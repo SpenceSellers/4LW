@@ -4,8 +4,8 @@ import Base27
 
 data DataLocation =
     Register |
-    MemoryLocation [Letter] |
-    Constant [Letter]
+    MemoryLocation Word |
+    Constant Word
     deriving (Show, Eq)
 
 data Instruction =
