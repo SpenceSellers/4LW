@@ -54,6 +54,14 @@ wordValue word = unDigits 27 $ map getValue (wordToList word)
 toWord :: Int -> Word
 toWord val = wordFromList $ map toLetter $ digits 27 (val `mod` wordValues)
 
+extendToWord :: Letter -> Word
+extendToWord letter = Word (Letter '_', Letter '_', Letter '_', letter)
+
+lastLetter :: Word -> Letter
+lastLetter (Word (a,b,c,d)) = d
+
 addWord :: Word -> Word -> Word
 addWord w1 w2 = toWord $ (wordValue w1) + (wordValue w2)
+
+
                 

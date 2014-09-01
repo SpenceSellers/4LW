@@ -2,8 +2,10 @@
 
 module Machine where
 import Data.Array
+import Data.Ix
 import Instruction
 import Base27
+import qualified Memory
 import Control.Lens
 import Control.Lens.At
 import Control.Lens.Iso
@@ -19,24 +21,22 @@ pcRegister = Letter 'T'
 
 
 type Registers = Array Letter Word
-
-type Memory = Array Word Letter
     
 data MachineState = MachineState {
       _registers :: Registers,
-      _memory :: Memory
+      _memory :: Memory.Memory
     } deriving (Show)
                   
 makeLenses ''MachineState
 
-blankMemory :: Memory
-blankMemory = listArray (minWord, maxWord) (repeat (Letter '_'))
-
+registerBounds :: (Letter, Letter)
+registerBounds = (Letter 'A', Letter 'T')
+                 
 blankRegisters :: Registers
-blankRegisters = listArray (Letter 'A', Letter 'T') (repeat (minWord))
+blankRegisters = listArray registerBounds (repeat (minWord))
                  
 blankState :: MachineState
-blankState = MachineState blankRegisters blankMemory
+blankState = MachineState blankRegisters Memory.blankMemory
 
 getPC :: State MachineState Word
 getPC = do
@@ -45,14 +45,23 @@ getPC = do
 
 setPC :: Word -> State MachineState ()
 setPC addr = registers.(ix pcRegister) .= addr
-  
--- advance :: State MachineState ()
--- advance = 
+
+
+getData :: MachineState -> DataLocation -> Word
+getData state (Constant word) = word
+getData state (Register letter) =
+    if inRange registerBounds letter
+    then (state^.registers) ! letter
+    else minWord
+getData state (MemoryLocation addr) = Memory.readWord (state^.memory) addr
+
+setData :: MachineState -> DataLocation -> Word -> MachineState
+setData state (Constant const) word = state -- No-op for now. Raise interrupt later.
+setData state (Register letter) word = 
+
 tick :: State MachineState ()
 tick = do
   registers.(ix (Letter 'A')) .= maxWord
   return ()
 
--- runInstruction :: Instruction -> State MachineState ()
--- runInstruction = 
   

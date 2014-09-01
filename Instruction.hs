@@ -3,7 +3,7 @@ module Instruction where
 import Base27
 
 data DataLocation =
-    Register |
+    Register Letter |
     MemoryLocation Word |
     Constant Word
     deriving (Show, Eq)
