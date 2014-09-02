@@ -14,10 +14,10 @@ import Data.Maybe
 import Control.Monad.State.Lazy
 
 stackRegister :: Letter
-stackRegister = Letter 'S'
+stackRegister = letter 'S'
 
 pcRegister :: Letter
-pcRegister = Letter 'T'
+pcRegister = letter 'T'
 
 
 type Registers = Array Letter Word
@@ -30,7 +30,7 @@ data MachineState = MachineState {
 makeLenses ''MachineState
 
 registerBounds :: (Letter, Letter)
-registerBounds = (Letter 'A', Letter 'T')
+registerBounds = (letter 'A', letter 'T')
                  
 blankRegisters :: Registers
 blankRegisters = listArray registerBounds (repeat (minWord))
