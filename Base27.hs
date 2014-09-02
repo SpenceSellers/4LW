@@ -63,5 +63,6 @@ lastLetter (Word (a,b,c,d)) = d
 addWord :: Word -> Word -> Word
 addWord w1 w2 = toWord $ (wordValue w1) + (wordValue w2)
 
-
+offset :: Word -> Int -> Word
+offset w diff = addWord w $ toWord diff
                 

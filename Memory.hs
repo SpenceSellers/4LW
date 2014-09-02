@@ -12,9 +12,9 @@ readLetter mem addr = mem ! addr
 -- |TODO: Check for end-of-bounds.
 readWord :: Memory -> Word -> Word
 readWord mem addr = Word (readLetter mem addr,
-                          readLetter mem (addWord addr $ toWord 1),
-                          readLetter mem (addWord addr $ toWord 2),
-                          readLetter mem (addWord addr $ toWord 3))
+                          readLetter mem (offset addr 1),
+                          readLetter mem (offset addr 2),
+                          readLetter mem (offset addr 3))
 
 writeLetter :: Memory -> Word -> Letter -> Memory
 writeLetter mem addr letter = mem // [(addr, letter)]
@@ -27,6 +27,6 @@ writeWord mem addr (Word (a,b,c,d)) =
             (addr2, c),
             (addr3, d)]
     where addr0 = addr
-          addr1 = addWord addr $ toWord 1
-          addr2 = addWord addr $ toWord 2
-          addr3 = addWord addr $ toWord 3
+          addr1 = offset addr 1
+          addr2 = offset addr 2
+          addr3 = offset addr 3
