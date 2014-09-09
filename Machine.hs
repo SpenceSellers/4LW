@@ -1,3 +1,4 @@
+
 {-# LANGUAGE TemplateHaskell #-}
 
 module Machine where
@@ -53,7 +54,7 @@ getData state (Register letter) =
     if inRange registerBounds letter
     then (state^.registers) ! letter
     else minWord
-getData state (MemoryLocation addr) = Memory.readWord (state^.memory) addr
+getData state (MemoryLocation addr) = either (const minWord) (id) $ Memory.readWord (state^.memory) addr
 
 setData :: MachineState -> DataLocation -> Word -> MachineState
 setData state (Constant const) word = state -- No-op for now. Raise interrupt later.
