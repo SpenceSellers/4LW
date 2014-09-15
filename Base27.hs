@@ -54,10 +54,10 @@ wordFromList (_) = minWord
 
 wordValue :: Word -> Int
 --wordValue word = read $ concat $ map (show) $ convertBase 27 10 (map getValue (wordToList word))
-wordValue word = unDigits 27 $ map getValue (wordToList word)
+wordValue = unDigits 27 . map getValue . wordToList
 
 toWord :: Int -> Word
-toWord val = wordFromList $ map toLetter $ digits 27 (val `mod` wordValues)
+toWord =  wordFromList . map toLetter . digits 27 . (`mod` wordValues)
 
 extendToWord :: Letter -> Word
 extendToWord letter_ = Word (letter '_', letter '_', letter '_', letter_)
