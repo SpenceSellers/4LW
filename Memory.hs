@@ -4,6 +4,8 @@ import Data.Array
 type Memory = Array Word Letter
 
 data MemoryError = AddressOverrun deriving (Show, Eq)
+
+data MemoryWrite = MemoryWrite Word Letter deriving (Show, Eq)
                  
 blankMemory :: Memory
 blankMemory = listArray (minWord, maxWord) (repeat (Letter '_'))
@@ -20,6 +22,10 @@ readWord mem addr = Right $ Word (readLetter mem addr,
 
 writeLetter :: Memory -> Word -> Letter -> Memory
 writeLetter mem addr letter = mem // [(addr, letter)]
+
+applyWrite :: Memory -> MemoryWrite -> Memory
+applyWrite mem (MemoryWrite addr letter) =
+    writeLetter mem addr letter
 
 -- |Todo: Check for end of bounds
 writeWord :: Memory -> Word -> Word -> Memory

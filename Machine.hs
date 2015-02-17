@@ -58,10 +58,10 @@ getData state (MemoryLocation addr) = either (const minWord) (id) $ Memory.readW
 
 setData :: MachineState -> DataLocation -> Word -> MachineState
 setData state (Constant const) word = state -- No-op for now. Raise interrupt later.
-setData state (Register letter) word = over registers (\regs -> regs  // [(letter, word)]) $ state
+setData state (Register letter) word =
+    over registers (\regs -> regs  // [(letter, word)]) $ state
 setData state (MemoryLocation addr) word =
     set memory (Memory.writeWord (state^.memory) addr word) $ state
-
 
 
 runInstruction :: Instruction -> State MachineState ()
@@ -69,10 +69,19 @@ runInstruction (Move src dest) = do
   state <- get
   let datum = getData state src
   put $ setData state dest datum
+
+runInstruction (Add src1 src2 dest) = do
+  state <- get
+  let data1 = getData state src1
+      data2 = getData state src2
+  put $ setData state dest (addWord data1 data2)
       
 tick :: State MachineState ()
 tick = do
   runInstruction (Move (Constant maxWord) (Register (Letter 'B')))
+  runInstruction (Move (Constant maxWord)
+                  (MemoryLocation
+                   (Word (letter 'A', letter 'A', letter 'A', letter 'A'))))
   return ()
 
   

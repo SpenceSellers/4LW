@@ -3,10 +3,22 @@ module Base27 where
 import Data.Char
 import Data.Ix
 import Data.Digits (digits, unDigits)
+    
+newtype Letter = Letter Char deriving (Ord, Eq)
 
-newtype Letter = Letter Char deriving (Show, Ord, Eq, Ix)
+instance Ix Letter where
+    range (l1, l2) = map letterValue $ range (n1, n2)
+        where
+          n1 = getValue l1
+          n2 = getValue l2
 
+    index (l1, l2) l = (getValue l) - (getValue l1)
 
+    inRange (l1, l2) l = (getValue l >= getValue l1) && (getValue l <= getValue l2)
+
+instance Show Letter where
+    show (Letter c) = "." ++ [c]
+                      
 -- | Better constructor, with checking.
 letter :: Char -> Letter
 letter c = if Base27.isLetter c then Letter c else error "Bad letter value!"
@@ -20,6 +32,10 @@ getValue :: Letter -> Int
 getValue (Letter '_') = 0
 getValue (Letter l) = (index ('A', 'Z') l) + 1
 
+letterValue :: Int -> Letter
+letterValue 0 = letter '_'
+letterValue n = letter $ range ('A', 'Z') !! (n - 1)
+
 -- | Converts a integer (0,26) to a letter. Yes this is a partial function.
 toLetter :: Int -> Letter
 toLetter num
@@ -28,12 +44,22 @@ toLetter num
     | num > 26 = error "toLetter must be 26 or below."
     | otherwise = letter $ chr ((ord 'A') + num - 1)
 
+
 convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
 
 
-newtype Word = Word (Letter, Letter, Letter, Letter) deriving (Show, Eq, Ord, Ix)
+newtype Word = Word (Letter, Letter, Letter, Letter) deriving (Eq, Ord, Ix)
 
+instance Show Word where
+    show word =
+        [ca, cb, cc, cd] where
+            (Word (a, b, c, d)) = word
+            (Letter ca) = a
+            (Letter cb) = b
+            (Letter cc) = c
+            (Letter cd) = d
+                   
 minWord :: Word
 minWord = Word (letter '_', letter '_', letter '_', letter '_')
 

@@ -6,7 +6,7 @@ version:             0.1.0.0
 -- synopsis:            
 -- description:         
 -- license:             
-license-file:        LICENSE
+--license-file:        LICENSE
 -- copyright:           
 -- category:            
 build-type:          Simple
@@ -15,4 +15,4 @@ cabal-version:       >=1.8
 executable 4LW
   main-is:           Main.hs
   -- other-modules:       
-  build-depends:       base ==4.6.*, mtl ==2.2.*, digits ==0.2.*, array ==0.4.*, lens ==4.2.*
+  build-depends:       base >= 3 && < 5, mtl, array, lens, digits

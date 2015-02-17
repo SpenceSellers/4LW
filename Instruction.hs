@@ -1,4 +1,3 @@
-
 module Instruction where
 
 import Base27
@@ -30,6 +29,10 @@ parseInstruction addr mem = undefined
           instructionLength = getValue $ Memory.readLetter mem (offset addr lengthOffset)
 
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
-constructInstruction (RawInstruction opcode len operands) = 
+constructInstruction (RawInstruction opcode len operands) = undefined
           
-parseOperands :: [Word] -> 
+parseOperands :: [Word] -> [DataLocation]
+parseOperands words = parseOperands_ words
+
+parseOperands_ :: [Word] -> [DataLocation]
+parseOperands_ (x:xs) = undefined
