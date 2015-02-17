@@ -39,6 +39,7 @@ writeWord mem addr (Word (a,b,c,d)) =
           addr2 = offset addr 2
           addr3 = offset addr 3
 
+-- |Reads an entire range of words.
 readWords :: Memory -> Word -> Int -> Either MemoryError [Word]
 readWords mem addr len = mapM (readWord mem) addrs
     where addrs = map (offset addr) [1..len]

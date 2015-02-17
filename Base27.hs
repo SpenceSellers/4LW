@@ -22,16 +22,17 @@ instance Show Letter where
 -- | Better constructor, with checking.
 letter :: Char -> Letter
 letter c = if Base27.isLetter c then Letter c else error "Bad letter value!"
-           
+
 isLetter :: Char -> Bool
 isLetter '_' = True
 isLetter c = inRange ('A', 'Z') c
 
-
+-- | Gets the numeric value of a Letter.
 getValue :: Letter -> Int
 getValue (Letter '_') = 0
 getValue (Letter l) = (index ('A', 'Z') l) + 1
 
+-- | Turns a numeric value into a Letter
 letterValue :: Int -> Letter
 letterValue 0 = letter '_'
 letterValue n = letter $ range ('A', 'Z') !! (n - 1)
@@ -48,9 +49,10 @@ toLetter num
 convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
 
-
+-- | A word is basically a tuple of four letters.
 newtype Word = Word (Letter, Letter, Letter, Letter) deriving (Eq, Ord, Ix)
 
+-- | The default Show is hard to read, let's just cram the letters together.
 instance Show Word where
     show word =
         [ca, cb, cc, cd] where
@@ -64,13 +66,16 @@ minWord :: Word
 minWord = Word (letter '_', letter '_', letter '_', letter '_')
 
 maxWord = Word (letter 'Z', letter 'Z', letter 'Z', letter 'Z')
-
+          
+-- | The number of possible values that a word can have.
 wordValues :: Int
 wordValues = 27 ^ 4
 
+-- | Turns a word into a list of letters.
 wordToList :: Word -> [Letter]
 wordToList (Word (a,b,c,d)) = [a,b,c,d]
 
+-- | Turns a list of letters into a word. Beware, this is a partial function.
 wordFromList :: [Letter] -> Word
 wordFromList (a:b:c:d:_) = Word (a,b,c,d)
 wordFromList (a:b:c:_) = Word (letter '_', a, b, c)
@@ -85,15 +90,18 @@ wordValue = unDigits 27 . map getValue . wordToList
 toWord :: Int -> Word
 toWord =  wordFromList . map toLetter . digits 27 . (`mod` wordValues)
 
+-- | Extends a letter to a word with the same numeric value.
 extendToWord :: Letter -> Word
 extendToWord letter_ = Word (letter '_', letter '_', letter '_', letter_)
 
 lastLetter :: Word -> Letter
 lastLetter (Word (a,b,c,d)) = d
 
+-- | Adds two words.
 addWord :: Word -> Word -> Word
 addWord w1 w2 = toWord $ (wordValue w1) + (wordValue w2)
 
+-- | Finds the word that occurs diff times after the initial word.
 offset :: Word -> Int -> Word
 offset w diff = addWord w $ toWord diff
                 

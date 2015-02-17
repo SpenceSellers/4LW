@@ -22,7 +22,8 @@ pcRegister = letter 'T'
 
 
 type Registers = Array Letter Word
-    
+
+-- | Stores the entire machine state from one instruction to the next.
 data MachineState = MachineState {
       _registers :: Registers,
       _memory :: Memory.Memory
@@ -32,22 +33,26 @@ makeLenses ''MachineState
 
 registerBounds :: (Letter, Letter)
 registerBounds = (letter 'A', letter 'T')
-                 
+
+-- | A set of blank registers.
 blankRegisters :: Registers
 blankRegisters = listArray registerBounds (repeat (minWord))
-                 
+
+-- | A blank "starting" state of the machine, with everything zeroed.
 blankState :: MachineState
 blankState = MachineState blankRegisters Memory.blankMemory
 
+-- | Gets the Program Counter
 getPC :: State MachineState Word
 getPC = do
   state <- get
   return $ fromJust $ state ^? registers.(ix pcRegister)
 
+-- | Sets the program counter
 setPC :: Word -> State MachineState ()
 setPC addr = registers.(ix pcRegister) .= addr
 
-
+-- | Fetches data from a DataLocation.
 getData :: MachineState -> DataLocation -> Word
 getData state (Constant word) = word
 getData state (Register letter) =
@@ -56,14 +61,17 @@ getData state (Register letter) =
     else minWord
 getData state (MemoryLocation addr) = either (const minWord) (id) $ Memory.readWord (state^.memory) addr
 
+-- | Applies a data write to any location, be it a register, main memory, etc.
 setData :: MachineState -> DataLocation -> Word -> MachineState
 setData state (Constant const) word = state -- No-op for now. Raise interrupt later.
+                                      
 setData state (Register letter) word =
     over registers (\regs -> regs  // [(letter, word)]) $ state
+         
 setData state (MemoryLocation addr) word =
     set memory (Memory.writeWord (state^.memory) addr word) $ state
 
-
+-- | Applies an instruction to the state of the Machine.
 runInstruction :: Instruction -> State MachineState ()
 runInstruction (Move src dest) = do
   state <- get
