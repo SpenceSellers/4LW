@@ -13,6 +13,7 @@ import Control.Lens.Iso
 import Control.Monad
 import Data.Maybe
 import Control.Monad.State.Lazy
+import Control.Applicative
 
 stackRegister :: Letter
 stackRegister = letter 'S'
@@ -72,27 +73,25 @@ setData (Register letter) word =
     registers %= (\regs -> regs  // [(letter, word)])
       
 setData (MemoryLocation addr) word =
-  memory %= \mem -> (Memory.writeWord mem addr word)
+    memory %= \mem -> (Memory.writeWord mem addr word)
 
 -- | Applies an instruction to the state of the Machine.
 runInstruction :: Instruction -> State MachineState ()
-runInstruction (Move src dest) = do
-  state <- get
-  datum <- getData src
-  setData dest datum
+runInstruction (Move src dest) =
+    setData dest =<< getData src
 
-runInstruction (Add src1 src2 dest) = do
-  state <- get
-  data1 <- getData src1
-  data2 <- getData src2
-  setData dest (addWord data1 data2)
+runInstruction (Add src1 src2 dest) =
+    setData dest =<< addWord <$> getData src1 <*> getData src2
       
 tick :: State MachineState ()
 tick = do
   runInstruction (Move (Constant maxWord) (Register (Letter 'B')))
-  runInstruction (Move (Constant maxWord)
-                  (MemoryLocation
-                   (Word (letter '_', letter '_', letter 'A', letter 'A'))))
+  runInstruction (Move (Constant (wrd "TEST"))
+                  (MemoryLocation (wrd "___C")))
+  runInstruction
+       (Add (Constant (wrd "___Z")) (MemoryLocation (wrd "___C")) (MemoryLocation (wrd "___J")))
+  
+  
   return ()
 
   
