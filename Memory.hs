@@ -48,3 +48,8 @@ writeWord mem addr (Word (a,b,c,d)) =
 readWords :: Memory -> Word -> Int -> Either MemoryError [Word]
 readWords mem addr len = mapM (readWord mem) addrs
     where addrs = map (offset addr) [1..len]
+
+exportString :: Memory -> (Word, Word) -> String
+exportString mem (start, end) =
+    map (\x -> (getletter $ mem ! x)) $ range (start, end)
+        where getletter (Letter c) = c

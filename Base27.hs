@@ -50,7 +50,7 @@ convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
 
 -- | A word is basically a tuple of four letters.
-newtype Word = Word (Letter, Letter, Letter, Letter) deriving (Eq, Ord, Ix)
+newtype Word = Word (Letter, Letter, Letter, Letter) deriving (Eq, Ord)
 
 -- | The default Show is hard to read, let's just cram the letters together.
 instance Show Word where
@@ -61,7 +61,17 @@ instance Show Word where
             (Letter cb) = b
             (Letter cc) = c
             (Letter cd) = d
-                   
+
+instance Ix Word where
+    range (w1, w2) = map toWord $ range (n1, n2)
+        where
+          n1 = wordValue w1
+          n2 = wordValue w2
+
+    index (w1, w2) w = (wordValue w) - (wordValue w1)
+
+    inRange (w1, w2) w = (wordValue w >= wordValue w1) && (wordValue w <= wordValue w2)
+                         
 minWord :: Word
 minWord = Word (letter '_', letter '_', letter '_', letter '_')
 
@@ -105,3 +115,6 @@ addWord w1 w2 = toWord $ (wordValue w1) + (wordValue w2)
 offset :: Word -> Int -> Word
 offset w diff = addWord w $ toWord diff
                 
+-- | Debug / Convenience function to make a word from a string.
+wrd :: String -> Word
+wrd (a:b:c:d:[]) = Word (letter a, letter b, letter c, letter d)
