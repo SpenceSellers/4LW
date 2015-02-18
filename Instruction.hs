@@ -26,7 +26,10 @@ parseInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionPa
 parseInstruction addr mem = undefined
     where lengthOffset = 2
           opcode = (Memory.readLetter mem addr, Memory.readLetter mem (offset addr 1))
-          instructionLength = getValue $ Memory.readLetter mem (offset addr lengthOffset)
+          instructionLength =
+              getValue $ case Memory.readLetter mem (offset addr lengthOffset) of
+                           Left err -> error "Bad read" -- TODO: Have a real error here.
+                           Right l -> l
 
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
 constructInstruction (RawInstruction opcode len operands) = undefined

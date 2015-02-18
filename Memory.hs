@@ -10,15 +10,20 @@ data MemoryWrite = MemoryWrite Word Letter deriving (Show, Eq)
 blankMemory :: Memory
 blankMemory = listArray (minWord, maxWord) (repeat (Letter '_'))
 
-readLetter :: Memory -> Word -> Letter
-readLetter mem addr = mem ! addr
+readLetter :: Memory -> Word -> Either MemoryError Letter
+readLetter mem addr = if inRange (bounds mem) addr then
+                          Right $ mem ! addr
+                      else
+                          Left AddressOverrun
 
 -- |TODO: Check for end-of-bounds.
 readWord :: Memory -> Word -> Either MemoryError Word
-readWord mem addr = Right $ Word (readLetter mem addr,
-                          readLetter mem (offset addr 1),
-                          readLetter mem (offset addr 2),
-                          readLetter mem (offset addr 3))
+readWord mem addr = do
+  a <- readLetter mem addr
+  b <- readLetter mem (offset addr 1)
+  c <- readLetter mem (offset addr 2)
+  d <- readLetter mem (offset addr 3)
+  return $ Word (a, b, c, d)
 
 writeLetter :: Memory -> Word -> Letter -> Memory
 writeLetter mem addr letter = mem // [(addr, letter)]
