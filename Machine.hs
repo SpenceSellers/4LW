@@ -14,6 +14,7 @@ import Control.Monad
 import Data.Maybe
 import Control.Monad.State.Lazy
 import Control.Applicative
+import Control.Monad.Reader
 
 stackRegister :: Letter
 stackRegister = letter 'S'
@@ -64,7 +65,7 @@ getData (Register letter) = do
                 
 getData (MemoryLocation addr) = do
   state <- get
-  return $ either (const minWord) (id) $ Memory.readWord (state^.memory) addr
+  return $ either (const minWord) id $ Memory.readWord (state^.memory) addr
 
 -- | Applies a data write to any location, be it a register, main memory, etc.
 setData :: DataLocation -> Word -> State MachineState ()
@@ -82,6 +83,9 @@ runInstruction (Move src dest) =
 
 runInstruction (Add src1 src2 dest) =
     setData dest =<< addWord <$> getData src1 <*> getData src2
+
+runInstruction (Jump dest) =
+    setData (Register pcRegister) =<< getData dest
       
 tick :: State MachineState ()
 tick = do

@@ -1,8 +1,9 @@
 module Instruction where
-
+import Control.Lens
+import Control.Applicative
 import Base27
 import qualified Memory
-    
+
 data DataLocation =
     Register Letter |
     MemoryLocation Word |
@@ -11,31 +12,54 @@ data DataLocation =
 
 data Instruction =
     Move DataLocation DataLocation |
-    Add DataLocation DataLocation DataLocation
+    Add DataLocation DataLocation DataLocation |
+    Jump DataLocation
     deriving (Show, Eq)
 
 
 data BadInstruction = BadInstruction
-data InstructionParseResult = InstructionParseResult Instruction Int
+data InstructionParseResult = InstructionParseResult RawInstruction Int
 
-data RawInstruction = RawInstruction (Word, Word) Int [Word]
+data RawInstruction = RawInstruction (Letter, Letter) Int Operands
                       deriving (Show, Eq)
 
 type Operands = [DataLocation]
+
+
+toEither :: a -> Maybe b -> Either a b
+toEither leftValue = maybe (Left leftValue) Right
+
+unwrapEither :: Either a b -> b
+unwrapEither (Right b) = b
+unwrapEither (Left a) = error "Failed Either"
+                        
 parseInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
-parseInstruction addr mem = undefined
+parseInstruction addr mem = Right $ InstructionParseResult rawInstruction instructionLength
     where lengthOffset = 2
-          opcode = (Memory.readLetter mem addr, Memory.readLetter mem (offset addr 1))
+          operandsOffset = 3
+          opcode = (unwrapEither $ Memory.readLetter mem addr, unwrapEither $ Memory.readLetter mem (offset addr 1))
           instructionLength =
-              getValue $ case Memory.readLetter mem (offset addr lengthOffset) of
-                           Left err -> error "Bad read" -- TODO: Have a real error here.
-                           Right l -> l
+              getValue $ unwrapEither $ Memory.readLetter mem (offset addr lengthOffset) 
+          rawOperands = unwrapEither $  Memory.readWords mem (offset addr operandsOffset) (instructionLength - 1) 
+          operands = parseOperands rawOperands
+          rawInstruction = RawInstruction opcode instructionLength operands
 
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
-constructInstruction (RawInstruction opcode len operands) = undefined
-          
-parseOperands :: [Word] -> [DataLocation]
-parseOperands words = parseOperands_ words
+constructInstruction (RawInstruction opcode len operands)
+    | opcode == (letter2 "AD") = toEither BadInstruction $ Add <$>
+                                 (operands ^? element 0) <*>
+                                 (operands ^? element 1) <*>
+                                 (operands ^? element 2)
 
-parseOperands_ :: [Word] -> [DataLocation]
-parseOperands_ (x:xs) = undefined
+-- TODO: Add error handling.
+parseOperands :: [Word] -> [DataLocation]
+parseOperands words = reverse $ parseOperands_ words []
+
+parseOperands_ :: [Word] -> Operands -> [DataLocation]
+parseOperands_ (control:opdata:xs) ops
+    | control == wrd "___R" = parseOperands_ xs ((Register (lastLetter opdata)): ops)
+    | control == wrd "___M" = parseOperands_ xs ((MemoryLocation opdata): ops)
+    | control == wrd "___C" = parseOperands_ xs ((Constant opdata): ops)
+
+parseOperands_ [] ops = ops
+    

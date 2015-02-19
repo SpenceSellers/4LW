@@ -71,7 +71,7 @@ instance Ix Word where
     index (w1, w2) w = (wordValue w) - (wordValue w1)
 
     inRange (w1, w2) w = (wordValue w >= wordValue w1) && (wordValue w <= wordValue w2)
-                         
+
 minWord :: Word
 minWord = Word (letter '_', letter '_', letter '_', letter '_')
 
@@ -118,3 +118,6 @@ offset w diff = addWord w $ toWord diff
 -- | Debug / Convenience function to make a word from a string.
 wrd :: String -> Word
 wrd (a:b:c:d:[]) = Word (letter a, letter b, letter c, letter d)
+
+letter2 :: String -> (Letter, Letter)
+letter2 (a:b:[]) = (letter a, letter b)
