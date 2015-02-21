@@ -28,6 +28,11 @@ readWord mem addr = do
 writeLetter :: Memory -> Word -> Letter -> Memory
 writeLetter mem addr letter = mem // [(addr, letter)]
 
+writeLetters :: Memory -> Word -> [Letter] -> Memory
+writeLetters mem addr (l:rest) =
+    writeLetters (writeLetter mem addr l) (offset addr 1) rest
+writeLetters mem _ [] = mem
+
 applyWrite :: Memory -> MemoryWrite -> Memory
 applyWrite mem (MemoryWrite addr letter) =
     writeLetter mem addr letter
@@ -43,13 +48,16 @@ writeWord mem addr (Word (a,b,c,d)) =
           addr1 = offset addr 1
           addr2 = offset addr 2
           addr3 = offset addr 3
-
+                      
 -- |Reads an entire range of words.
 readWords :: Memory -> Word -> Int -> Either MemoryError [Word]
 readWords mem addr len = mapM (readWord mem) addrs
-    where addrs = map (offset addr) [1..len]
+    where addrs = map (offset addr) [0,4..len]
 
 exportString :: Memory -> (Word, Word) -> String
 exportString mem (start, end) =
     map (\x -> (getletter $ mem ! x)) $ range (start, end)
         where getletter (Letter c) = c
+
+importString :: String -> Word -> Memory -> Memory
+importString str addr mem = writeLetters mem addr (map letter str)

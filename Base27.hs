@@ -119,5 +119,9 @@ offset w diff = addWord w $ toWord diff
 wrd :: String -> Word
 wrd (a:b:c:d:[]) = Word (letter a, letter b, letter c, letter d)
 
+wordToString :: Word -> String
+wordToString word = map getLetter (wordToList word)
+    where getLetter (Letter c) = c
+    
 letter2 :: String -> (Letter, Letter)
 letter2 (a:b:[]) = (letter a, letter b)
