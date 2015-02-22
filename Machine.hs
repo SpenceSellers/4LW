@@ -15,6 +15,10 @@ import Data.Maybe
 import Control.Monad.State.Lazy
 import Control.Applicative
 import Control.Monad.Reader
+import Debug.Trace
+
+hoistState :: Monad m => State s a -> StateT s m a
+hoistState = StateT . (return .) . runState
 
 stackRegister :: Letter
 stackRegister = letter 'S'
@@ -78,6 +82,7 @@ setData (MemoryLocation addr) word =
 
 -- | Applies an instruction to the state of the Machine.
 runInstruction :: Instruction -> State MachineState ()
+runInstruction Nop = return ()
 runInstruction (Move src dest) =
     setData dest =<< getData src
 
@@ -89,13 +94,26 @@ runInstruction (Jump dest) =
       
 tick :: State MachineState ()
 tick = do
-  runInstruction (Move (Constant maxWord) (Register (Letter 'B')))
-  runInstruction (Move (Constant (wrd "TEST"))
-                  (MemoryLocation (wrd "___C")))
-  runInstruction
-       (Add (Constant (wrd "___Z")) (MemoryLocation (wrd "___C")) (MemoryLocation (wrd "___J")))
-  
-  
-  return ()
-
-  
+  pc <- getPC
+  state <- get
+  let instructionResult = parseInstruction pc mem
+      mem = state ^. memory
+            
+  case instructionResult of
+    Left BadInstruction -> return ()
+    Right (InstructionParseResult instruction length) ->
+        do
+          trace ("ins: " ++ (show instruction)) return ()
+          setPC $ (offset pc length)
+          runInstruction instruction
+         
+run :: StateT MachineState IO ()
+run = do
+  state <- get
+  tickResult <- hoistState $ tick
+  registerA <- hoistState $ getData (Register (Letter 'A'))
+  registerH <- hoistState $ getData (Register (Letter 'H'))
+  liftIO $ putStrLn $ "Register A: " ++ (show $ registerA)
+  case registerH == wrd "____" of
+    True -> run
+    False -> return ()
