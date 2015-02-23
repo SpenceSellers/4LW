@@ -26,6 +26,7 @@ stackRegister = letter 'S'
 pcRegister :: Letter
 pcRegister = letter 'T'
 
+data MachineAction = NoAction | Halt deriving (Show, Eq)
 
 type Registers = Array Letter Word
 
@@ -92,7 +93,7 @@ runInstruction (Add src1 src2 dest) =
 runInstruction (Jump dest) =
     setData (Register pcRegister) =<< getData dest
       
-tick :: State MachineState ()
+tick :: State MachineState MachineAction
 tick = do
   pc <- getPC
   state <- get
@@ -100,13 +101,14 @@ tick = do
       mem = state ^. memory
             
   case instructionResult of
-    Left BadInstruction -> return ()
+    Left BadInstruction -> return Halt
     Right (InstructionParseResult instruction length) ->
         do
           trace ("ins: " ++ (show instruction)) return ()
           setPC $ (offset pc length)
           runInstruction instruction
-         
+          return NoAction
+          
 run :: StateT MachineState IO ()
 run = do
   state <- get
@@ -114,6 +116,6 @@ run = do
   registerA <- hoistState $ getData (Register (Letter 'A'))
   registerH <- hoistState $ getData (Register (Letter 'H'))
   liftIO $ putStrLn $ "Register A: " ++ (show $ registerA)
-  case registerH == wrd "____" of
-    True -> run
-    False -> return ()
+  case tickResult of
+    NoAction -> run
+    Halt -> return ()

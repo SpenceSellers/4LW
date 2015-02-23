@@ -37,7 +37,7 @@ unwrapEither (Right b) = b
 unwrapEither (Left a) = error "Failed Either"
                         
 parseInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
-parseInstruction addr mem = Right $ InstructionParseResult instruction instructionLength
+parseInstruction addr mem = InstructionParseResult <$> instruction <*> pure instructionLength
     where lengthOffset = 2
           operandsOffset = 4
           opcode = (unwrapEither $ Memory.readLetter mem addr, unwrapEither $ Memory.readLetter mem (offset addr 1))
@@ -46,7 +46,7 @@ parseInstruction addr mem = Right $ InstructionParseResult instruction instructi
           rawOperands = unwrapEither $  Memory.readWords mem (offset addr operandsOffset) (instructionLength - 1) 
           operands = parseOperands rawOperands
           rawInstruction = RawInstruction opcode instructionLength (fromJust operands)
-          instruction = unwrapEither $ constructInstruction rawInstruction
+          instruction = constructInstruction rawInstruction
 
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
 constructInstruction (RawInstruction opcode len operands)
@@ -59,6 +59,7 @@ constructInstruction (RawInstruction opcode len operands)
     | opcode == (letter2 "MV") = toEither BadInstruction $ Move <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
+    | otherwise = trace ("OPcode is: " ++ (show opcode)) Left BadInstruction
     -- | opcode == (letter2 "JP") 
 
 -- TODO: Add error handling.
