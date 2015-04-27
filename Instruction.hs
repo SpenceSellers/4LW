@@ -36,7 +36,6 @@ toMaybe :: Either a b -> Maybe b
 toMaybe (Right val) = Just val
 toMaybe (Left _) = Nothing
 
-                   
 unwrapEither :: Either a b -> b
 unwrapEither (Right b) = b
 unwrapEither (Left a) = error "Failed Either"
@@ -70,10 +69,11 @@ constructInstruction (RawInstruction opcode len operands)
     | opcode == (letter2 "MV") = toEither BadInstruction $ Move <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
+    | opcode == (letter2 "JP") = toEither BadInstruction $ Jump <$>
+                                 (operands ^? ix 0)
     | otherwise = trace ("OPcode is: " ++ (show opcode)) Left BadInstruction
     -- | opcode == (letter2 "JP") 
 
--- TODO: Add error handling.
 parseOperands :: [Word] -> Maybe [DataLocation]
 parseOperands words = reverse <$> parseOperands_ words []
 

@@ -101,21 +101,22 @@ tick = do
       mem = state ^. memory
             
   case instructionResult of
-    Left BadInstruction -> return Halt
+    Left BadInstruction -> trace ("BAD INSTRUCTION") $ return Halt
     Right (InstructionParseResult instruction length) ->
         do
           trace ("ins: " ++ (show instruction)) return ()
           setPC $ (offset pc length)
           runInstruction instruction
-          return NoAction
+          return $ case instruction of Nop -> Halt; _ -> NoAction -- TODO: Remove temporary Nop halt
           
 run :: StateT MachineState IO ()
 run = do
   state <- get
   tickResult <- hoistState $ tick
   registerA <- hoistState $ getData (Register (Letter 'A'))
-  registerH <- hoistState $ getData (Register (Letter 'H'))
+  registerT <- hoistState $ getData (Register (Letter 'T'))
   liftIO $ putStrLn $ "Register A: " ++ (show $ registerA)
+  liftIO $ putStrLn $ "Register T: " ++ (show $ registerT)
   case tickResult of
     NoAction -> run
     Halt -> return ()
