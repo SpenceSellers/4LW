@@ -32,21 +32,32 @@ type Operands = [DataLocation]
 toEither :: a -> Maybe b -> Either a b
 toEither leftValue = maybe (Left leftValue) Right
 
+toMaybe :: Either a b -> Maybe b
+toMaybe (Right val) = Just val
+toMaybe (Left _) = Nothing
+
+                   
 unwrapEither :: Either a b -> b
 unwrapEither (Right b) = b
 unwrapEither (Left a) = error "Failed Either"
-                        
+
+convertEither :: newerr -> Either e r -> Either newerr r
+convertEither _ (Right r) = Right r
+convertEither new (Left e) = Left new
+                             
 parseInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
-parseInstruction addr mem = InstructionParseResult <$> instruction <*> pure instructionLength
+parseInstruction addr mem = InstructionParseResult <$> instruction <*> toBad instructionLength
     where lengthOffset = 2
           operandsOffset = 4
-          opcode = (unwrapEither $ Memory.readLetter mem addr, unwrapEither $ Memory.readLetter mem (offset addr 1))
-          instructionLength =
-              getValue $ unwrapEither $ Memory.readLetter mem (offset addr lengthOffset) 
-          rawOperands = unwrapEither $  Memory.readWords mem (offset addr operandsOffset) (instructionLength - 1) 
-          operands = parseOperands rawOperands
-          rawInstruction = RawInstruction opcode instructionLength (fromJust operands)
-          instruction = constructInstruction rawInstruction
+          opcode = (,) <$> (Memory.readLetter mem addr) <*> (Memory.readLetter mem (offset addr 1))
+          instructionLength = getValue <$> Memory.readLetter mem (offset addr lengthOffset) 
+          rawOperands =  do
+            len <- instructionLength
+            Memory.readWords mem (offset addr operandsOffset) (len - 1)
+          operands = parseOperands =<< toMaybe rawOperands
+          rawInstruction = RawInstruction <$> toBad opcode <*> toBad instructionLength <*> toEither BadInstruction operands
+          instruction = constructInstruction =<< rawInstruction
+          toBad = convertEither BadInstruction
 
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
 constructInstruction (RawInstruction opcode len operands)
