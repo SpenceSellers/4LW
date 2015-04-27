@@ -1,4 +1,5 @@
 module Memory where
+import Prelude hiding (Word)
 import Base27
 import Data.Array
 type Memory = Array Word Letter
@@ -50,9 +51,10 @@ writeWord mem addr (Word (a,b,c,d)) =
           addr3 = offset addr 3
                       
 -- |Reads an entire range of words.
+-- |The "length" is still in number of letters!
 readWords :: Memory -> Word -> Int -> Either MemoryError [Word]
 readWords mem addr len = mapM (readWord mem) addrs
-    where addrs = map (offset addr) [0,4..len]
+    where addrs = map (offset addr) [0,4..len*4]
 
 exportString :: Memory -> (Word, Word) -> String
 exportString mem (start, end) =

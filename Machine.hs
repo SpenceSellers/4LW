@@ -2,6 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Machine where
+import Prelude hiding (Word)
 import Data.Array
 import Data.Ix
 import Instruction

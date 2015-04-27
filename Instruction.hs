@@ -1,4 +1,5 @@
 module Instruction where
+import Prelude hiding (Word)
 import Data.Maybe
 import Control.Lens
 import Control.Applicative
@@ -22,13 +23,16 @@ data Instruction =
 
 data BadInstruction = BadInstruction deriving Show
 data InstructionParseResult = InstructionParseResult Instruction Int
+                            deriving (Show)
 
 data RawInstruction = RawInstruction (Letter, Letter) Int Operands
                       deriving (Show, Eq)
 
 type Operands = [DataLocation]
 
-
+tr :: Show a => a -> a
+tr x = trace (show x) x
+       
 toEither :: a -> Maybe b -> Either a b
 toEither leftValue = maybe (Left leftValue) Right
 
@@ -45,15 +49,15 @@ convertEither _ (Right r) = Right r
 convertEither new (Left e) = Left new
                              
 parseInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
-parseInstruction addr mem = InstructionParseResult <$> instruction <*> toBad instructionLength
+parseInstruction addr mem = tr $ InstructionParseResult <$> instruction <*> toBad ((*4) <$> instructionLength )
     where lengthOffset = 2
           operandsOffset = 4
           opcode = (,) <$> (Memory.readLetter mem addr) <*> (Memory.readLetter mem (offset addr 1))
           instructionLength = getValue <$> Memory.readLetter mem (offset addr lengthOffset) 
           rawOperands =  do
             len <- instructionLength
-            Memory.readWords mem (offset addr operandsOffset) (len - 1)
-          operands = parseOperands =<< toMaybe rawOperands
+            Memory.readWords mem (offset addr operandsOffset) (len - 2)
+          operands = parseOperands =<< toMaybe (tr rawOperands)
           rawInstruction = RawInstruction <$> toBad opcode <*> toBad instructionLength <*> toEither BadInstruction operands
           instruction = constructInstruction =<< rawInstruction
           toBad = convertEither BadInstruction
