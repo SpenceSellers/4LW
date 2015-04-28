@@ -68,20 +68,32 @@ getData (Register letter) = do
   return $ if inRange registerBounds letter
            then (state^.registers) ! letter
            else minWord
-                
 getData (MemoryLocation addr) = do
   state <- get
   return $ either (const minWord) id $ Memory.readWord (state^.memory) addr
 
+getData (Negated loc) = do
+  val <- getData loc
+  return $ negateWord val
+
+getData (Incremented loc) = do
+  val <- getData loc
+  return $ offset val 1
+         
 -- | Applies a data write to any location, be it a register, main memory, etc.
 setData :: DataLocation -> Word -> State MachineState ()
 setData (Constant const) word = return () -- No-op for now. Raise interrupt later.
 setData (Register letter) word =
-    registers %= (\regs -> regs  // [(letter, word)])
+    registers %= (\regs -> regs // [(letter, word)])
       
 setData (MemoryLocation addr) word =
     memory %= \mem -> (Memory.writeWord mem addr word)
 
+setData (Negated loc) word =
+    setData loc (negateWord word)
+
+setData (Incremented loc) word =
+    setData loc (offset word 1)
 -- | Applies an instruction to the state of the Machine.
 runInstruction :: Instruction -> State MachineState ()
 runInstruction Nop = return ()
@@ -93,6 +105,12 @@ runInstruction (Add src1 src2 dest) =
                    
 runInstruction (Sub src1 src2 dest) =
     setData dest =<< subWord <$> getData src1 <*> getData src2
+
+runInstruction (Mul src1 src2 dest) =
+    setData dest =<< mulWord <$> getData src1 <*> getData src2
+
+runInstruction (Div src1 src2 dest) =
+    setData dest =<< divWord <$> getData src1 <*> getData src2
 
 runInstruction (Jump dest) =
     setData (Register pcRegister) =<< getData dest
@@ -114,7 +132,7 @@ tick = do
     Left BadInstruction -> trace ("BAD INSTRUCTION") $ return Halt
     Right (InstructionParseResult instruction length) ->
         do
-          trace ("ins: " ++ (show instruction)) return ()
+          --trace ("ins: " ++ (show instruction)) return ()
           setPC $ (offset pc length)
           runInstruction instruction
           return $ case instruction of Nop -> Halt; _ -> NoAction -- TODO: Remove temporary Nop halt
@@ -125,8 +143,8 @@ run = do
   tickResult <- hoistState $ tick
   registerA <- hoistState $ getData (Register (Letter 'A'))
   registerT <- hoistState $ getData (Register (Letter 'T'))
-  liftIO $ putStrLn $ "Register A: " ++ (show $ registerA)
-  liftIO $ putStrLn $ "Register T: " ++ (show $ registerT)
+  --liftIO $ putStrLn $ "Register A: " ++ (show $ registerA)
+  --liftIO $ putStrLn $ "Register T: " ++ (show $ registerT)
   case tickResult of
     NoAction -> run
     Halt -> return ()

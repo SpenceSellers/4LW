@@ -120,7 +120,16 @@ addWord w1 w2 = toWord $ (wordValue w1) + (wordValue w2)
 
 subWord :: Base27.Word -> Base27.Word -> Base27.Word
 subWord w1 w2 = toWord $ (wordValue w1) - (wordValue w2)
-                
+
+mulWord :: Base27.Word -> Base27.Word -> Base27.Word
+mulWord w1 w2 = toWord $ (wordValue w1) * (wordValue w2)
+
+divWord :: Base27.Word -> Base27.Word -> Base27.Word
+divWord w1 w2 = toWord $ (wordValue w1) `div` (wordValue w2)
+
+negateWord :: Base27.Word -> Base27.Word
+negateWord = subWord (wrd "ZZZZ")
+
 -- | Finds the word that occurs diff times after the initial word.
 offset :: Base27.Word -> Int -> Base27.Word
 offset w diff = addWord w $ toWord diff

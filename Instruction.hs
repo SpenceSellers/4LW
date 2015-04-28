@@ -10,7 +10,9 @@ import qualified Memory
 data DataLocation =
     Register Letter |
     MemoryLocation Word |
-    Constant Word
+    Constant Word |
+    Negated DataLocation |
+    Incremented DataLocation
     deriving (Show, Eq)
 
 data Instruction =
@@ -18,8 +20,11 @@ data Instruction =
     Move DataLocation DataLocation |
     Add DataLocation DataLocation DataLocation |
     Sub DataLocation DataLocation DataLocation |
+    Mul DataLocation DataLocation DataLocation |
+    Div DataLocation DataLocation DataLocation |
     Jump DataLocation |
     JumpZero DataLocation DataLocation
+    
     deriving (Show, Eq)
 
 
@@ -75,7 +80,15 @@ constructInstruction (RawInstruction opcode len operands)
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
-                                 
+    | opcode == (letter2 "ML") = toEither BadInstruction $ Mul <$>
+                                 (operands ^? ix 0) <*>
+                                 (operands ^? ix 1) <*>
+                                 (operands ^? ix 2)
+
+    | opcode == (letter2 "DV") = toEither BadInstruction $ Div <$>
+                                 (operands ^? ix 0) <*>
+                                 (operands ^? ix 1) <*>
+                                 (operands ^? ix 2)
     | opcode == (letter2 "MV") = toEither BadInstruction $ Move <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
@@ -92,14 +105,17 @@ parseOperands :: [Word] -> Maybe [DataLocation]
 parseOperands words = reverse <$> parseOperands_ words []
 
 parseOperands_ :: [Word] -> Operands -> Maybe [DataLocation]
-parseOperands_ (control:opdata:xs) ops
-    | control == wrd "___R" =  parseOperands_ xs ((Register (lastLetter opdata)): ops)
-    | control == wrd "___M" =  parseOperands_ xs ((MemoryLocation opdata): ops)
-    | control == wrd "___C" =  parseOperands_ xs ((Constant opdata): ops)
+parseOperands_ ((Word (_, _, flag, control)):opdata:xs) ops
+    | control == letter 'R' =  parseOperands_ xs (applyFlag flag (Register (lastLetter opdata)): ops)
+    | control == letter 'M' =  parseOperands_ xs (applyFlag flag (MemoryLocation opdata): ops)
+    | control == letter 'C' =  parseOperands_ xs (applyFlag flag (Constant opdata): ops)
 
 parseOperands_ (x:xs) ops = Nothing -- Odd number of words.
 parseOperands_ [] ops = return ops
-    
--- readInstruction :: Word -> Memory.Memory -> Either BadInstruction Instruction
--- readInstruction addr mem =
---     constructInstruction =<< (parseInstruction addr mem)
+
+applyFlag :: Letter -> DataLocation -> DataLocation
+applyFlag flag loc
+    | flag == letter '_' = loc
+    | flag == letter 'N' = Negated loc
+    | flag == letter 'I' = Incremented loc
+    | otherwise = error "Bad flag!"
