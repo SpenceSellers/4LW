@@ -17,7 +17,9 @@ data Instruction =
     Nop | 
     Move DataLocation DataLocation |
     Add DataLocation DataLocation DataLocation |
-    Jump DataLocation
+    Sub DataLocation DataLocation DataLocation |
+    Jump DataLocation |
+    JumpZero DataLocation DataLocation
     deriving (Show, Eq)
 
 
@@ -49,7 +51,7 @@ convertEither _ (Right r) = Right r
 convertEither new (Left e) = Left new
                              
 parseInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
-parseInstruction addr mem = tr $ InstructionParseResult <$> instruction <*> toBad ((*4) <$> instructionLength )
+parseInstruction addr mem = InstructionParseResult <$> instruction <*> toBad ((*4) <$> instructionLength )
     where lengthOffset = 2
           operandsOffset = 4
           opcode = (,) <$> (Memory.readLetter mem addr) <*> (Memory.readLetter mem (offset addr 1))
@@ -57,7 +59,7 @@ parseInstruction addr mem = tr $ InstructionParseResult <$> instruction <*> toBa
           rawOperands =  do
             len <- instructionLength
             Memory.readWords mem (offset addr operandsOffset) (len - 2)
-          operands = parseOperands =<< toMaybe (tr rawOperands)
+          operands = parseOperands =<< toMaybe rawOperands
           rawInstruction = RawInstruction <$> toBad opcode <*> toBad instructionLength <*> toEither BadInstruction operands
           instruction = constructInstruction =<< rawInstruction
           toBad = convertEither BadInstruction
@@ -69,12 +71,20 @@ constructInstruction (RawInstruction opcode len operands)
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
+    | opcode == (letter2 "SB") = toEither BadInstruction $ Sub <$>
+                                 (operands ^? ix 0) <*>
+                                 (operands ^? ix 1) <*>
+                                 (operands ^? ix 2)
                                  
     | opcode == (letter2 "MV") = toEither BadInstruction $ Move <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
     | opcode == (letter2 "JP") = toEither BadInstruction $ Jump <$>
                                  (operands ^? ix 0)
+                                 
+    | opcode == (letter2 "JZ") = toEither BadInstruction $ JumpZero <$>
+                                 (operands ^? ix 0) <*>
+                                 (operands ^? ix 1)
     | otherwise = trace ("OPcode is: " ++ (show opcode)) Left BadInstruction
     -- | opcode == (letter2 "JP") 
 

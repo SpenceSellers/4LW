@@ -90,9 +90,18 @@ runInstruction (Move src dest) =
 
 runInstruction (Add src1 src2 dest) =
     setData dest =<< addWord <$> getData src1 <*> getData src2
+                   
+runInstruction (Sub src1 src2 dest) =
+    setData dest =<< subWord <$> getData src1 <*> getData src2
 
 runInstruction (Jump dest) =
     setData (Register pcRegister) =<< getData dest
+
+runInstruction (JumpZero datloc dest) = do
+    dat <- getData datloc
+    if dat == minWord
+      then setData (Register pcRegister) =<< getData dest
+      else return ()
       
 tick :: State MachineState MachineAction
 tick = do

@@ -4,7 +4,13 @@ import Data.Char
 import Data.Ix
 import Data.Digits (digits, unDigits)
     
-newtype Letter = Letter Char deriving (Ord, Eq)
+newtype Letter = Letter Char deriving (Eq)
+
+instance Ord Letter where
+    compare (Letter '_') (Letter '_') = EQ
+    compare (Letter '_') (Letter _) = LT
+    compare (Letter _) (Letter '_') = GT
+    compare (Letter a) (Letter b) = compare a b
 
 instance Ix Letter where
     range (l1, l2) = map letterValue $ range (n1, n2)
@@ -18,7 +24,7 @@ instance Ix Letter where
 
 instance Show Letter where
     show (Letter c) = "." ++ [c]
-                      
+
 -- | Better constructor, with checking.
 letter :: Char -> Letter
 letter c = if Base27.isLetter c then Letter c else error "Bad letter value!"
@@ -50,7 +56,8 @@ convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
 
 -- | A word is basically a tuple of four letters.
-data Word = Word (Letter, Letter, Letter, Letter) deriving (Eq, Ord)
+data Word = Word (Letter, Letter, Letter, Letter)
+            deriving (Eq, Ord)
 
 -- | The default Show is hard to read, let's just cram the letters together.
 instance Show Base27.Word where
@@ -111,6 +118,9 @@ lastLetter (Word (a,b,c,d)) = d
 addWord :: Base27.Word -> Base27.Word -> Base27.Word
 addWord w1 w2 = toWord $ (wordValue w1) + (wordValue w2)
 
+subWord :: Base27.Word -> Base27.Word -> Base27.Word
+subWord w1 w2 = toWord $ (wordValue w1) - (wordValue w2)
+                
 -- | Finds the word that occurs diff times after the initial word.
 offset :: Base27.Word -> Int -> Base27.Word
 offset w diff = addWord w $ toWord diff
