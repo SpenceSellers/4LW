@@ -62,8 +62,8 @@ readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionPar
 readInstruction addr mem = InstructionParseResult <$> instruction <*> toBad ((*4) <$> instructionLength )
     where lengthOffset = 2
           operandsOffset = 4
-          opcode = (,) <$> (Memory.readLetter mem addr) <*> (Memory.readLetter mem (offset addr 1))
-          instructionLength = Base27.getValue <$> (toBad $ Memory.readLetter mem (offset addr lengthOffset))
+          opcode = (,) <$> Memory.readLetter mem addr <*> Memory.readLetter mem (offset addr 1)
+          instructionLength = Base27.getValue <$> toBad (Memory.readLetter mem (offset addr lengthOffset))
           operands = do
             len <- instructionLength
             readOperands (offset addr operandsOffset) (len - 2) mem
@@ -73,35 +73,35 @@ readInstruction addr mem = InstructionParseResult <$> instruction <*> toBad ((*4
 
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
 constructInstruction (RawInstruction opcode len operands)
-    | opcode == (letter2 "__") = Right Nop
-    | opcode == (letter2 "AD") = toEither BadInstruction $ Add <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1) <*>
-                                 (operands ^? ix 2)
-                                 
-    | opcode == (letter2 "SB") = toEither BadInstruction $ Sub <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1) <*>
-                                 (operands ^? ix 2)
-                                 
-    | opcode == (letter2 "ML") = toEither BadInstruction $ Mul <$>
+    | opcode == letter2 "__" = Right Nop
+    | opcode == letter2 "AD" = toEither BadInstruction $ Add <$>
+                                (operands ^? ix 0) <*>
+                                (operands ^? ix 1) <*>
+                                (operands ^? ix 2)
+                                
+    | opcode == letter2 "SB" = toEither BadInstruction $ Sub <$>
+                                (operands ^? ix 0) <*>
+                                (operands ^? ix 1) <*>
+                                (operands ^? ix 2)
+                                
+    | opcode == letter2 "ML" = toEither BadInstruction $ Mul <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
 
-    | opcode == (letter2 "DV") = toEither BadInstruction $ Div <$>
+    | opcode == letter2 "DV" = toEither BadInstruction $ Div <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
                                  
-    | opcode == (letter2 "MV") = toEither BadInstruction $ Move <$>
+    | opcode == letter2 "MV" = toEither BadInstruction $ Move <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
                                  
-    | opcode == (letter2 "JP") = toEither BadInstruction $ Jump <$>
+    | opcode == letter2 "JP" = toEither BadInstruction $ Jump <$>
                                  (operands ^? ix 0)
                                  
-    | opcode == (letter2 "JZ") = toEither BadInstruction $ JumpZero <$>
+    | opcode == letter2 "JZ" = toEither BadInstruction $ JumpZero <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
                                  
@@ -109,7 +109,7 @@ constructInstruction (RawInstruction opcode len operands)
 
 readOperands :: Word -> Int -> Memory.Memory -> Either BadInstruction [DataLocation]
 readOperands addr len mem =
-    toEither BadInstruction $ (parseOperands =<< (toMaybe $ Memory.readWords mem addr len))
+    toEither BadInstruction $ parseOperands =<< toMaybe (Memory.readWords mem addr len)
 
 parseOperands :: [Word] -> Maybe [DataLocation]
 parseOperands words = reverse <$> parseOperands_ words []

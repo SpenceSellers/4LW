@@ -36,7 +36,7 @@ isLetter c = inRange ('A', 'Z') c
 -- | Gets the numeric value of a Letter.
 getValue :: Letter -> Int
 getValue (Letter '_') = 0
-getValue (Letter l) = (index ('A', 'Z') l) + 1
+getValue (Letter l) = index ('A', 'Z') l + 1
 
 -- | Turns a numeric value into a Letter
 letterValue :: Int -> Letter
@@ -49,7 +49,7 @@ toLetter num
     | num == 0 = letter '_'
     | num < 0 = error "toLetter must be positive"
     | num > 26 = error "toLetter must be 26 or below."
-    | otherwise = letter $ chr ((ord 'A') + num - 1)
+    | otherwise = letter $ chr (ord 'A' + num - 1)
 
 
 convertBase :: Integral a => a -> a -> [a] -> [a]

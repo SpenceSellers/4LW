@@ -44,7 +44,7 @@ registerBounds = (letter 'A', letter 'T')
 
 -- | A set of blank registers.
 blankRegisters :: Registers
-blankRegisters = listArray registerBounds (repeat (minWord))
+blankRegisters = listArray registerBounds (repeat minWord)
 
 -- | A blank "starting" state of the machine, with everything zeroed.
 blankState :: MachineState
@@ -54,11 +54,11 @@ blankState = MachineState blankRegisters Memory.blankMemory
 getPC :: State MachineState Word
 getPC = do
   state <- get
-  return $ fromJust $ state ^? registers.(ix pcRegister)
+  return $ fromJust $ state ^? registers . ix pcRegister
 
 -- | Sets the program counter
 setPC :: Word -> State MachineState ()
-setPC addr = registers.(ix pcRegister) .= addr
+setPC addr = registers . ix pcRegister .= addr
 
 -- | Fetches data from a DataLocation.
 getData :: DataLocation -> State MachineState Word
@@ -73,6 +73,7 @@ getData (MemoryLocation addr) = do
   return $ either (const minWord) id $ Memory.readWord (state^.memory) addr
 
 getData (Negated loc) = do
+  
   val <- getData loc
   return $ negateWord val
 
@@ -91,7 +92,7 @@ setData (Register letter) word =
     registers %= (\regs -> regs // [(letter, word)])
       
 setData (MemoryLocation addr) word =
-    memory %= \mem -> (Memory.writeWord mem addr word)
+    memory %= \mem -> Memory.writeWord mem addr word
 
 setData (Negated loc) word =
     setData loc (negateWord word)
@@ -141,14 +142,14 @@ tick = do
     Right (InstructionParseResult instruction length) ->
         do
           --trace ("ins: " ++ (show instruction)) return ()
-          setPC $ (offset pc length)
+          setPC $ offset pc length
           runInstruction instruction
           return $ case instruction of Nop -> Halt; _ -> NoAction -- TODO: Remove temporary Nop halt
           
 run :: StateT MachineState IO ()
 run = do
   state <- get
-  tickResult <- hoistState $ tick
+  tickResult <- hoistState tick
   --registerA <- hoistState $ getData (Register (Letter 'A'))
   --registerT <- hoistState $ getData (Register (Letter 'T'))
   --liftIO $ putStrLn $ "Register A: " ++ (show $ registerA)
