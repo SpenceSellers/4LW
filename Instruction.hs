@@ -23,7 +23,6 @@ data Instruction =
     Sub DataLocation DataLocation DataLocation |
     Mul DataLocation DataLocation DataLocation |
     Div DataLocation DataLocation DataLocation |
-    
     Jump DataLocation |
     JumpZero DataLocation DataLocation
     
@@ -56,20 +55,21 @@ unwrapEither (Left a) = error "Failed Either"
 convertEither :: newerr -> Either e r -> Either newerr r
 convertEither _ (Right r) = Right r
 convertEither new (Left e) = Left new
-                             
-parseInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
-parseInstruction addr mem = InstructionParseResult <$> instruction <*> toBad ((*4) <$> instructionLength )
+
+toBad = convertEither BadInstruction
+
+readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
+readInstruction addr mem = InstructionParseResult <$> instruction <*> toBad ((*4) <$> instructionLength )
     where lengthOffset = 2
           operandsOffset = 4
           opcode = (,) <$> (Memory.readLetter mem addr) <*> (Memory.readLetter mem (offset addr 1))
-          instructionLength = getValue <$> Memory.readLetter mem (offset addr lengthOffset) 
-          rawOperands =  do
+          instructionLength = Base27.getValue <$> (toBad $ Memory.readLetter mem (offset addr lengthOffset))
+          operands = do
             len <- instructionLength
-            Memory.readWords mem (offset addr operandsOffset) (len - 2)
-          operands = parseOperands =<< toMaybe rawOperands
-          rawInstruction = RawInstruction <$> toBad opcode <*> toBad instructionLength <*> toEither BadInstruction operands
+            readOperands (offset addr operandsOffset) (len - 2) mem
+          rawInstruction = RawInstruction <$> toBad opcode <*> instructionLength <*> operands
           instruction = constructInstruction =<< rawInstruction
-          toBad = convertEither BadInstruction
+          
 
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
 constructInstruction (RawInstruction opcode len operands)
@@ -78,10 +78,12 @@ constructInstruction (RawInstruction opcode len operands)
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
+                                 
     | opcode == (letter2 "SB") = toEither BadInstruction $ Sub <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
+                                 
     | opcode == (letter2 "ML") = toEither BadInstruction $ Mul <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
@@ -91,17 +93,23 @@ constructInstruction (RawInstruction opcode len operands)
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
+                                 
     | opcode == (letter2 "MV") = toEither BadInstruction $ Move <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
+                                 
     | opcode == (letter2 "JP") = toEither BadInstruction $ Jump <$>
                                  (operands ^? ix 0)
                                  
     | opcode == (letter2 "JZ") = toEither BadInstruction $ JumpZero <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
-    | otherwise = trace ("OPcode is: " ++ (show opcode)) Left BadInstruction
-    -- | opcode == (letter2 "JP") 
+                                 
+    | otherwise = trace ("Invalid OPcode is: " ++ (show opcode)) Left BadInstruction
+
+readOperands :: Word -> Int -> Memory.Memory -> Either BadInstruction [DataLocation]
+readOperands addr len mem =
+    toEither BadInstruction $ (parseOperands =<< (toMaybe $ Memory.readWords mem addr len))
 
 parseOperands :: [Word] -> Maybe [DataLocation]
 parseOperands words = reverse <$> parseOperands_ words []

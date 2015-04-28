@@ -133,7 +133,7 @@ tick :: State MachineState MachineAction
 tick = do
   pc <- getPC
   state <- get
-  let instructionResult = parseInstruction pc mem
+  let instructionResult = readInstruction pc mem
       mem = state ^. memory
             
   case instructionResult of
