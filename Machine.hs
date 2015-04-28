@@ -79,6 +79,10 @@ getData (Negated loc) = do
 getData (Incremented loc) = do
   val <- getData loc
   return $ offset val 1
+
+getData (Decremented loc) = do
+  val <- getData loc
+  return $ offset val (-1)
          
 -- | Applies a data write to any location, be it a register, main memory, etc.
 setData :: DataLocation -> Word -> State MachineState ()
@@ -94,6 +98,10 @@ setData (Negated loc) word =
 
 setData (Incremented loc) word =
     setData loc (offset word 1)
+
+setData (Decremented loc) word =
+    setData loc (offset word (-1))
+
 -- | Applies an instruction to the state of the Machine.
 runInstruction :: Instruction -> State MachineState ()
 runInstruction Nop = return ()
@@ -141,8 +149,8 @@ run :: StateT MachineState IO ()
 run = do
   state <- get
   tickResult <- hoistState $ tick
-  registerA <- hoistState $ getData (Register (Letter 'A'))
-  registerT <- hoistState $ getData (Register (Letter 'T'))
+  --registerA <- hoistState $ getData (Register (Letter 'A'))
+  --registerT <- hoistState $ getData (Register (Letter 'T'))
   --liftIO $ putStrLn $ "Register A: " ++ (show $ registerA)
   --liftIO $ putStrLn $ "Register T: " ++ (show $ registerT)
   case tickResult of

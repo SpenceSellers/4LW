@@ -12,7 +12,8 @@ data DataLocation =
     MemoryLocation Word |
     Constant Word |
     Negated DataLocation |
-    Incremented DataLocation
+    Incremented DataLocation |
+    Decremented DataLocation
     deriving (Show, Eq)
 
 data Instruction =
@@ -22,6 +23,7 @@ data Instruction =
     Sub DataLocation DataLocation DataLocation |
     Mul DataLocation DataLocation DataLocation |
     Div DataLocation DataLocation DataLocation |
+    
     Jump DataLocation |
     JumpZero DataLocation DataLocation
     
@@ -118,4 +120,5 @@ applyFlag flag loc
     | flag == letter '_' = loc
     | flag == letter 'N' = Negated loc
     | flag == letter 'I' = Incremented loc
+    | flag == letter 'D' = Decremented loc
     | otherwise = error "Bad flag!"
