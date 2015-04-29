@@ -1,8 +1,8 @@
-
 module Main where
 import Machine
 import Control.Monad.State.Lazy
 import Control.Lens
+import Data.Maybe
 import Data.Ix
 import Base27
 import Memory
@@ -20,9 +20,7 @@ main = do
   prog <- readFile filename
   
   let state = blankState
-  let state' = memory %~ importString
-               (sanitizeProg prog)
-               (wrd "____") $ state
+  let state' = memory %~ fromJust . importString (sanitizeProg prog) (wrd "____") $ state
   (_, state'') <- runStateT run state'
   putStrLn $ exportString (_memory state'') (minWord, wrd "_AAA")
-  putStrLn $ show $ state'' ^. registers
+  print $ state'' ^. registers

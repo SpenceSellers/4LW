@@ -2,6 +2,7 @@ module Memory where
 import Prelude hiding (Word)
 import Base27
 import Data.Array
+import Control.Applicative
 type Memory = Array Word Letter
 
 data MemoryError = AddressOverrun deriving (Show, Eq)
@@ -61,5 +62,5 @@ exportString mem (start, end) =
     map (\x -> (getletter $ mem ! x)) $ range (start, end)
         where getletter (Letter c) = c
 
-importString :: String -> Word -> Memory -> Memory
-importString str addr mem = writeLetters mem addr (map letter str)
+importString :: String -> Word -> Memory -> Maybe Memory
+importString str addr mem = writeLetters mem addr <$> sequence (map letterSafe str)

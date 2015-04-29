@@ -25,9 +25,17 @@ instance Ix Letter where
 instance Show Letter where
     show (Letter c) = "." ++ [c]
 
+data Offset = LetterOffset Int | WordOffset Int
+            deriving (Show)
+
 -- | Better constructor, with checking.
 letter :: Char -> Letter
 letter c = if Base27.isLetter c then Letter c else error "Bad letter value!"
+
+letterSafe :: Char -> Maybe Letter
+letterSafe c
+    | Base27.isLetter c = Just (letter c)
+    | otherwise = Nothing
 
 isLetter :: Char -> Bool
 isLetter '_' = True
@@ -56,7 +64,7 @@ convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
 
 -- | A word is basically a tuple of four letters.
-data Word = Word (Letter, Letter, Letter, Letter)
+data Word = Word !(Letter, Letter, Letter, Letter)
             deriving (Eq, Ord)
 
 -- | The default Show is hard to read, let's just cram the letters together.

@@ -70,7 +70,6 @@ readInstruction addr mem = InstructionParseResult <$> instruction <*> toBad ((*4
           rawInstruction = RawInstruction <$> toBad opcode <*> instructionLength <*> operands
           instruction = constructInstruction =<< rawInstruction
           
-
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
 constructInstruction (RawInstruction opcode len operands)
     | opcode == letter2 "__" = Right Nop
