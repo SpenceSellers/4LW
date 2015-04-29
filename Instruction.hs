@@ -114,7 +114,7 @@ parseOperands :: [Word] -> Maybe [DataLocation]
 parseOperands words = reverse <$> parseOperands_ words []
 
 parseOperands_ :: [Word] -> Operands -> Maybe [DataLocation]
-parseOperands_ ((Word (_, _, flag, control)):opdata:xs) ops
+parseOperands_ ((Word _ _ flag control):opdata:xs) ops
     | control == letter 'R' =  parseOperands_ xs (applyFlag flag (Register (lastLetter opdata)): ops)
     | control == letter 'M' =  parseOperands_ xs (applyFlag flag (MemoryLocation opdata): ops)
     | control == letter 'C' =  parseOperands_ xs (applyFlag flag (Constant opdata): ops)

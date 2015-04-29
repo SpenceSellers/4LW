@@ -64,14 +64,14 @@ convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
 
 -- | A word is basically a tuple of four letters.
-data Word = Word !(Letter, Letter, Letter, Letter)
+data Word = Word !Letter !Letter !Letter !Letter
             deriving (Eq, Ord)
 
 -- | The default Show is hard to read, let's just cram the letters together.
 instance Show Base27.Word where
     show word =
         [ca, cb, cc, cd] where
-            (Word (a, b, c, d)) = word
+            (Word a b c d) = word
             (Letter ca) = a
             (Letter cb) = b
             (Letter cc) = c
@@ -88,9 +88,9 @@ instance Ix Base27.Word where
     inRange (w1, w2) w = (wordValue w >= wordValue w1) && (wordValue w <= wordValue w2)
 
 minWord :: Base27.Word
-minWord = Word (letter '_', letter '_', letter '_', letter '_')
+minWord = Word (letter '_') (letter '_') (letter '_') (letter '_')
 
-maxWord = Word (letter 'Z', letter 'Z', letter 'Z', letter 'Z')
+maxWord = Word (letter 'Z') (letter 'Z') (letter 'Z') (letter 'Z')
           
 -- | The number of possible values that a word can have.
 wordValues :: Int
@@ -98,14 +98,14 @@ wordValues = 27 ^ 4
 
 -- | Turns a word into a list of letters.
 wordToList :: Base27.Word -> [Letter]
-wordToList (Word (a,b,c,d)) = [a,b,c,d]
+wordToList (Word a b c d) = [a,b,c,d]
 
 -- | Turns a list of letters into a word. Beware, this is a partial function.
 wordFromList :: [Letter] -> Base27.Word
-wordFromList (a:b:c:d:_) = Word (a,b,c,d)
-wordFromList (a:b:c:_) = Word (letter '_', a, b, c)
-wordFromList (a:b:_) = Word (letter '_', letter '_', a, b)
-wordFromList (a:_) = Word (letter '_', letter '_', letter '_', a)
+wordFromList (a:b:c:d:_) = Word a b c d
+wordFromList (a:b:c:_) = Word (letter '_') a b c
+wordFromList (a:b:_) = Word (letter '_') (letter '_') a b
+wordFromList (a:_) = Word (letter '_') (letter '_') (letter '_') a
 wordFromList (_) = minWord
 
 wordValue :: Base27.Word -> Int
@@ -117,10 +117,10 @@ toWord =  wordFromList . map toLetter . digits 27 . (`mod` wordValues)
 
 -- | Extends a letter to a word with the same numeric value.
 extendToWord :: Letter -> Base27.Word
-extendToWord letter_ = Word (letter '_', letter '_', letter '_', letter_)
+extendToWord letter_ = Word (letter '_') (letter '_') (letter '_') letter_
 
 lastLetter :: Base27.Word -> Letter
-lastLetter (Word (a,b,c,d)) = d
+lastLetter (Word _ _ _ d) = d
 
 -- | Adds two words.
 addWord :: Base27.Word -> Base27.Word -> Base27.Word
@@ -144,7 +144,7 @@ offset w diff = addWord w $ toWord diff
                 
 -- | Debug / Convenience function to make a word from a string.
 wrd :: String -> Base27.Word
-wrd (a:b:c:d:[]) = Word (letter a, letter b, letter c, letter d)
+wrd (a:b:c:d:[]) = Word (letter a) (letter b) (letter c) (letter d)
 
 wordToString :: Base27.Word -> String
 wordToString word = map getLetter (wordToList word)

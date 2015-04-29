@@ -25,7 +25,7 @@ readWord mem addr = do
   b <- readLetter mem (offset addr 1)
   c <- readLetter mem (offset addr 2)
   d <- readLetter mem (offset addr 3)
-  return $ Word (a, b, c, d)
+  return $ Word a b c d
 
 writeLetter :: Memory -> Word -> Letter -> Memory
 writeLetter mem addr letter = mem // [(addr, letter)]
@@ -41,7 +41,7 @@ applyWrite mem (MemoryWrite addr letter) =
 
 -- |Todo: Check for end of bounds
 writeWord :: Memory -> Word -> Word -> Memory
-writeWord mem addr (Word (a,b,c,d)) =
+writeWord mem addr (Word a b c d) =
     mem // [(addr0, a),
             (addr1, b),
             (addr2, c),
