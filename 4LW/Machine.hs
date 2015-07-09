@@ -1,5 +1,6 @@
 
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Machine where
 import Prelude hiding (Word)
@@ -9,6 +10,7 @@ import Data.Ix
 import Instruction
 import Base27
 import qualified Memory
+import qualified Io
 import Control.Lens
 import Control.Lens.At
 import Control.Lens.Iso
@@ -40,7 +42,9 @@ data MachineState = MachineState {
       _registers :: Registers,
       _memory :: Memory.Memory,
       _action :: MachineAction,
-      _ticknum :: Integer
+      _tickNum :: Integer,
+      _inBuffer :: [Char],
+      _outBuffer :: [Char]
     } deriving (Show)
 
 makeLenses ''MachineState
@@ -54,7 +58,17 @@ blankRegisters = listArray registerBounds (repeat minWord)
 
 -- | A blank "starting" state of the machine, with everything zeroed.
 blankState :: MachineState
-blankState = MachineState blankRegisters Memory.blankMemory NoAction 0
+blankState = MachineState blankRegisters Memory.blankMemory NoAction 0 [] []
+
+popInBuffer :: State MachineState (Maybe Char)
+popInBuffer = do
+  state <- get
+  let buf = view inBuffer state
+  case buf of
+    x:xs -> do
+        inBuffer .= xs
+        return (Just x)
+    [] -> return Nothing
 
 -- | Gets the Program Counter
 getPC :: State MachineState Word
@@ -79,7 +93,10 @@ getData (MemoryLocation addr) = do
   return $ either (const minWord) id $ Memory.readWord (state^.memory) addr
 
 getData (Io selector) = do
-    return minWord -- TODO implement
+  char <- popInBuffer
+  case char of
+    Just c -> return $ Io.charToInternal c
+    Nothing -> return $ maxWord
 
 getData (Negated loc) = do
 
@@ -104,7 +121,7 @@ setData (MemoryLocation addr) word =
     memory %= \mem -> Memory.writeWord mem addr word
 
 setData (Io selector) word =
-    action .= IOWrite (show word)
+    action .= IOWrite [Io.internalToChar word]
 
 setData (Negated loc) word =
     setData loc (negateWord word)
@@ -147,6 +164,7 @@ tick :: State MachineState ()
 tick = do
   pc <- getPC
   state <- get
+  tickNum += 1
   let instructionResult = readInstruction pc mem
       mem = state ^. memory
 
@@ -159,16 +177,23 @@ tick = do
           runInstruction instruction
           --return $ case instruction of Nop -> Halt; _ -> NoAction -- TODO: Remove temporary Nop halt
 
+start :: StateT MachineState IO ()
+start = do
+    lift $ hSetBuffering stdin NoBuffering
+    run
+
 run :: StateT MachineState IO ()
 run = do
-  hoistState tick
-  registerA <- hoistState $ getData (Register (Letter 'A'))
-  registerT <- hoistState $ getData (Register (Letter 'T'))
-  --liftIO $ putStrLn $ "Register A: " ++ (show $ registerA)
-  --liftIO $ putStrLn $ "Register T: " ++ (show $ registerT)
+  input <- lift $ Io.readToBuffer []
+  inBuffer <>= input
+
+  hoistState tick -- Run the tick
+
   state <- hoistState $ get
   let currentAction = view action state
+  --let ticknum = view tickNum state
   action .= NoAction -- Clear action
+
   case currentAction of
     NoAction -> run
     HaltAction -> return ()

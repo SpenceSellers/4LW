@@ -18,9 +18,11 @@ main = do
   args <- getArgs
   let filename = head args
   prog <- readFile filename
-  
+
   let state = blankState
   let state' = memory %~ fromJust . importString (sanitizeProg prog) (wrd "____") $ state
-  (_, state'') <- runStateT run state'
+  (_, state'') <- runStateT start state'
+  putStrLn "\n\n\n\n\n\n"
+  putStrLn "Done:"
   putStrLn $ exportString (_memory state'') (minWord, wrd "_AAA")
   print $ state'' ^. registers
