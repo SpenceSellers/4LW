@@ -8,16 +8,18 @@ import Base27
 import qualified Memory
 
 data DataLocation =
-    Register Letter |
-    MemoryLocation Word |
-    Constant Word |
-    Negated DataLocation |
-    Incremented DataLocation |
-    Decremented DataLocation
+    Register Letter |          -- A register
+    MemoryLocation Word |      -- A location in main memory
+    Constant Word |            -- A fixed constant word
+    Io Letter |                -- Std IO. Letter/Word will be used as a selector later.
+    Negated DataLocation |     -- The real result but negated
+    Incremented DataLocation | -- The real result but incremented
+    Decremented DataLocation   -- The real result but decremented
     deriving (Show, Eq)
 
 data Instruction =
-    Nop | 
+    Nop |
+    Halt |
     Move DataLocation DataLocation |
     Add DataLocation DataLocation DataLocation |
     Sub DataLocation DataLocation DataLocation |
@@ -25,7 +27,7 @@ data Instruction =
     Div DataLocation DataLocation DataLocation |
     Jump DataLocation |
     JumpZero DataLocation DataLocation
-    
+
     deriving (Show, Eq)
 
 
@@ -40,7 +42,7 @@ type Operands = [DataLocation]
 
 tr :: Show a => a -> a
 tr x = trace (show x) x
-       
+
 toEither :: a -> Maybe b -> Either a b
 toEither leftValue = maybe (Left leftValue) Right
 
@@ -69,20 +71,21 @@ readInstruction addr mem = InstructionParseResult <$> instruction <*> toBad ((*4
             readOperands (offset addr operandsOffset) (len - 2) mem
           rawInstruction = RawInstruction <$> toBad opcode <*> instructionLength <*> operands
           instruction = constructInstruction =<< rawInstruction
-          
+
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
 constructInstruction (RawInstruction opcode len operands)
     | opcode == letter2 "__" = Right Nop
+    | opcode == letter2 "HL" = Right Halt
     | opcode == letter2 "AD" = toEither BadInstruction $ Add <$>
                                 (operands ^? ix 0) <*>
                                 (operands ^? ix 1) <*>
                                 (operands ^? ix 2)
-                                
+
     | opcode == letter2 "SB" = toEither BadInstruction $ Sub <$>
                                 (operands ^? ix 0) <*>
                                 (operands ^? ix 1) <*>
                                 (operands ^? ix 2)
-                                
+
     | opcode == letter2 "ML" = toEither BadInstruction $ Mul <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
@@ -92,18 +95,18 @@ constructInstruction (RawInstruction opcode len operands)
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
-                                 
+
     | opcode == letter2 "MV" = toEither BadInstruction $ Move <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
-                                 
+
     | opcode == letter2 "JP" = toEither BadInstruction $ Jump <$>
                                  (operands ^? ix 0)
-                                 
+
     | opcode == letter2 "JZ" = toEither BadInstruction $ JumpZero <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
-                                 
+
     | otherwise = trace ("Invalid OPcode is: " ++ (show opcode)) Left BadInstruction
 
 readOperands :: Word -> Int -> Memory.Memory -> Either BadInstruction [DataLocation]
@@ -118,6 +121,7 @@ parseOperands_ ((Word _ _ flag control):opdata:xs) ops
     | control == letter 'R' =  parseOperands_ xs (applyFlag flag (Register (lastLetter opdata)): ops)
     | control == letter 'M' =  parseOperands_ xs (applyFlag flag (MemoryLocation opdata): ops)
     | control == letter 'C' =  parseOperands_ xs (applyFlag flag (Constant opdata): ops)
+    | control == letter 'I' =  parseOperands_ xs (applyFlag flag (Io (lastLetter opdata)): ops)
 
 parseOperands_ (x:xs) ops = Nothing -- Odd number of words.
 parseOperands_ [] ops = return ops

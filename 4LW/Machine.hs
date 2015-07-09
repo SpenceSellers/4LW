@@ -3,6 +3,7 @@
 
 module Machine where
 import Prelude hiding (Word)
+import System.IO
 import Data.Array
 import Data.Ix
 import Instruction
@@ -27,16 +28,21 @@ stackRegister = letter 'S'
 pcRegister :: Letter
 pcRegister = letter 'T'
 
-data MachineAction = NoAction | Halt deriving (Show, Eq)
+data MachineAction = NoAction |
+                     HaltAction |
+                     IOWrite String
+                     deriving (Show, Eq)
 
 type Registers = Array Letter Word
 
 -- | Stores the entire machine state from one instruction to the next.
 data MachineState = MachineState {
       _registers :: Registers,
-      _memory :: Memory.Memory
+      _memory :: Memory.Memory,
+      _action :: MachineAction,
+      _ticknum :: Integer
     } deriving (Show)
-                  
+
 makeLenses ''MachineState
 
 registerBounds :: (Letter, Letter)
@@ -48,7 +54,7 @@ blankRegisters = listArray registerBounds (repeat minWord)
 
 -- | A blank "starting" state of the machine, with everything zeroed.
 blankState :: MachineState
-blankState = MachineState blankRegisters Memory.blankMemory
+blankState = MachineState blankRegisters Memory.blankMemory NoAction 0
 
 -- | Gets the Program Counter
 getPC :: State MachineState Word
@@ -72,8 +78,11 @@ getData (MemoryLocation addr) = do
   state <- get
   return $ either (const minWord) id $ Memory.readWord (state^.memory) addr
 
+getData (Io selector) = do
+    return minWord -- TODO implement
+
 getData (Negated loc) = do
-  
+
   val <- getData loc
   return $ negateWord val
 
@@ -84,15 +93,18 @@ getData (Incremented loc) = do
 getData (Decremented loc) = do
   val <- getData loc
   return $ offset val (-1)
-         
+
 -- | Applies a data write to any location, be it a register, main memory, etc.
 setData :: DataLocation -> Word -> State MachineState ()
 setData (Constant const) word = return () -- No-op for now. Raise interrupt later.
 setData (Register letter) word =
     registers %= (\regs -> regs // [(letter, word)])
-      
+
 setData (MemoryLocation addr) word =
     memory %= \mem -> Memory.writeWord mem addr word
+
+setData (Io selector) word =
+    action .= IOWrite (show word)
 
 setData (Negated loc) word =
     setData loc (negateWord word)
@@ -106,12 +118,13 @@ setData (Decremented loc) word =
 -- | Applies an instruction to the state of the Machine.
 runInstruction :: Instruction -> State MachineState ()
 runInstruction Nop = return ()
+runInstruction Instruction.Halt = action .= HaltAction
 runInstruction (Move src dest) =
     setData dest =<< getData src
 
 runInstruction (Add src1 src2 dest) =
     setData dest =<< addWord <$> getData src1 <*> getData src2
-                   
+
 runInstruction (Sub src1 src2 dest) =
     setData dest =<< subWord <$> getData src1 <*> getData src2
 
@@ -129,31 +142,37 @@ runInstruction (JumpZero datloc dest) = do
     if dat == minWord
       then setData (Register pcRegister) =<< getData dest
       else return ()
-      
-tick :: State MachineState MachineAction
+
+tick :: State MachineState ()
 tick = do
   pc <- getPC
   state <- get
   let instructionResult = readInstruction pc mem
       mem = state ^. memory
-            
+
   case instructionResult of
-    Left BadInstruction -> trace ("BAD INSTRUCTION") $ return Halt
+    Left BadInstruction -> trace ("BAD INSTRUCTION") $ return ()
     Right (InstructionParseResult instruction length) ->
         do
           --trace ("ins: " ++ (show instruction)) return ()
           setPC $ offset pc length
           runInstruction instruction
-          return $ case instruction of Nop -> Halt; _ -> NoAction -- TODO: Remove temporary Nop halt
-          
+          --return $ case instruction of Nop -> Halt; _ -> NoAction -- TODO: Remove temporary Nop halt
+
 run :: StateT MachineState IO ()
 run = do
-  state <- get
-  tickResult <- hoistState tick
-  --registerA <- hoistState $ getData (Register (Letter 'A'))
-  --registerT <- hoistState $ getData (Register (Letter 'T'))
+  hoistState tick
+  registerA <- hoistState $ getData (Register (Letter 'A'))
+  registerT <- hoistState $ getData (Register (Letter 'T'))
   --liftIO $ putStrLn $ "Register A: " ++ (show $ registerA)
   --liftIO $ putStrLn $ "Register T: " ++ (show $ registerT)
-  case tickResult of
+  state <- hoistState $ get
+  let currentAction = view action state
+  action .= NoAction -- Clear action
+  case currentAction of
     NoAction -> run
-    Halt -> return ()
+    HaltAction -> return ()
+    IOWrite str -> do
+        lift $ putStr str
+        lift $ hFlush stdout
+        run
