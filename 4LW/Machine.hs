@@ -76,6 +76,24 @@ setRegister r w = registers %= (\regs -> regs // [(r, w)])
 setMemory :: Word -> Word -> State MachineState ()
 setMemory addr word = memory %= \mem -> Memory.writeWord mem addr word
 
+pushStack :: Word -> State MachineState ()
+pushStack word = do
+    regs <- use registers
+    let oldStackAddr = regs ! stackRegister
+    let newStackAddr = offset oldStackAddr (-4)
+    setMemory newStackAddr word -- Make sure to use the NEW one.
+
+    setRegister stackRegister newStackAddr
+
+popStack :: State MachineState Word
+popStack = do
+    state <- get
+    regs <- use registers
+    let stackAddr = regs ! stackRegister
+    let newAddr = offset stackAddr 4
+    setRegister stackRegister newAddr
+    return $ either (const minWord) id $ Memory.readWord (state^.memory) stackAddr
+
 -- | Gets the Program Counter
 getPC :: State MachineState Word
 getPC = do
@@ -100,13 +118,7 @@ getData (MemoryLocation loc) =
     either <$> pure (const minWord) <*> pure id <*>
         (Memory.readWord <$> use memory <*> getData loc)
 
-getData (Stack) = do
-    state <- get
-    regs <- use registers
-    let stackAddr = regs ! stackRegister
-    let newAddr = offset stackAddr 4
-    setRegister stackRegister newAddr
-    return $ either (const minWord) id $ Memory.readWord (state^.memory) stackAddr
+getData (Stack) = popStack
 
 getData (Io selector) = do
   char <- popInBuffer
@@ -127,13 +139,7 @@ setData (Register letter) word = setRegister letter word
 
 setData (MemoryLocation loc) word = flip setMemory word =<< (getData loc)
 
-setData (Stack) word = do
-    regs <- use registers
-    let oldStackAddr = regs ! stackRegister
-    let newStackAddr = offset oldStackAddr (-4)
-    setMemory newStackAddr word -- Make sure to use the NEW one.
-
-    setRegister stackRegister newStackAddr
+setData (Stack) word = pushStack word
 
 setData (Io selector) word =
     action .= IOWrite [Io.internalToChar word]
@@ -174,6 +180,12 @@ runInstruction (JumpZero datloc dest) = do
     if dat == minWord
       then setRegister pcRegister =<< getData dest
       else return ()
+
+runInstruction (FCall addr) = do
+    pushStack =<< getPC
+    setPC =<< getData addr
+
+runInstruction (Return) = setPC =<< popStack
 
 tick :: State MachineState ()
 tick = do

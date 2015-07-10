@@ -23,6 +23,7 @@ charToInternal c
     | c == '_' = wrd "____"
     | inRange ('A', 'Z') c = extendToWord $ letter c
     | inRange ('a', 'z') c = Base27.Word (letter '_') (letter '_') (letter 'A') (letter . toUpper $ c)
+    | inRange ('0', '9') c = Base27.Word (letter '_') (letter '_') (letter 'N') (Base27.letterValue . read $ [c])
 
 internalToChar :: Base27.Word -> Char
 internalToChar (Word a b c d) = char
