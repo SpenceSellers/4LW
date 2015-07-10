@@ -16,7 +16,7 @@ readToBuffer buf = do
             return buf
 
 charToInternal :: Char -> Base27.Word
-charToInternal c = minWord
+charToInternal c = extendToWord $ letter c
 
 internalToChar :: Base27.Word -> Char
 internalToChar w = c

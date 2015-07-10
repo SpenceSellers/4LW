@@ -9,9 +9,9 @@ import qualified Memory
 
 data DataLocation =
     Register Letter |          -- A register
-    MemoryLocation Word |      -- A location in main memory
     Constant Word |            -- A fixed constant word
     Io Letter |                -- Std IO. Letter/Word will be used as a selector later.
+    MemoryLocation DataLocation |      -- A location in main memory
     Negated DataLocation |     -- The real result but negated
     Incremented DataLocation | -- The real result but incremented
     Decremented DataLocation   -- The real result but decremented
@@ -117,11 +117,11 @@ parseOperands :: [Word] -> Maybe [DataLocation]
 parseOperands words = reverse <$> parseOperands_ words []
 
 parseOperands_ :: [Word] -> Operands -> Maybe [DataLocation]
-parseOperands_ ((Word _ _ flag control):opdata:xs) ops
-    | control == letter 'R' =  parseOperands_ xs (applyFlag flag (Register (lastLetter opdata)): ops)
-    | control == letter 'M' =  parseOperands_ xs (applyFlag flag (MemoryLocation opdata): ops)
-    | control == letter 'C' =  parseOperands_ xs (applyFlag flag (Constant opdata): ops)
-    | control == letter 'I' =  parseOperands_ xs (applyFlag flag (Io (lastLetter opdata)): ops)
+parseOperands_ ((Word _ flag1 flag2 control):opdata:xs) ops
+    | control == letter 'R' =  parseOperands_ xs (applyFlags [flag1, flag2] (Register (lastLetter opdata)): ops)
+    -- | control == letter 'M' =  parseOperands_ xs (applyFlag flag (MemoryLocation opdata): ops)
+    | control == letter 'C' =  parseOperands_ xs (applyFlags [flag1, flag2] (Constant opdata): ops)
+    | control == letter 'I' =  parseOperands_ xs (applyFlags [flag1, flag2] (Io (lastLetter opdata)): ops)
 
 parseOperands_ (x:xs) ops = Nothing -- Odd number of words.
 parseOperands_ [] ops = return ops
@@ -130,6 +130,10 @@ applyFlag :: Letter -> DataLocation -> DataLocation
 applyFlag flag loc
     | flag == letter '_' = loc
     | flag == letter 'N' = Negated loc
+    | flag == letter 'M' = MemoryLocation loc
     | flag == letter 'I' = Incremented loc
     | flag == letter 'D' = Decremented loc
     | otherwise = error "Bad flag!"
+
+applyFlags :: [Letter] -> DataLocation -> DataLocation
+applyFlags letters loc = foldr applyFlag loc letters

@@ -88,8 +88,11 @@ getData (Register letter) = do
   return $ if inRange registerBounds letter
            then (state^.registers) ! letter
            else minWord
-getData (MemoryLocation addr) = do
+getData (MemoryLocation loc) = do
+  addr <- getData loc
+  --trace ("Getting data from " ++ show addr ++ " sourced from " ++ show loc) (return ())
   state <- get
+  --trace ("The result is " ++ (show $ Memory.readWord (state^.memory) addr)) (return ())
   return $ either (const minWord) id $ Memory.readWord (state^.memory) addr
 
 getData (Io selector) = do
@@ -117,7 +120,10 @@ setData (Constant const) word = return () -- No-op for now. Raise interrupt late
 setData (Register letter) word =
     registers %= (\regs -> regs // [(letter, word)])
 
-setData (MemoryLocation addr) word =
+setData (MemoryLocation loc) word = do
+    --trace ("Writing " ++ show word ++  " to location in " ++ (show loc)) (return ())
+    addr <- getData loc
+    --trace ("Which is " ++ show addr) (return ())
     memory %= \mem -> Memory.writeWord mem addr word
 
 setData (Io selector) word =

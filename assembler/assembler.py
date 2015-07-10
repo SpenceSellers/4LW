@@ -86,23 +86,27 @@ def assembleOperand(arg_str, index, labels):
 
     flags = data_descrips[:-1]
     dat = data_descrips[-1]
-    opflag = '_'
+    opflags = []
     for flag in flags:
         if flag == "neg":
-            opflag = 'N'
+            opflags.append('N')
         elif flag == "inc":
-            opflat = 'I'
+            opflags.append('I')
         elif flag == 'dec':
-            opflag = 'D'
+            opflags.append('D')
+        elif flag == 'mem':
+            opflags.append('M')
+    if len(opflags) > 2:
+        raise Exception("There cannot be more than two flags on a operand")
+
+    flagstr = "{s:_>2}".format(s = ''.join(opflags))
 
     if loctype == 'reg':
-        return '__' + opflag + 'R' + getDat(dat, index + 4, labels)
-    elif loctype == 'mem':
-        return '__' + opflag + 'M' + getDat(dat, index + 4, labels)
+        return '_' + flagstr + 'R' + getDat(dat, index + 4, labels)
     elif loctype == 'const':
-        return '__' + opflag + 'C' + getDat(dat, index + 4, labels)
+        return '_' + flagstr + 'C' + getDat(dat, index + 4, labels)
     elif loctype == 'io':
-        return '__' + opflag + 'I' + getDat(dat, index + 4, labels)
+        return '_' + flagstr + 'I' + getDat(dat, index + 4, labels)
     else:
         raise Exception("Unrecognized data type: " + loctype)
 
