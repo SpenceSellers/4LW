@@ -73,6 +73,9 @@ popInBuffer = do
 setRegister :: Letter -> Word -> State MachineState ()
 setRegister r w = registers %= (\regs -> regs // [(r, w)])
 
+setMemory :: Word -> Word -> State MachineState ()
+setMemory addr word = memory %= \mem -> Memory.writeWord mem addr word
+
 -- | Gets the Program Counter
 getPC :: State MachineState Word
 getPC = do
@@ -86,17 +89,16 @@ setPC addr = registers . ix pcRegister .= addr
 -- | Fetches data from a DataLocation.
 getData :: DataLocation -> State MachineState Word
 getData (Constant word) = return word
+
 getData (Register letter) = do
   state <- get
   return $ if inRange registerBounds letter
            then (state^.registers) ! letter
            else minWord
-getData (MemoryLocation loc) = do
-  addr <- getData loc
-  --trace ("Getting data from " ++ show addr ++ " sourced from " ++ show loc) (return ())
-  state <- get
-  --trace ("The result is " ++ (show $ Memory.readWord (state^.memory) addr)) (return ())
-  return $ either (const minWord) id $ Memory.readWord (state^.memory) addr
+
+getData (MemoryLocation loc) =
+    either <$> pure (const minWord) <*> pure id <*>
+        (Memory.readWord <$> use memory <*> getData loc)
 
 getData (Stack) = do
     state <- get
@@ -112,33 +114,23 @@ getData (Io selector) = do
     Just c -> return $ Io.charToInternal c
     Nothing -> return $ maxWord
 
-getData (Negated loc) = do
-  val <- getData loc
-  return $ negateWord val
+getData (Negated loc) = negateWord <$> getData loc
 
-getData (Incremented loc) = do
-  val <- getData loc
-  return $ offset val 1
+getData (Incremented loc) = offset <$> getData loc <*> pure 1
 
-getData (Decremented loc) = do
-  val <- getData loc
-  return $ offset val (-1)
+getData (Decremented loc) = offset <$> getData loc <*> pure (-1)
 
 -- | Applies a data write to any location, be it a register, main memory, etc.
 setData :: DataLocation -> Word -> State MachineState ()
 setData (Constant const) word = return () -- No-op for now. Raise interrupt later.
 setData (Register letter) word = setRegister letter word
 
-setData (MemoryLocation loc) word = do
-    --trace ("Writing " ++ show word ++  " to location in " ++ (show loc)) (return ())
-    addr <- getData loc
-    --trace ("Which is " ++ show addr) (return ())
-    memory %= \mem -> Memory.writeWord mem addr word
+setData (MemoryLocation loc) word = flip setMemory word =<< (getData loc)
 
 setData (Stack) word = do
     regs <- use registers
     let stackAddr = regs ! stackRegister
-    memory %= \mem -> Memory.writeWord mem stackAddr word
+    setMemory stackAddr word
     let newStackAddr = offset stackAddr (-4)
     setRegister stackRegister newStackAddr
 
