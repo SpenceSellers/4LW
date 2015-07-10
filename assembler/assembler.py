@@ -30,10 +30,11 @@ class Labels:
         news = s
         for label, pos in self.uses:
             word = self.get_loc(label)
+            #print("Replacing {} with {} ({})".format(pos, label, word))
             news = self.replaceWord(news, word, pos)
         assert len(news) == len(s)
         return news
-        
+
 def main():
     filename = sys.argv[1]
     f = open(filename, 'r')
@@ -47,7 +48,7 @@ def main():
     print(assembled)
 
 def assembleLine(line, index, labels):
-    
+
     m = re.match('^(.*?)(#.*)?$', line)
     real_line = m.group(1)
     splitted = re.split('\s+', real_line)
@@ -60,7 +61,7 @@ def assembleLine(line, index, labels):
     if splitted[0] == 'data':
         return ''.join(splitted[1:])
     return assembleInstruction(real_line, index, labels)
-    
+
 def assembleInstruction(line, index, labels):
     splitted = re.findall("\s*(\[.*?\]|\S+)", line)
     if len(splitted) == 0:
@@ -68,16 +69,16 @@ def assembleInstruction(line, index, labels):
     opcode = splitted[0]
     args = splitted[1:]
     assembled_args = ""
-    argdex = index
+    argdex = index + 4
     for arg in args:
-        argdex += 4
         assembled_args += assembleOperand(arg, argdex, labels)
+        argdex += 8
     assert len(assembled_args) % 4 == 0
     length = toBase27(len(assembled_args)/4 + 1)
     if len(length) > 1:
         raise Exception("Length of operands is too long!")
     return opcode + length + '_' + assembled_args
-    
+
 def assembleOperand(arg_str, index, labels):
     match = re.match("\[\s*(\S+)\s+(.*?)\]", arg_str)
     loctype = match.group(1)
@@ -93,13 +94,15 @@ def assembleOperand(arg_str, index, labels):
             opflat = 'I'
         elif flag == 'dec':
             opflag = 'D'
-    
+
     if loctype == 'reg':
         return '__' + opflag + 'R' + getDat(dat, index + 4, labels)
     elif loctype == 'mem':
         return '__' + opflag + 'M' + getDat(dat, index + 4, labels)
     elif loctype == 'const':
         return '__' + opflag + 'C' + getDat(dat, index + 4, labels)
+    elif loctype == 'io':
+        return '__' + opflag + 'I' + getDat(dat, index + 4, labels)
     else:
         raise Exception("Unrecognized data type: " + loctype)
 
@@ -112,7 +115,7 @@ def getDat(datstr, index, labels):
     if m:
         labels.add_use(m.group(1), index)
         return "@@@@"
-    
+
 def expandWord(s):
     word =  "{:>4s}".format(s).replace(" ", "_")
     if len(word) > 4:
@@ -126,7 +129,7 @@ def to_base(n, base):
         digits.insert(0, int(n % base))
         n = int(n // base)
     return digits
-    
+
 def toBase27(n):
     alpha = '_' + string.ascii_uppercase
     s = ''
@@ -137,4 +140,3 @@ def toBase27(n):
 
 if __name__ == '__main__':
     main()
-    
