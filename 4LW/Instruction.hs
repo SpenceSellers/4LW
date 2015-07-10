@@ -123,6 +123,7 @@ parseOperands_ ((Word _ flag1 flag2 control):opdata:xs) ops
     -- | control == letter 'M' =  parseOperands_ xs (applyFlag flag (MemoryLocation opdata): ops)
     | control == letter 'C' =  parseOperands_ xs (applyFlags [flag1, flag2] (Constant opdata): ops)
     | control == letter 'I' =  parseOperands_ xs (applyFlags [flag1, flag2] (Io (lastLetter opdata)): ops)
+    | control == letter 'S' = parseOperands_ xs (applyFlags [flag1, flag2] (Stack): ops)
 
 parseOperands_ (x:xs) ops = Nothing -- Odd number of words.
 parseOperands_ [] ops = return ops

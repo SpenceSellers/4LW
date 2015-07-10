@@ -58,6 +58,10 @@ def assembleLine(line, index, labels):
         labels.define(splitted[1],index)
         return ""
 
+    if splitted[0] == 'constant':
+        labels.define(splitted[1],splitted[2])
+        return ""
+
     if splitted[0] == 'data':
         return ''.join(splitted[1:])
     return assembleInstruction(real_line, index, labels)
@@ -102,14 +106,17 @@ def assembleOperand(arg_str, index, labels):
     flagstr = "{s:_>2}".format(s = ''.join(opflags))
 
     if loctype == 'reg':
-        return '_' + flagstr + 'R' + getDat(dat, index + 4, labels)
+        loctypestr = 'R'
     elif loctype == 'const':
-        return '_' + flagstr + 'C' + getDat(dat, index + 4, labels)
+        loctypestr = 'C'
     elif loctype == 'io':
-        return '_' + flagstr + 'I' + getDat(dat, index + 4, labels)
+        loctypestr = 'I'
+    elif loctype == 'stack':
+        loctypestr = 'S'
     else:
         raise Exception("Unrecognized data type: " + loctype)
 
+    return '_' + flagstr + loctypestr + getDat(dat, index + 4, labels)
 def getDat(datstr, index, labels):
     if re.match("[A-Z_]+", datstr):
         return expandWord(datstr)

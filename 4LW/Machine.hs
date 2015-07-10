@@ -129,9 +129,10 @@ setData (MemoryLocation loc) word = flip setMemory word =<< (getData loc)
 
 setData (Stack) word = do
     regs <- use registers
-    let stackAddr = regs ! stackRegister
-    setMemory stackAddr word
-    let newStackAddr = offset stackAddr (-4)
+    let oldStackAddr = regs ! stackRegister
+    let newStackAddr = offset oldStackAddr (-4)
+    setMemory newStackAddr word -- Make sure to use the NEW one.
+
     setRegister stackRegister newStackAddr
 
 setData (Io selector) word =
@@ -166,12 +167,12 @@ runInstruction (Div src1 src2 dest) =
     setData dest =<< divWord <$> getData src1 <*> getData src2
 
 runInstruction (Jump dest) =
-    setData (Register pcRegister) =<< getData dest
+    setRegister pcRegister =<< getData dest
 
 runInstruction (JumpZero datloc dest) = do
     dat <- getData datloc
     if dat == minWord
-      then setData (Register pcRegister) =<< getData dest
+      then setRegister pcRegister =<< getData dest
       else return ()
 
 tick :: State MachineState ()
@@ -186,13 +187,12 @@ tick = do
     Left BadInstruction -> trace ("BAD INSTRUCTION") $ return ()
     Right (InstructionParseResult instruction length) ->
         do
-          --trace ("ins: " ++ (show instruction)) return ()
           setPC $ offset pc length
           runInstruction instruction
-          --return $ case instruction of Nop -> Halt; _ -> NoAction -- TODO: Remove temporary Nop halt
 
 start :: StateT MachineState IO ()
 start = do
+    hoistState $ setRegister stackRegister (wrd "ZZZZ")
     lift $ hSetBuffering stdin NoBuffering
     run
 
