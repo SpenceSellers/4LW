@@ -28,7 +28,7 @@ data Instruction =
     Div DataLocation DataLocation DataLocation |
     Jump DataLocation |
     JumpZero DataLocation DataLocation |
-    FCall DataLocation |
+    FCall DataLocation [DataLocation] |
     Return
 
     deriving (Show, Eq)
@@ -110,7 +110,8 @@ constructInstruction (RawInstruction opcode len operands)
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
     | opcode == letter2 "FN" = toEither BadInstruction $ FCall <$>
-                                 (operands ^? ix 0)
+                                 (operands ^? ix 0) <*>
+                                 (pure . tail $ operands)
     | opcode == letter2 "RT" = Right Return
 
     | otherwise = trace ("Invalid OPcode is: " ++ (show opcode)) Left BadInstruction

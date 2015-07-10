@@ -181,8 +181,9 @@ runInstruction (JumpZero datloc dest) = do
       then setRegister pcRegister =<< getData dest
       else return ()
 
-runInstruction (FCall addr) = do
+runInstruction (FCall addr args) = do
     pushStack =<< getPC
+    sequence . map (\arg -> pushStack =<< getData arg) $ args
     setPC =<< getData addr
 
 runInstruction (Return) = setPC =<< popStack

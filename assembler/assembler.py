@@ -84,7 +84,7 @@ def assembleInstruction(line, index, labels):
     return opcode + length + '_' + assembled_args
 
 def assembleOperand(arg_str, index, labels):
-    match = re.match("\[\s*(\S+)\s+(.*?)\]", arg_str)
+    match = re.match("\[\s*(\S*)\s*(.*?)\]", arg_str)
     loctype = match.group(1)
     data_descrips = re.split('\s+', match.group(2))
 
@@ -118,6 +118,8 @@ def assembleOperand(arg_str, index, labels):
 
     return '_' + flagstr + loctypestr + getDat(dat, index + 4, labels)
 def getDat(datstr, index, labels):
+    if datstr in [None, '']:
+        return '____'
     if re.match("[A-Z_]+", datstr):
         return expandWord(datstr)
     if re.match("[0-9]+", datstr):
