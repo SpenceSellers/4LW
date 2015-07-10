@@ -4,6 +4,8 @@ module Io where
 import Base27
 import System.IO
 import Data.Monoid
+import Data.Char
+import Data.Ix
 
 readToBuffer :: [Char] -> IO [Char]
 readToBuffer buf = do
@@ -16,8 +18,12 @@ readToBuffer buf = do
             return buf
 
 charToInternal :: Char -> Base27.Word
-charToInternal c = extendToWord $ letter c
+charToInternal c
+    | c == ' ' = wrd "__A_"
+    | c == '_' = wrd "____"
+    | inRange ('A', 'Z') c = extendToWord $ letter c
+    | inRange ('a', 'z') c = Base27.Word (letter '_') (letter '_') (letter 'A') (letter . toUpper $ c)
 
 internalToChar :: Base27.Word -> Char
-internalToChar w = c
-    where (Letter c) = Base27.lastLetter w
+internalToChar (Word a b c d) = char
+    where Letter char = d

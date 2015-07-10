@@ -70,6 +70,9 @@ popInBuffer = do
         return (Just x)
     [] -> return Nothing
 
+setRegister :: Letter -> Word -> State MachineState ()
+setRegister r w = registers %= (\regs -> regs // [(r, w)])
+
 -- | Gets the Program Counter
 getPC :: State MachineState Word
 getPC = do
@@ -95,6 +98,14 @@ getData (MemoryLocation loc) = do
   --trace ("The result is " ++ (show $ Memory.readWord (state^.memory) addr)) (return ())
   return $ either (const minWord) id $ Memory.readWord (state^.memory) addr
 
+getData (Stack) = do
+    state <- get
+    regs <- use registers
+    let stackAddr = regs ! stackRegister
+    let newAddr = offset stackAddr 4
+    setRegister stackRegister newAddr
+    return $ either (const minWord) id $ Memory.readWord (state^.memory) stackAddr
+
 getData (Io selector) = do
   char <- popInBuffer
   case char of
@@ -102,7 +113,6 @@ getData (Io selector) = do
     Nothing -> return $ maxWord
 
 getData (Negated loc) = do
-
   val <- getData loc
   return $ negateWord val
 
@@ -117,14 +127,20 @@ getData (Decremented loc) = do
 -- | Applies a data write to any location, be it a register, main memory, etc.
 setData :: DataLocation -> Word -> State MachineState ()
 setData (Constant const) word = return () -- No-op for now. Raise interrupt later.
-setData (Register letter) word =
-    registers %= (\regs -> regs // [(letter, word)])
+setData (Register letter) word = setRegister letter word
 
 setData (MemoryLocation loc) word = do
     --trace ("Writing " ++ show word ++  " to location in " ++ (show loc)) (return ())
     addr <- getData loc
     --trace ("Which is " ++ show addr) (return ())
     memory %= \mem -> Memory.writeWord mem addr word
+
+setData (Stack) word = do
+    regs <- use registers
+    let stackAddr = regs ! stackRegister
+    memory %= \mem -> Memory.writeWord mem stackAddr word
+    let newStackAddr = offset stackAddr (-4)
+    setRegister stackRegister newStackAddr
 
 setData (Io selector) word =
     action .= IOWrite [Io.internalToChar word]

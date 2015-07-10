@@ -3,7 +3,7 @@ module Base27 where
 import Data.Char
 import Data.Ix
 import Data.Digits (digits, unDigits)
-    
+
 newtype Letter = Letter Char deriving (Eq)
 
 instance Ord Letter where
@@ -91,7 +91,7 @@ minWord :: Base27.Word
 minWord = Word (letter '_') (letter '_') (letter '_') (letter '_')
 
 maxWord = Word (letter 'Z') (letter 'Z') (letter 'Z') (letter 'Z')
-          
+
 -- | The number of possible values that a word can have.
 wordValues :: Int
 wordValues = 27 ^ 4
@@ -141,7 +141,7 @@ negateWord = subWord (wrd "ZZZZ")
 -- | Finds the word that occurs diff times after the initial word.
 offset :: Base27.Word -> Int -> Base27.Word
 offset w diff = addWord w $ toWord diff
-                
+
 -- | Debug / Convenience function to make a word from a string.
 wrd :: String -> Base27.Word
 wrd (a:b:c:d:[]) = Word (letter a) (letter b) (letter c) (letter d)
@@ -149,6 +149,6 @@ wrd (a:b:c:d:[]) = Word (letter a) (letter b) (letter c) (letter d)
 wordToString :: Base27.Word -> String
 wordToString word = map getLetter (wordToList word)
     where getLetter (Letter c) = c
-    
+
 letter2 :: String -> (Letter, Letter)
 letter2 (a:b:[]) = (letter a, letter b)

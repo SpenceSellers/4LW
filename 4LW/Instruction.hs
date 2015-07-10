@@ -11,6 +11,7 @@ data DataLocation =
     Register Letter |          -- A register
     Constant Word |            -- A fixed constant word
     Io Letter |                -- Std IO. Letter/Word will be used as a selector later.
+    Stack |
     MemoryLocation DataLocation |      -- A location in main memory
     Negated DataLocation |     -- The real result but negated
     Incremented DataLocation | -- The real result but incremented
