@@ -60,10 +60,10 @@ blankRegisters = listArray registerBounds (repeat minWord)
 blankState :: MachineState
 blankState = MachineState blankRegisters Memory.blankMemory NoAction 0 [] []
 
+-- | Pops a char off of the machine's input buffer.
 popInBuffer :: State MachineState (Maybe Char)
 popInBuffer = do
-  state <- get
-  let buf = view inBuffer state
+  buf <- use inBuffer
   case buf of
     x:xs -> do
         inBuffer .= xs
@@ -87,12 +87,12 @@ pushStack word = do
 
 popStack :: State MachineState Word
 popStack = do
-    state <- get
+    mem <- use memory
     regs <- use registers
     let stackAddr = regs ! stackRegister
     let newAddr = offset stackAddr 4
     setRegister stackRegister newAddr
-    return $ either (const minWord) id $ Memory.readWord (state^.memory) stackAddr
+    return $ either (const minWord) id $ Memory.readWord mem stackAddr
 
 -- | Gets the Program Counter
 getPC :: State MachineState Word
@@ -109,9 +109,9 @@ getData :: DataLocation -> State MachineState Word
 getData (Constant word) = return word
 
 getData (Register letter) = do
-  state <- get
+  regs <- use registers
   return $ if inRange registerBounds letter
-           then (state^.registers) ! letter
+           then regs ! letter
            else minWord
 
 getData (MemoryLocation loc) =
@@ -186,7 +186,15 @@ runInstruction (FCall addr args) = do
     sequence . map (\arg -> pushStack =<< getData arg) $ args
     setPC =<< getData addr
 
-runInstruction (Return) = setPC =<< popStack
+runInstruction (Return args) = do
+    -- It's important that Return reads the args first, THEN the
+    -- PC, and THEN pushes the args on. That way it's possible to return
+    -- items on the stack.
+    argDatas <- sequence . map getData $ args
+    setPC =<< popStack
+    sequence . map pushStack $ argDatas
+    return ()
+
 
 tick :: State MachineState ()
 tick = do

@@ -49,7 +49,7 @@ def main():
 
 def assembleLine(line, index, labels):
 
-    m = re.match('^(.*?)(#.*)?$', line)
+    m = re.match('^\s*(.*?)(#.*)?$', line)
     real_line = m.group(1)
     splitted = re.split('\s+', real_line)
     if len(splitted) == 0:
@@ -85,7 +85,11 @@ def assembleInstruction(line, index, labels):
 
 def assembleOperand(arg_str, index, labels):
     match = re.match("\[\s*(\S*)\s*(.*?)\]", arg_str)
-    loctype = match.group(1)
+    try:
+        loctype = match.group(1)
+    except AttributeError:
+        print("Bad parse at " + arg_str + " (index {})".format(index))
+        raise
     data_descrips = re.split('\s+', match.group(2))
 
     flags = data_descrips[:-1]
