@@ -19,10 +19,10 @@ newtype Letter = Letter Char deriving (Eq)
 pattern LetterV c <- Letter c
 
 instance Ord Letter where
-    compare (Letter '_') (Letter '_') = EQ
-    compare (Letter '_') (Letter _) = LT
-    compare (Letter _) (Letter '_') = GT
-    compare (Letter a) (Letter b) = compare a b
+    compare (LetterV '_') (LetterV '_') = EQ
+    compare (LetterV '_') (LetterV _) = LT
+    compare (LetterV _) (LetterV '_') = GT
+    compare (LetterV a) (LetterV b) = compare a b
 
 instance Ix Letter where
     range (l1, l2) = map letterValue $ range (n1, n2)
@@ -128,9 +128,10 @@ wordValue (Word a b c d) = (19683 * (getValue a)) + (729 * (getValue b)) + (27 *
 toWord :: Int -> Base27.Word
 --toWord = wordFromList . map toLetter . digits 27 . (`mod` wordValues)
 toWord num = Word (toLetter a) (toLetter b) (toLetter c) (toLetter d)
-    where (a,b,c,d) = toWordDigits (num `mod` wordValues)
+    where (a,b,c,d) = toWordDigits num
 
 toWordDigits :: Int -> (Int, Int, Int, Int)
+--{-# INLINE toWordDigits #-}
 toWordDigits val = (a, b, c, d)
     where n = val `mod` wordValues
           (dr, d) = quotRem val 27
