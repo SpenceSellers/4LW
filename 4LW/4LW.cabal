@@ -14,5 +14,10 @@ cabal-version:       >=1.8
 
 executable 4LW
   main-is:           Main.hs
+  ghc-options:
+    -O2
+    -threaded
+    -fprof-auto
+    -auto-all
   -- other-modules:
   build-depends:       base, mtl, array, lens, digits

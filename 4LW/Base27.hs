@@ -1,10 +1,22 @@
-module Base27 where
+{-# LANGUAGE PatternSynonyms #-}
 
-import Data.Char
+module Base27 (Letter, Word(Word) , letter,
+               letterSafe, getValue,
+               letterValue, offset, wrd,
+               extendToWord, pattern LetterV,
+               minWord, maxWord, letter2, lastLetter,
+               negateWord, addWord, subWord, mulWord,
+               divWord, isLetter) where
+import Prelude hiding (Word)
+import Data.Char hiding (isLetter)
 import Data.Ix
+import Debug.Trace
 import Data.Digits (digits, unDigits)
 
 newtype Letter = Letter Char deriving (Eq)
+
+-- | A view for letter. You can pattern match on it, but you can't construct it!
+pattern LetterV c <- Letter c
 
 instance Ord Letter where
     compare (Letter '_') (Letter '_') = EQ
@@ -23,7 +35,7 @@ instance Ix Letter where
     inRange (l1, l2) l = (getValue l >= getValue l1) && (getValue l <= getValue l2)
 
 instance Show Letter where
-    show (Letter c) = "." ++ [c]
+    show (LetterV c) = "." ++ [c]
 
 data Offset = LetterOffset Int | WordOffset Int
             deriving (Show)
@@ -43,8 +55,8 @@ isLetter c = inRange ('A', 'Z') c
 
 -- | Gets the numeric value of a Letter.
 getValue :: Letter -> Int
-getValue (Letter '_') = 0
-getValue (Letter l) = index ('A', 'Z') l + 1
+getValue (LetterV '_') = 0
+getValue (LetterV l) = index ('A', 'Z') l + 1
 
 -- | Turns a numeric value into a Letter
 letterValue :: Int -> Letter
@@ -55,7 +67,7 @@ letterValue n = letter $ range ('A', 'Z') !! (n - 1)
 toLetter :: Int -> Letter
 toLetter num
     | num == 0 = letter '_'
-    | num < 0 = error "toLetter must be positive"
+    | num < 0 = error ("toLetter must be positive: " ++ show num)
     | num > 26 = error "toLetter must be 26 or below."
     | otherwise = letter $ chr (ord 'A' + num - 1)
 
@@ -64,7 +76,7 @@ convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
 
 -- | A word is basically a tuple of four letters.
-data Word = Word !Letter !Letter !Letter !Letter
+data Word = Word Letter Letter Letter Letter
             deriving (Eq, Ord)
 
 -- | The default Show is hard to read, let's just cram the letters together.
@@ -72,10 +84,10 @@ instance Show Base27.Word where
     show word =
         [ca, cb, cc, cd] where
             (Word a b c d) = word
-            (Letter ca) = a
-            (Letter cb) = b
-            (Letter cc) = c
-            (Letter cd) = d
+            (LetterV ca) = a
+            (LetterV cb) = b
+            (LetterV cc) = c
+            (LetterV cd) = d
 
 instance Ix Base27.Word where
     range (w1, w2) = map toWord $ range (n1, n2)
@@ -109,15 +121,26 @@ wordFromList (a:_) = Word (letter '_') (letter '_') (letter '_') a
 wordFromList (_) = minWord
 
 wordValue :: Base27.Word -> Int
---wordValue word = read $ concat $ map (show) $ convertBase 27 10 (map getValue (wordToList word))
-wordValue = unDigits 27 . map getValue . wordToList
+--wordValue = unDigits 27 . map getValue . wordToList
+-- Optimized expanded version:
+wordValue (Word a b c d) = (19683 * (getValue a)) + (729 * (getValue b)) + (27 * (getValue c)) + (getValue d)
 
 toWord :: Int -> Base27.Word
-toWord =  wordFromList . map toLetter . digits 27 . (`mod` wordValues)
+--toWord = wordFromList . map toLetter . digits 27 . (`mod` wordValues)
+toWord num = Word (toLetter a) (toLetter b) (toLetter c) (toLetter d)
+    where (a,b,c,d) = toWordDigits (num `mod` wordValues)
+
+toWordDigits :: Int -> (Int, Int, Int, Int)
+toWordDigits val = (a, b, c, d)
+    where n = val `mod` wordValues
+          (dr, d) = quotRem val 27
+          (cr, c) = quotRem dr 27
+          (br, b) = quotRem cr 27
+          (_, a) = quotRem br 27
 
 -- | Extends a letter to a word with the same numeric value.
 extendToWord :: Letter -> Base27.Word
-extendToWord letter_ = Word (letter '_') (letter '_') (letter '_') letter_
+extendToWord l = Word (letter '_') (letter '_') (letter '_') l
 
 lastLetter :: Base27.Word -> Letter
 lastLetter (Word _ _ _ d) = d
@@ -140,15 +163,23 @@ negateWord = subWord (wrd "ZZZZ")
 
 -- | Finds the word that occurs diff times after the initial word.
 offset :: Base27.Word -> Int -> Base27.Word
-offset w diff = addWord w $ toWord diff
+--offset w diff = addWord w $ toWord diff
+offset w diff
+  | diff > 0 = addWord w $ toWord diff
+  | diff == 0 = w
+  | diff < 0 = subWord w $ toWord (diff * (-1))
 
 -- | Debug / Convenience function to make a word from a string.
 wrd :: String -> Base27.Word
 wrd (a:b:c:d:[]) = Word (letter a) (letter b) (letter c) (letter d)
 
+wrdSafe :: String -> Maybe Base27.Word
+wrdSafe (a:b:c:d:[]) = Word <$> (letterSafe a) <*> (letterSafe b) <*> (letterSafe c) <*> (letterSafe d)
+wrdSafe _ = Nothing
+
 wordToString :: Base27.Word -> String
 wordToString word = map getLetter (wordToList word)
-    where getLetter (Letter c) = c
+    where getLetter (LetterV c) = c
 
 letter2 :: String -> (Letter, Letter)
 letter2 (a:b:[]) = (letter a, letter b)

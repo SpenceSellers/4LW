@@ -8,9 +8,9 @@ type Memory = Array Word Letter
 data MemoryError = AddressOverrun deriving (Show, Eq)
 
 data MemoryWrite = MemoryWrite Word Letter deriving (Show, Eq)
-                 
+
 blankMemory :: Memory
-blankMemory = listArray (minWord, maxWord) (repeat (Letter '_'))
+blankMemory = listArray (minWord, maxWord) (repeat (letter '_'))
 
 readLetter :: Memory -> Word -> Either MemoryError Letter
 readLetter mem addr = if inRange (bounds mem) addr then
@@ -18,13 +18,17 @@ readLetter mem addr = if inRange (bounds mem) addr then
                       else
                           Left AddressOverrun
 
--- |TODO: Check for end-of-bounds.
+readLetters :: Memory -> Word -> Int -> Either MemoryError [Letter]
+readLetters mem addr len = mapM (readLetter mem) addrs
+    where addrs = map (offset addr) [0 .. len - 1]
+
 readWord :: Memory -> Word -> Either MemoryError Word
 readWord mem addr = do
   a <- readLetter mem addr
   b <- readLetter mem (offset addr 1)
   c <- readLetter mem (offset addr 2)
   d <- readLetter mem (offset addr 3)
+  --[a,b,c,d] <- readLetters mem addr 4 -- This alternative proved to be slightly slower.
   return $ Word a b c d
 
 writeLetter :: Memory -> Word -> Letter -> Memory
@@ -50,7 +54,7 @@ writeWord mem addr (Word a b c d) =
           addr1 = offset addr 1
           addr2 = offset addr 2
           addr3 = offset addr 3
-                      
+
 -- |Reads an entire range of words.
 -- |The "length" is still in number of letters!
 readWords :: Memory -> Word -> Int -> Either MemoryError [Word]
@@ -60,7 +64,7 @@ readWords mem addr len = mapM (readWord mem) addrs
 exportString :: Memory -> (Word, Word) -> String
 exportString mem (start, end) =
     map (\x -> (getletter $ mem ! x)) $ range (start, end)
-        where getletter (Letter c) = c
+        where getletter (LetterV c) = c
 
 importString :: String -> Word -> Memory -> Maybe Memory
 importString str addr mem = writeLetters mem addr <$> sequence (map letterSafe str)

@@ -27,4 +27,4 @@ charToInternal c
 
 internalToChar :: Base27.Word -> Char
 internalToChar (Word a b c d) = char
-    where Letter char = d
+    where (LetterV char) = d

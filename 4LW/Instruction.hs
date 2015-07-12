@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 module Instruction where
 import Prelude hiding (Word)
 import Data.Maybe
@@ -38,13 +39,15 @@ data Instruction =
     deriving (Show, Eq)
 
 
-data BadInstruction = BadInstruction deriving Show
+data BadInstruction =
+     BadInstruction deriving Show
 
 -- | An InstructionParseResult is just the instruction, and how long
 --  the instruction was, so we can change the Program Counter register
 --  to the correct place for the next instruction.
-data InstructionParseResult = InstructionParseResult Instruction Int
-                            deriving (Show)
+data InstructionParseResult where
+    InstructionParseResult :: Instruction -> Int -> InstructionParseResult
+    deriving (Show)
 
 -- | A RawInstruction is all of the data that makes up an Instruction, but
 --  it has not been assembled into something that 4LW can use yet.
@@ -151,10 +154,10 @@ parseOperands words = reverse <$> parseOperands_ words []
 
 parseOperands_ :: [Word] -> Operands -> Maybe [DataLocation]
 parseOperands_ ((Word _ flag1 flag2 control):opdata:xs) ops
-    | control == letter 'R' =  build (Register (lastLetter opdata))
+    | control == letter 'R' = build (Register (lastLetter opdata))
     -- | control == letter 'M' =  parseOperands_ xs (applyFlag flag (MemoryLocation opdata): ops)
-    | control == letter 'C' =  build (Constant opdata)
-    | control == letter 'I' =  build (Io (lastLetter opdata))
+    | control == letter 'C' = build (Constant opdata)
+    | control == letter 'I' = build (Io (lastLetter opdata))
     | control == letter 'S' = build Stack
     where build instruction = parseOperands_ xs (applyFlags [flag1, flag2] instruction:ops)
 

@@ -21,6 +21,7 @@ import Control.Applicative
 import Control.Monad.Reader
 import Debug.Trace
 
+-- | Brings a function into the State monad.
 hoistState :: Monad m => State s a -> StateT s m a
 hoistState = StateT . (return .) . runState
 
@@ -177,9 +178,7 @@ runInstruction (Jump dest) =
 
 runInstruction (JumpZero datloc dest) = do
     dat <- getData datloc
-    if dat == minWord
-      then setRegister pcRegister =<< getData dest
-      else return ()
+    when (dat == minWord) (setRegister pcRegister =<< getData dest)
 
 runInstruction (FCall addr args) = do
     pushStack =<< getPC
