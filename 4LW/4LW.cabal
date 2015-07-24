@@ -20,4 +20,4 @@ executable 4LW
     -fprof-auto
     -auto-all
   -- other-modules:
-  build-depends:       base, mtl, array, lens, digits
+  build-depends:       base, mtl, array, lens, digits, containers, data-default

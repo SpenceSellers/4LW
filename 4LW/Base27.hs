@@ -12,6 +12,7 @@ import Data.Char hiding (isLetter)
 import Data.Ix
 import Debug.Trace
 import Data.Digits (digits, unDigits)
+import Data.Default
 
 newtype Letter = Letter Char deriving (Eq)
 
@@ -36,6 +37,9 @@ instance Ix Letter where
 
 instance Show Letter where
     show (LetterV c) = "." ++ [c]
+
+instance Default Letter where
+    def = letter '_'
 
 data Offset = LetterOffset Int | WordOffset Int
             deriving (Show)

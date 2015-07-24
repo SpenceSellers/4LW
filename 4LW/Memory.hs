@@ -2,21 +2,19 @@ module Memory where
 import Prelude hiding (Word)
 import Base27
 import Data.Array
+import qualified Data.Map as Map
 import Control.Applicative
-type Memory = Array Word Letter
+import Data.Default
+type Memory = Map.Map Word Letter
 
 data MemoryError = AddressOverrun deriving (Show, Eq)
 
-data MemoryWrite = MemoryWrite Word Letter deriving (Show, Eq)
-
 blankMemory :: Memory
-blankMemory = listArray (minWord, maxWord) (repeat (letter '_'))
+blankMemory = Map.empty
 
 readLetter :: Memory -> Word -> Either MemoryError Letter
-readLetter mem addr = if inRange (bounds mem) addr then
-                          Right $ mem ! addr
-                      else
-                          Left AddressOverrun
+readLetter mem addr = Right $ Map.findWithDefault (letter '_') addr mem
+
 
 readLetters :: Memory -> Word -> Int -> Either MemoryError [Letter]
 readLetters mem addr len = mapM (readLetter mem) addrs
@@ -32,24 +30,18 @@ readWord mem addr = do
   return $ Word a b c d
 
 writeLetter :: Memory -> Word -> Letter -> Memory
-writeLetter mem addr letter = mem // [(addr, letter)]
+writeLetter mem addr letter = Map.insert addr letter mem
 
 writeLetters :: Memory -> Word -> [Letter] -> Memory
 writeLetters mem addr (l:rest) =
     writeLetters (writeLetter mem addr l) (offset addr 1) rest
 writeLetters mem _ [] = mem
 
-applyWrite :: Memory -> MemoryWrite -> Memory
-applyWrite mem (MemoryWrite addr letter) =
-    writeLetter mem addr letter
-
 -- |Todo: Check for end of bounds
 writeWord :: Memory -> Word -> Word -> Memory
 writeWord mem addr (Word a b c d) =
-    mem // [(addr0, a),
-            (addr1, b),
-            (addr2, c),
-            (addr3, d)]
+    foldl (\m (addr', letter') -> Map.insert addr' letter' m) mem
+        [(addr0, a), (addr1, b), (addr2, c), (addr3, d)]
     where addr0 = addr
           addr1 = offset addr 1
           addr2 = offset addr 2
@@ -63,8 +55,12 @@ readWords mem addr len = mapM (readWord mem) addrs
 
 exportString :: Memory -> (Word, Word) -> String
 exportString mem (start, end) =
-    map (\x -> (getletter $ mem ! x)) $ range (start, end)
+    map (\addr -> getletter $ orBlank $ readLetter mem addr) $ range (start, end)
         where getletter (LetterV c) = c
+
 
 importString :: String -> Word -> Memory -> Maybe Memory
 importString str addr mem = writeLetters mem addr <$> sequence (map letterSafe str)
+
+orBlank :: Default a => Either MemoryError a -> a
+orBlank = either (const def) (id)
