@@ -138,7 +138,7 @@ toWordDigits :: Int -> (Int, Int, Int, Int)
 --{-# INLINE toWordDigits #-}
 toWordDigits val = (a, b, c, d)
     where n = val `mod` wordValues
-          (dr, d) = quotRem val 27
+          (dr, d) = quotRem n 27
           (cr, c) = quotRem dr 27
           (br, b) = quotRem cr 27
           (_, a) = quotRem br 27
