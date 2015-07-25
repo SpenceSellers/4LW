@@ -1,6 +1,7 @@
 module Memory where
 import Prelude hiding (Word)
 import Base27
+import Lengths
 import Data.Array
 import qualified Data.Map as Map
 import Control.Applicative
@@ -17,9 +18,8 @@ blankMemory = Map.empty
 readLetter :: Memory -> Word -> Letter
 readLetter mem addr =  Map.findWithDefault (letter '_') addr mem
 
-
-readLetters :: Memory -> Word -> Int -> [Letter]
-readLetters mem addr len = map (readLetter mem) addrs
+readLetters :: Memory -> Word -> LetterLength -> [Letter]
+readLetters mem addr (LetterLength len) = map (readLetter mem) addrs
     where addrs = map (offset addr) [0 .. len - 1]
 
 readWord :: Memory -> Word -> Word
@@ -44,9 +44,8 @@ writeWord mem addr (Word a b c d) =
     where (addr0, addr1, addr2, addr3) = wordAddrs addr
 
 -- |Reads an entire range of words.
--- |The "length" is still in number of letters!
-readWords :: Memory -> Word -> Int -> [Word]
-readWords mem addr len = map (readWord mem) addrs
+readWords :: Memory -> Word -> WordLength -> [Word]
+readWords mem addr (WordLength len) = map (readWord mem) addrs
     where addrs = map (offset addr) [0,4..len*4]
 
 exportString :: Memory -> (Word, Word) -> String

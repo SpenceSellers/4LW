@@ -6,6 +6,7 @@ import Control.Lens
 import Control.Applicative
 import Debug.Trace
 import Base27
+import Lengths
 import qualified Memory
 
 -- | A DataLocation is a place an instruction can place data or take it from.
@@ -80,21 +81,24 @@ toBad = convertEither BadInstruction
 -- and memory region supplied to it. It has a lot to think about, so unfortunately
 -- it's rather huge and horrible.
 readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
-readInstruction addr mem = InstructionParseResult <$> instruction <*> pure (instructionLength * 4)
+readInstruction addr mem = InstructionParseResult <$> instruction <*> pure (letterLen instructionLength)
     -- We're multiplying the length by four, because the ParseResult wants it in Letters, but
     -- the instruction reports it in Words for space efficiency.
     where lengthOffset = 2 -- Letter offset that the instruction length is at.
           operandsOffset = 4 -- Letter offset the operands start at.
           -- Make a tuple containing the two-letter opcode.
           opcode = (Memory.readLetter mem addr, Memory.readLetter mem (offset addr 1))
-          -- Figure out how long the instruction claims it is.
-          instructionLength = Base27.getValue (Memory.readLetter mem (offset addr lengthOffset))
+          -- Figure out how long the instruction claims it is, in words.
+          instructionLengthAddr = offset addr lengthOffset
+          instructionLength = WordLength . Base27.getValue $ Memory.readLetter mem instructionLengthAddr
+
+          operandsLength = addWordLengths instructionLength (WordLength (-2))
+
+          operandsStartAddr = offset addr operandsOffset
           -- Read and parse the operands (arguments)
-          operands = do
-            let len = instructionLength
-            readOperands (offset addr operandsOffset) (len - 2) mem
+          operands = readOperands operandsStartAddr operandsLength mem
           -- Build the non-final RawInstruction. At this point it could still all be invalid.
-          rawInstruction = RawInstruction <$> pure opcode <*> pure instructionLength <*> operands
+          rawInstruction = RawInstruction opcode (letterLen instructionLength) <$> operands
           -- Finally construct the instruction.
           instruction = constructInstruction =<< rawInstruction
 
@@ -143,7 +147,7 @@ constructInstruction (RawInstruction opcode len operands)
 
 -- | Reads the operands (arguments) that follow an instruction's opcode.
 --  It'll parse them and return real DataLocations.
-readOperands :: Word -> Int -> Memory.Memory -> Either BadInstruction [DataLocation]
+readOperands :: Word -> WordLength -> Memory.Memory -> Either BadInstruction [DataLocation]
 readOperands addr len mem =
     toEither BadInstruction $ parseOperands =<< pure (Memory.readWords mem addr len)
 
