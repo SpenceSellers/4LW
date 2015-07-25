@@ -166,9 +166,7 @@ divWord w1 w2 = toWord $ (wordValue w1) `div` (wordValue w2)
 negateWord :: Base27.Word -> Base27.Word
 negateWord = subWord (wrd "ZZZZ")
 
--- | Finds the word that occurs diff times after the initial word.
-offset :: Base27.Word -> Int -> Base27.Word
---offset w diff = addWord w $ toWord diff
+offset :: Word -> Int -> Word
 offset w diff
   | diff > 0 = addWord w $ toWord diff
   | diff == 0 = w

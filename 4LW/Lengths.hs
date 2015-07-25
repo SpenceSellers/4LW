@@ -21,3 +21,6 @@ addLengths a b = LetterLength $ (letterLen a) + (letterLen b)
 
 addWordLengths :: WordLength -> WordLength -> WordLength
 addWordLengths (WordLength a) (WordLength b) = WordLength $ a + b
+
+offsetBy :: ToLetterLength l =>  Base27.Word -> l -> Base27.Word
+offsetBy w off = offset w (letterLen off)

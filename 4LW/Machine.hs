@@ -9,6 +9,7 @@ import Data.Array
 import Data.Ix
 import Instruction
 import Base27
+import Lengths
 import qualified Memory
 import qualified Io
 import Control.Lens
@@ -81,7 +82,7 @@ pushStack :: Word -> State MachineState ()
 pushStack word = do
     regs <- use registers
     let oldStackAddr = regs ! stackRegister
-    let newStackAddr = offset oldStackAddr (-4)
+    let newStackAddr = offsetBy oldStackAddr (WordLength (-1))
     setMemory newStackAddr word -- Make sure to use the NEW one.
 
     setRegister stackRegister newStackAddr
@@ -91,7 +92,7 @@ popStack = do
     mem <- use memory
     regs <- use registers
     let stackAddr = regs ! stackRegister
-    let newAddr = offset stackAddr 4
+    let newAddr = offsetBy stackAddr (WordLength 1)
     setRegister stackRegister newAddr
     return $ Memory.readWord mem stackAddr
 

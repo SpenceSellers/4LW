@@ -8,6 +8,7 @@ import Control.Applicative
 import Data.Default
 import Control.Lens
 import Control.Monad.Identity
+
 type Memory = Map.Map Word Letter
 
 data MemoryError = AddressOverrun deriving (Show, Eq)
@@ -33,7 +34,7 @@ writeLetter mem addr letter = Map.insert addr letter mem
 -- |Writes a sequence of letters to memory, given a starting address.
 writeLetters :: Memory -> Word -> [Letter] -> Memory
 writeLetters mem addr (l:rest) =
-    writeLetters (writeLetter mem addr l) (offset addr 1) rest
+    writeLetters (writeLetter mem addr l) (offsetBy addr (LetterLength 1)) rest
 writeLetters mem _ [] = mem
 
 -- |Todo: Check for end of bounds
@@ -60,7 +61,7 @@ importString str addr mem = writeLetters mem addr <$> sequence (map letterSafe s
 orBlank :: Default a => Either MemoryError a -> a
 orBlank = either (const def) id
 
--- |Calculates the addresses of a word given a starting word.
+-- |Calculates the letter addresses of a word given a starting word.
 -- At the moment this does wrap around.
 wordAddrs :: Word -> (Word, Word, Word, Word)
 wordAddrs start = (start, offset start 1, offset start 2, offset start 3)

@@ -84,17 +84,17 @@ readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionPar
 readInstruction addr mem = InstructionParseResult <$> instruction <*> pure (letterLen instructionLength)
     -- We're multiplying the length by four, because the ParseResult wants it in Letters, but
     -- the instruction reports it in Words for space efficiency.
-    where lengthOffset = 2 -- Letter offset that the instruction length is at.
-          operandsOffset = 4 -- Letter offset the operands start at.
+    where lengthOffset = LetterLength 2 -- Letter offset that the instruction length is at.
+          operandsOffset = LetterLength 4 -- Letter offset the operands start at.
           -- Make a tuple containing the two-letter opcode.
           opcode = (Memory.readLetter mem addr, Memory.readLetter mem (offset addr 1))
           -- Figure out how long the instruction claims it is, in words.
-          instructionLengthAddr = offset addr lengthOffset
+          instructionLengthAddr = offsetBy addr lengthOffset
           instructionLength = WordLength . Base27.getValue $ Memory.readLetter mem instructionLengthAddr
 
           operandsLength = addWordLengths instructionLength (WordLength (-2))
 
-          operandsStartAddr = offset addr operandsOffset
+          operandsStartAddr = offsetBy addr operandsOffset
           -- Read and parse the operands (arguments)
           operands = readOperands operandsStartAddr operandsLength mem
           -- Build the non-final RawInstruction. At this point it could still all be invalid.
