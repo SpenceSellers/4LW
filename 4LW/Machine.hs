@@ -93,7 +93,7 @@ popStack = do
     let stackAddr = regs ! stackRegister
     let newAddr = offset stackAddr 4
     setRegister stackRegister newAddr
-    return $ either (const minWord) id $ Memory.readWord mem stackAddr
+    return $ Memory.readWord mem stackAddr
 
 -- | Gets the Program Counter
 getPC :: State MachineState Word
@@ -115,9 +115,7 @@ getData (Register letter) = do
            then regs ! letter
            else minWord
 
-getData (MemoryLocation loc) =
-    either <$> pure (const minWord) <*> pure id <*>
-        (Memory.readWord <$> use memory <*> getData loc)
+getData (MemoryLocation loc) = Memory.readWord <$> use memory <*> getData loc
 
 getData (Stack) = popStack
 

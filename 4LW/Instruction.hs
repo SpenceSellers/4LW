@@ -80,21 +80,21 @@ toBad = convertEither BadInstruction
 -- and memory region supplied to it. It has a lot to think about, so unfortunately
 -- it's rather huge and horrible.
 readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
-readInstruction addr mem = InstructionParseResult <$> instruction <*> toBad ((*4) <$> instructionLength )
+readInstruction addr mem = InstructionParseResult <$> instruction <*> pure (instructionLength * 4)
     -- We're multiplying the length by four, because the ParseResult wants it in Letters, but
     -- the instruction reports it in Words for space efficiency.
     where lengthOffset = 2 -- Letter offset that the instruction length is at.
           operandsOffset = 4 -- Letter offset the operands start at.
           -- Make a tuple containing the two-letter opcode.
-          opcode = (,) <$> Memory.readLetter mem addr <*> Memory.readLetter mem (offset addr 1)
+          opcode = (Memory.readLetter mem addr, Memory.readLetter mem (offset addr 1))
           -- Figure out how long the instruction claims it is.
-          instructionLength = Base27.getValue <$> toBad (Memory.readLetter mem (offset addr lengthOffset))
+          instructionLength = Base27.getValue (Memory.readLetter mem (offset addr lengthOffset))
           -- Read and parse the operands (arguments)
           operands = do
-            len <- instructionLength
+            let len = instructionLength
             readOperands (offset addr operandsOffset) (len - 2) mem
           -- Build the non-final RawInstruction. At this point it could still all be invalid.
-          rawInstruction = RawInstruction <$> toBad opcode <*> instructionLength <*> operands
+          rawInstruction = RawInstruction <$> pure opcode <*> pure instructionLength <*> operands
           -- Finally construct the instruction.
           instruction = constructInstruction =<< rawInstruction
 
@@ -145,7 +145,7 @@ constructInstruction (RawInstruction opcode len operands)
 --  It'll parse them and return real DataLocations.
 readOperands :: Word -> Int -> Memory.Memory -> Either BadInstruction [DataLocation]
 readOperands addr len mem =
-    toEither BadInstruction $ parseOperands =<< toMaybe (Memory.readWords mem addr len)
+    toEither BadInstruction $ parseOperands =<< pure (Memory.readWords mem addr len)
 
 -- | Given the list of words that make up the operands (arguments) to an
 --  instruction, turn them into real DataLocations.

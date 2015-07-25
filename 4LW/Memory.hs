@@ -6,7 +6,7 @@ import qualified Data.Map as Map
 import Control.Applicative
 import Data.Default
 import Control.Lens
-
+import Control.Monad.Identity
 type Memory = Map.Map Word Letter
 
 data MemoryError = AddressOverrun deriving (Show, Eq)
@@ -14,19 +14,17 @@ data MemoryError = AddressOverrun deriving (Show, Eq)
 blankMemory :: Memory
 blankMemory = Map.empty
 
-readLetter :: Memory -> Word -> Either MemoryError Letter
-readLetter mem addr = Right $ Map.findWithDefault (letter '_') addr mem
+readLetter :: Memory -> Word -> Letter
+readLetter mem addr =  Map.findWithDefault (letter '_') addr mem
 
 
-readLetters :: Memory -> Word -> Int -> Either MemoryError [Letter]
-readLetters mem addr len = mapM (readLetter mem) addrs
+readLetters :: Memory -> Word -> Int -> [Letter]
+readLetters mem addr len = map (readLetter mem) addrs
     where addrs = map (offset addr) [0 .. len - 1]
 
-readWord :: Memory -> Word -> Either MemoryError Word
-readWord mem addr = do
-  (a,b,c,d) <- wordAddrApply (readLetter mem) addr
-  --[a,b,c,d] <- readLetters mem addr 4 -- This alternative proved to be slightly slower to the inlined version
-  return $ Word a b c d
+readWord :: Memory -> Word -> Word
+readWord mem addr = Word a b c d
+    where (a,b,c,d) = wordAddrMap (readLetter mem) addr
 
 -- |Writes a single letter to memory, given an address.
 writeLetter :: Memory -> Word -> Letter -> Memory
@@ -47,13 +45,13 @@ writeWord mem addr (Word a b c d) =
 
 -- |Reads an entire range of words.
 -- |The "length" is still in number of letters!
-readWords :: Memory -> Word -> Int -> Either MemoryError [Word]
-readWords mem addr len = mapM (readWord mem) addrs
+readWords :: Memory -> Word -> Int -> [Word]
+readWords mem addr len = map (readWord mem) addrs
     where addrs = map (offset addr) [0,4..len*4]
 
 exportString :: Memory -> (Word, Word) -> String
 exportString mem (start, end) =
-    map (\addr -> getletter $ orBlank $ readLetter mem addr) $ range (start, end)
+    map (\addr -> getletter $ readLetter mem addr) $ range (start, end)
         where getletter (LetterV c) = c
 
 
@@ -72,4 +70,8 @@ wordAddrs start = (start, offset start 1, offset start 2, offset start 3)
 -- and gives the addresses to a monadic function.
 wordAddrApply :: Monad m => (Word -> m a) -> Word -> m (a,a,a,a)
 wordAddrApply f addr = sequenceOf each (f a0, f a1, f a2, f a3)
+    where (a0, a1, a2, a3) = wordAddrs addr
+
+wordAddrMap :: (Word -> a) -> Word -> (a, a, a, a)
+wordAddrMap f addr = (f a0, f a1, f a2, f a3)
     where (a0, a1, a2, a3) = wordAddrs addr
