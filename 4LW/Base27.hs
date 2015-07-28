@@ -13,6 +13,7 @@ import Data.Ix
 import Debug.Trace
 import Data.Digits (digits, unDigits)
 import Data.Default
+import Control.Lens
 
 newtype Letter = Letter Char deriving (Eq)
 
@@ -20,10 +21,11 @@ newtype Letter = Letter Char deriving (Eq)
 pattern LetterV c <- Letter c
 
 instance Ord Letter where
-    compare (LetterV '_') (LetterV '_') = EQ
-    compare (LetterV '_') (LetterV _) = LT
-    compare (LetterV _) (LetterV '_') = GT
-    compare (LetterV a) (LetterV b) = compare a b
+    -- Letter being used instead of LetterV for performance.
+    compare (Letter '_') (Letter '_') = EQ
+    compare (Letter '_') (Letter _) = LT
+    compare (Letter _) (Letter '_') = GT
+    compare (Letter a) (Letter b) = compare a b
 
 instance Ix Letter where
     range (l1, l2) = map letterValue $ range (n1, n2)
@@ -41,9 +43,6 @@ instance Show Letter where
 instance Default Letter where
     def = letter '_'
 
-data Offset = LetterOffset Int | WordOffset Int
-            deriving (Show)
-
 -- | Better constructor, with checking.
 letter :: Char -> Letter
 letter c = if Base27.isLetter c then Letter c else error "Bad letter value!"
@@ -60,7 +59,7 @@ isLetter c = inRange ('A', 'Z') c
 -- | Gets the numeric value of a Letter.
 getValue :: Letter -> Int
 getValue (LetterV '_') = 0
-getValue (LetterV l) = index ('A', 'Z') l + 1
+getValue (LetterV l) = Data.Ix.index ('A', 'Z') l + 1
 
 -- | Turns a numeric value into a Letter
 letterValue :: Int -> Letter
@@ -75,6 +74,11 @@ toLetter num
     | num > 26 = error "toLetter must be 26 or below."
     | otherwise = letter $ chr (ord 'A' + num - 1)
 
+toLetterSafe :: Int -> Maybe Letter
+toLetterSafe num
+    | num < 0 = Nothing
+    | num > 26 = Nothing
+    | otherwise = Just $ letterValue num
 
 convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
@@ -103,9 +107,28 @@ instance Ix Base27.Word where
 
     inRange (w1, w2) w = (wordValue w >= wordValue w1) && (wordValue w <= wordValue w2)
 
+firstLetter :: Lens' Word Letter
+firstLetter f (Word a b c d) = (\new -> Word new b c d) <$> f a
+
+secondLetter :: Lens' Word Letter
+secondLetter f (Word a b c d) = (\new -> Word a new c d) <$> f b
+
+thirdLetter :: Lens' Word Letter
+thirdLetter f (Word a b c d) = (\new -> Word a b new d) <$> f c
+
+fourthLetter :: Lens' Word Letter
+fourthLetter f (Word a b c d) = (\new -> Word a b c new) <$> f d
+
+valueOfWord :: Iso' Word Int
+valueOfWord = iso wordValue toWord
+
+valueOfLetter :: Prism' Int Letter
+valueOfLetter = prism' getValue toLetterSafe
+
 minWord :: Base27.Word
 minWord = Word (letter '_') (letter '_') (letter '_') (letter '_')
 
+maxWord :: Base27.Word
 maxWord = Word (letter 'Z') (letter 'Z') (letter 'Z') (letter 'Z')
 
 -- | The number of possible values that a word can have.
@@ -128,6 +151,7 @@ wordValue :: Base27.Word -> Int
 --wordValue = unDigits 27 . map getValue . wordToList
 -- Optimized expanded version:
 wordValue (Word a b c d) = (19683 * (getValue a)) + (729 * (getValue b)) + (27 * (getValue c)) + (getValue d)
+
 
 toWord :: Int -> Base27.Word
 --toWord = wordFromList . map toLetter . digits 27 . (`mod` wordValues)

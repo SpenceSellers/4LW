@@ -102,6 +102,11 @@ readInstruction addr mem = InstructionParseResult <$> instruction <*> pure (toLe
           -- Finally construct the instruction.
           instruction = constructInstruction =<< rawInstruction
 
+readInstructionWords :: Word -> Memory.Memory -> [Word]
+readInstructionWords addr mem = Memory.readWords mem addr len
+    where lengthOffset = LetterLength 2
+          len = WordLength . Base27.getValue $ Memory.readLetter mem (offsetBy addr lengthOffset)
+
 -- | Takes a RawInstruction and figures out what it really is.
 -- the resulting Instruction will be actually usable by 4LW.
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
