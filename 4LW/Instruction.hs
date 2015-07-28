@@ -47,7 +47,7 @@ data BadInstruction =
 --  the instruction was, so we can change the Program Counter register
 --  to the correct place for the next instruction.
 data InstructionParseResult where
-    InstructionParseResult :: Instruction -> Int -> InstructionParseResult
+    InstructionParseResult :: Instruction -> LetterLength -> InstructionParseResult
     deriving (Show)
 
 -- | A RawInstruction is all of the data that makes up an Instruction, but
@@ -81,7 +81,7 @@ toBad = convertEither BadInstruction
 -- and memory region supplied to it. It has a lot to think about, so unfortunately
 -- it's rather huge and horrible.
 readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
-readInstruction addr mem = InstructionParseResult <$> instruction <*> pure (letterLen instructionLength)
+readInstruction addr mem = InstructionParseResult <$> instruction <*> pure (toLetterLength instructionLength)
     -- We're multiplying the length by four, because the ParseResult wants it in Letters, but
     -- the instruction reports it in Words for space efficiency.
     where lengthOffset = LetterLength 2 -- Letter offset that the instruction length is at.

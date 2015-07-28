@@ -2,7 +2,9 @@ module Lengths where
 import Base27
 
 newtype LetterLength = LetterLength Int
+    deriving Show
 newtype WordLength = WordLength Int
+    deriving Show
 
 class ToLetterLength a where
     letterLen :: a -> Int

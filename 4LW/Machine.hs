@@ -13,8 +13,6 @@ import Lengths
 import qualified Memory
 import qualified Io
 import Control.Lens
-import Control.Lens.At
-import Control.Lens.Iso
 import Control.Monad
 import Data.Maybe
 import Control.Monad.State.Lazy
@@ -206,7 +204,7 @@ tick = do
     Left BadInstruction -> trace ("BAD INSTRUCTION") $ return ()
     Right (InstructionParseResult instruction length) ->
         do
-          setPC $ offset pc length
+          setPC $ offsetBy pc length
           runInstruction instruction
 
 start :: StateT MachineState IO ()

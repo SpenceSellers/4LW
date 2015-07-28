@@ -58,6 +58,9 @@ exportString mem (start, end) =
 importString :: String -> Word -> Memory -> Maybe Memory
 importString str addr mem = writeLetters mem addr <$> sequence (map letterSafe str)
 
+makeMem :: String -> Maybe Memory
+makeMem s = importString s minWord blankMemory
+
 orBlank :: Default a => Either MemoryError a -> a
 orBlank = either (const def) id
 
