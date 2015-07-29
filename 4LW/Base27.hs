@@ -6,7 +6,8 @@ module Base27 (Letter, Word(Word) , letter,
                extendToWord, pattern LetterV,
                minWord, maxWord, letter2, lastLetter,
                negateWord, addWord, subWord, mulWord,
-               divWord, isLetter) where
+               divWord, isLetter,
+               firstLetter, secondLetter, thirdLetter, fourthLetter) where
 import Prelude hiding (Word)
 import Data.Char hiding (isLetter)
 import Data.Ix

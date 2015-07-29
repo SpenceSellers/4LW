@@ -53,7 +53,7 @@ data InstructionParseResult where
 -- | A RawInstruction is all of the data that makes up an Instruction, but
 --  it has not been assembled into something that 4LW can use yet.
 --  It might turn out to not be a valid instruction at all.
-data RawInstruction = RawInstruction (Letter, Letter) Int Operands
+data RawInstruction = RawInstruction (Letter, Letter) Operands
                       deriving (Show, Eq)
 
 type Operands = [DataLocation]
@@ -78,39 +78,31 @@ convertEither new (Left e) = Left new
 toBad = convertEither BadInstruction
 
 -- | readInstruction will attempt to build an entire Instruction out of the address
--- and memory region supplied to it. It has a lot to think about, so unfortunately
--- it's rather huge and horrible.
+-- and memory region supplied to it.
 readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
-readInstruction addr mem = InstructionParseResult <$> instruction <*> pure (toLetterLength instructionLength)
-    -- We're multiplying the length by four, because the ParseResult wants it in Letters, but
-    -- the instruction reports it in Words for space efficiency.
-    where lengthOffset = LetterLength 2 -- Letter offset that the instruction length is at.
-          operandsOffset = LetterLength 4 -- Letter offset the operands start at.
-          -- Make a tuple containing the two-letter opcode.
-          opcode = (Memory.readLetter mem addr, Memory.readLetter mem (offset addr 1))
-          -- Figure out how long the instruction claims it is, in words.
-          instructionLengthAddr = offsetBy addr lengthOffset
-          instructionLength = WordLength . Base27.getValue $ Memory.readLetter mem instructionLengthAddr
+readInstruction addr mem = InstructionParseResult <$> instruction <*> pure (toLetterLength . WordLength $ length instructionWords)
+    where instructionWords = readInstructionWords addr mem
+          instruction = buildInstruction instructionWords
 
-          operandsLength = addWordLengths instructionLength (WordLength (-2))
+buildInstruction :: [Word] -> Either BadInstruction Instruction
+buildInstruction raw = constructInstruction =<< assembleRaw raw
 
-          operandsStartAddr = offsetBy addr operandsOffset
-          -- Read and parse the operands (arguments)
-          operands = readOperands operandsStartAddr operandsLength mem
-          -- Build the non-final RawInstruction. At this point it could still all be invalid.
-          rawInstruction = RawInstruction opcode (letterLen instructionLength) <$> operands
-          -- Finally construct the instruction.
-          instruction = constructInstruction =<< rawInstruction
+assembleRaw :: [Word] -> Either BadInstruction RawInstruction
+assembleRaw [] = Left BadInstruction
+assembleRaw (opWord:rawOperands) = RawInstruction <$> pure opcode <*> operands
+    where opcode = (opWord ^. firstLetter, opWord ^. secondLetter)
+          operands = toEither BadInstruction $ parseOperands rawOperands
 
 readInstructionWords :: Word -> Memory.Memory -> [Word]
 readInstructionWords addr mem = Memory.readWords mem addr len
     where lengthOffset = LetterLength 2
           len = WordLength . Base27.getValue $ Memory.readLetter mem (offsetBy addr lengthOffset)
-
+          -- realLen = if len == WordLength 0 then WordLength 1 else len
+      
 -- | Takes a RawInstruction and figures out what it really is.
 -- the resulting Instruction will be actually usable by 4LW.
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
-constructInstruction (RawInstruction opcode len operands)
+constructInstruction (RawInstruction opcode operands)
     | opcode == letter2 "__" = Right Nop
     | opcode == letter2 "HL" = Right Halt
     | opcode == letter2 "AD" = toEither BadInstruction $ Add <$>

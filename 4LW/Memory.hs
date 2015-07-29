@@ -47,7 +47,7 @@ writeWord mem addr (Word a b c d) =
 -- |Reads an entire range of words.
 readWords :: Memory -> Word -> WordLength -> [Word]
 readWords mem addr (WordLength len) = map (readWord mem) addrs
-    where addrs = map (offset addr) [0,4..len*4]
+    where addrs = map (offset addr) [0,4..(len - 1)*4]
 
 exportString :: Memory -> (Word, Word) -> String
 exportString mem (start, end) =
