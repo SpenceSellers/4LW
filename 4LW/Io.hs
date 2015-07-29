@@ -1,11 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
-module Io where
+module Io (readToBuffer, charToInternal, internalToChar) where
 
 import Base27
 import System.IO
 import Data.Monoid
 import Data.Char
 import Data.Ix
+import Control.Lens
 
 readToBuffer :: [Char] -> IO [Char]
 readToBuffer buf = do
@@ -25,6 +26,11 @@ charToInternal c
     | inRange ('a', 'z') c = Base27.Word (letter '_') (letter '_') (letter 'A') (letter . toUpper $ c)
     | inRange ('0', '9') c = Base27.Word (letter '_') (letter '_') (letter 'N') (Base27.toLetter . read $ [c])
 
-internalToChar :: Base27.Word -> Char
-internalToChar (Word a b c d) = char
-    where (LetterV char) = d
+internalToChar :: Base27.Word -> Maybe Char
+internalToChar (WordChars '_' '_' '_' c) = Just $ toUpper c
+internalToChar (WordChars '_' '_' 'A' '_') = Just ' '
+internalToChar (WordChars '_' '_' 'A' c) = Just $ toLower c
+internalToChar (WordChars '_' '_' 'N' c) = toDigit (letter c)
+
+toDigit :: Letter -> Maybe Char
+toDigit l = range ('0', '9') ^? ix (getValue l)

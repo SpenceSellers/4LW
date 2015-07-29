@@ -3,9 +3,10 @@
 module Base27 (Letter, Word(Word) , letter,
                letterSafe, getValue,
                toLetter, offset, wrd,
-               extendToWord, pattern LetterV,
+               extendToWord, pattern LetterV, pattern WordChars,
                minWord, maxWord, letter2,
                negateWord, addWord, subWord, mulWord,
+               leftShift, rightShift,
                divWord, isLetter,
                firstLetter, secondLetter, thirdLetter, fourthLetter) where
 import Prelude hiding (Word)
@@ -20,6 +21,7 @@ newtype Letter = Letter Char deriving (Eq)
 
 -- | A view for letter. You can pattern match on it, but you can't construct it!
 pattern LetterV c <- Letter c
+pattern WordChars a b c d <- Word (Letter a) (Letter b) (Letter c) (Letter d)
 
 instance Ord Letter where
     -- Letter being used instead of LetterV for performance.
@@ -78,6 +80,10 @@ toLetterSafe num
 
 convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
+
+---------------------
+-------- WORDS ------
+---------------------
 
 -- | A word is basically a tuple of four letters.
 data Word = Word Letter Letter Letter Letter
@@ -148,7 +154,6 @@ wordValue :: Base27.Word -> Int
 -- Optimized expanded version:
 wordValue (Word a b c d) = (19683 * (getValue a)) + (729 * (getValue b)) + (27 * (getValue c)) + (getValue d)
 
-
 toWord :: Int -> Base27.Word
 --toWord = wordFromList . map toLetter . digits 27 . (`mod` wordValues)
 toWord num = Word (toLetter a) (toLetter b) (toLetter c) (toLetter d)
@@ -183,6 +188,12 @@ divWord w1 w2 = toWord $ (wordValue w1) `div` (wordValue w2)
 negateWord :: Base27.Word -> Base27.Word
 negateWord = subWord (wrd "ZZZZ")
 
+rightShift :: Word -> Word
+rightShift (Word a b c d) = Word (letter ' ') a b c
+
+leftShift :: Word -> Word
+leftShift (Word a b c d) = Word b c d (letter ' ')
+
 offset :: Word -> Int -> Word
 offset w diff
   | diff > 0 = addWord w $ toWord diff
@@ -203,6 +214,7 @@ wordToString word = map getLetter (wordToList word)
 
 lettersFromString :: String -> Maybe [Letter]
 lettersFromString = sequence . fmap letterSafe
+
 
 letter2 :: String -> (Letter, Letter)
 letter2 (a:b:[]) = (letter a, letter b)

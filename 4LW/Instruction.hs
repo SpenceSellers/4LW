@@ -35,13 +35,14 @@ data Instruction =
     Jump DataLocation |
     JumpZero DataLocation DataLocation |
     FCall DataLocation [DataLocation] |
-    Return [DataLocation]
+    Return [DataLocation] |
+    Swap DataLocation DataLocation
 
     deriving (Show, Eq)
 
 
 data BadInstruction =
-     BadInstruction deriving Show
+     BadInstruction | BadOpcode | BadOperands deriving Show
 
 -- | An InstructionParseResult is just the instruction, and how long
 --  the instruction was, so we can change the Program Counter register
@@ -75,7 +76,7 @@ convertEither :: newerr -> Either e r -> Either newerr r
 convertEither _ (Right r) = Right r
 convertEither new (Left e) = Left new
 
-toBad = convertEither BadInstruction
+toBad = toEither BadInstruction
 
 -- | readInstruction will attempt to build an entire Instruction out of the address
 -- and memory region supplied to it.
@@ -94,7 +95,7 @@ assembleRaw :: [Word] -> Either BadInstruction RawInstruction
 assembleRaw [] = Left BadInstruction
 assembleRaw (opWord:rawOperands) = RawInstruction <$> pure opcode <*> operands
     where opcode = (opWord ^. firstLetter, opWord ^. secondLetter)
-          operands = toEither BadInstruction $ parseOperands rawOperands
+          operands = toEither BadOperands $ parseOperands rawOperands
 
 -- Reads the words of an instruction, using the length flag.
 readInstructionWords :: Word -> Memory.Memory -> [Word]
@@ -109,42 +110,48 @@ constructInstruction :: RawInstruction -> Either BadInstruction Instruction
 constructInstruction (RawInstruction opcode operands)
     | opcode == letter2 "__" = Right Nop
     | opcode == letter2 "HL" = Right Halt
-    | opcode == letter2 "AD" = toEither BadInstruction $ Add <$>
+    | opcode == letter2 "AD" = toBad $ Add <$>
                                 (operands ^? ix 0) <*>
                                 (operands ^? ix 1) <*>
                                 (operands ^? ix 2)
 
-    | opcode == letter2 "SB" = toEither BadInstruction $ Sub <$>
+    | opcode == letter2 "SB" = toBad $ Sub <$>
                                 (operands ^? ix 0) <*>
                                 (operands ^? ix 1) <*>
                                 (operands ^? ix 2)
 
-    | opcode == letter2 "ML" = toEither BadInstruction $ Mul <$>
+    | opcode == letter2 "ML" = toBad $ Mul <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
 
-    | opcode == letter2 "DV" = toEither BadInstruction $ Div <$>
+    | opcode == letter2 "DV" = toBad $ Div <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
 
-    | opcode == letter2 "MV" = toEither BadInstruction $ Move <$>
+    | opcode == letter2 "MV" = toBad $ Move <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
 
-    | opcode == letter2 "JP" = toEither BadInstruction $ Jump <$>
+    | opcode == letter2 "JP" = toBad $ Jump <$>
                                  (operands ^? ix 0)
 
-    | opcode == letter2 "JZ" = toEither BadInstruction $ JumpZero <$>
+    | opcode == letter2 "JZ" = toBad $ JumpZero <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
-    | opcode == letter2 "FN" = toEither BadInstruction $ FCall <$>
+
+    | opcode == letter2 "FN" = toBad $ FCall <$>
                                  (operands ^? ix 0) <*>
                                  (pure . tail $ operands)
+
     | opcode == letter2 "RT" = Right $ Return operands
 
-    | otherwise = trace ("Invalid OPcode is: " ++ (show opcode)) Left BadInstruction
+    | opcode == letter2 "SW" = toBad $ Swap <$>
+                                 (operands ^? ix 0) <*>
+                                 (operands ^? ix 1)
+
+    | otherwise = Left BadOpcode
 
 
 -- | Given the list of words that make up the operands (arguments) to an

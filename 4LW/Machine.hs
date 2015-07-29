@@ -140,7 +140,7 @@ setData (MemoryLocation loc) word = flip setMemory word =<< (getData loc)
 setData (Stack) word = pushStack word
 
 setData (Io selector) word =
-    action .= IOWrite [Io.internalToChar word]
+    action .= (IOWrite $ catMaybes [Io.internalToChar word])
 
 setData (Negated loc) word =
     setData loc (negateWord word)
@@ -191,6 +191,11 @@ runInstruction (Return args) = do
     sequence . map pushStack $ argDatas
     return ()
 
+runInstruction (Swap a b) = do
+    aData <- getData a
+    bData <- getData b
+    setData a bData
+    setData b aData
 
 tick :: State MachineState ()
 tick = do
@@ -201,7 +206,7 @@ tick = do
       mem = state ^. memory
 
   case instructionResult of
-    Left BadInstruction -> trace ("BAD INSTRUCTION") $ return ()
+    Left reason -> trace ("BAD INSTRUCTION: " ++ show reason) $ return ()
     Right (InstructionParseResult instruction length) ->
         do
           setPC $ offsetBy pc length

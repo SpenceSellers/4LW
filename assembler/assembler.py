@@ -63,7 +63,9 @@ def assembleLine(line, index, labels):
         return ""
 
     if splitted[0] == 'data':
-        return ''.join(splitted[1:])
+        labels.define(splitted[1], index)
+        return ''.join(splitted[2:])
+
     return assembleInstruction(real_line, index, labels)
 
 def assembleInstruction(line, index, labels):
