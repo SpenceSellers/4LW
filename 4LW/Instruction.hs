@@ -80,25 +80,29 @@ toBad = convertEither BadInstruction
 -- | readInstruction will attempt to build an entire Instruction out of the address
 -- and memory region supplied to it.
 readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
-readInstruction addr mem = InstructionParseResult <$> instruction <*> pure (toLetterLength . WordLength $ length instructionWords)
+readInstruction addr mem = InstructionParseResult <$> instruction <*> pure instructionLength
     where instructionWords = readInstructionWords addr mem
+          instructionLength = (toLetterLength . WordLength $ length instructionWords)
           instruction = buildInstruction instructionWords
 
+-- Builds a complete instruction out of the supplied Words.
 buildInstruction :: [Word] -> Either BadInstruction Instruction
 buildInstruction raw = constructInstruction =<< assembleRaw raw
 
+-- Assembles a RawInstruction out of the supplied Words
 assembleRaw :: [Word] -> Either BadInstruction RawInstruction
 assembleRaw [] = Left BadInstruction
 assembleRaw (opWord:rawOperands) = RawInstruction <$> pure opcode <*> operands
     where opcode = (opWord ^. firstLetter, opWord ^. secondLetter)
           operands = toEither BadInstruction $ parseOperands rawOperands
 
+-- Reads the words of an instruction, using the length flag.
 readInstructionWords :: Word -> Memory.Memory -> [Word]
 readInstructionWords addr mem = Memory.readWords mem addr len
     where lengthOffset = LetterLength 2
           len = WordLength . Base27.getValue $ Memory.readLetter mem (offsetBy addr lengthOffset)
           -- realLen = if len == WordLength 0 then WordLength 1 else len
-      
+
 -- | Takes a RawInstruction and figures out what it really is.
 -- the resulting Instruction will be actually usable by 4LW.
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
@@ -142,11 +146,6 @@ constructInstruction (RawInstruction opcode operands)
 
     | otherwise = trace ("Invalid OPcode is: " ++ (show opcode)) Left BadInstruction
 
--- | Reads the operands (arguments) that follow an instruction's opcode.
---  It'll parse them and return real DataLocations.
-readOperands :: Word -> WordLength -> Memory.Memory -> Either BadInstruction [DataLocation]
-readOperands addr len mem =
-    toEither BadInstruction $ parseOperands =<< pure (Memory.readWords mem addr len)
 
 -- | Given the list of words that make up the operands (arguments) to an
 --  instruction, turn them into real DataLocations.
@@ -155,10 +154,10 @@ parseOperands words = reverse <$> parseOperands_ words []
 
 parseOperands_ :: [Word] -> Operands -> Maybe [DataLocation]
 parseOperands_ ((Word _ flag1 flag2 control):opdata:xs) ops
-    | control == letter 'R' = build (Register (lastLetter opdata))
+    | control == letter 'R' = build (Register (opdata ^. fourthLetter))
     -- | control == letter 'M' =  parseOperands_ xs (applyFlag flag (MemoryLocation opdata): ops)
     | control == letter 'C' = build (Constant opdata)
-    | control == letter 'I' = build (Io (lastLetter opdata))
+    | control == letter 'I' = build (Io (opdata ^. fourthLetter))
     | control == letter 'S' = build Stack
     where build instruction = parseOperands_ xs (applyFlags [flag1, flag2] instruction:ops)
 

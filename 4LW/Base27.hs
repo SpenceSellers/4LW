@@ -2,9 +2,9 @@
 
 module Base27 (Letter, Word(Word) , letter,
                letterSafe, getValue,
-               letterValue, offset, wrd,
+               toLetter, offset, wrd,
                extendToWord, pattern LetterV,
-               minWord, maxWord, letter2, lastLetter,
+               minWord, maxWord, letter2,
                negateWord, addWord, subWord, mulWord,
                divWord, isLetter,
                firstLetter, secondLetter, thirdLetter, fourthLetter) where
@@ -29,7 +29,7 @@ instance Ord Letter where
     compare (Letter a) (Letter b) = compare a b
 
 instance Ix Letter where
-    range (l1, l2) = map letterValue $ range (n1, n2)
+    range (l1, l2) = map toLetter $ range (n1, n2)
         where
           n1 = getValue l1
           n2 = getValue l2
@@ -62,11 +62,6 @@ getValue :: Letter -> Int
 getValue (LetterV '_') = 0
 getValue (LetterV l) = Data.Ix.index ('A', 'Z') l + 1
 
--- | Turns a numeric value into a Letter
-letterValue :: Int -> Letter
-letterValue 0 = letter '_'
-letterValue n = letter $ range ('A', 'Z') !! (n - 1)
-
 -- | Converts a integer (0,26) to a letter. Yes this is a partial function.
 toLetter :: Int -> Letter
 toLetter num
@@ -79,7 +74,7 @@ toLetterSafe :: Int -> Maybe Letter
 toLetterSafe num
     | num < 0 = Nothing
     | num > 26 = Nothing
-    | otherwise = Just $ letterValue num
+    | otherwise = Just $ toLetter num
 
 convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
@@ -172,9 +167,6 @@ toWordDigits val = (a, b, c, d)
 extendToWord :: Letter -> Base27.Word
 extendToWord l = Word (letter '_') (letter '_') (letter '_') l
 
-lastLetter :: Base27.Word -> Letter
-lastLetter (Word _ _ _ d) = d
-
 -- | Adds two words.
 addWord :: Base27.Word -> Base27.Word -> Base27.Word
 addWord w1 w2 = toWord $ (wordValue w1) + (wordValue w2)
@@ -208,6 +200,9 @@ wrdSafe _ = Nothing
 wordToString :: Base27.Word -> String
 wordToString word = map getLetter (wordToList word)
     where getLetter (LetterV c) = c
+
+lettersFromString :: String -> Maybe [Letter]
+lettersFromString = sequence . fmap letterSafe
 
 letter2 :: String -> (Letter, Letter)
 letter2 (a:b:[]) = (letter a, letter b)

@@ -2,9 +2,9 @@ module Memory where
 import Prelude hiding (Word)
 import Base27
 import Lengths
-import Data.Array
 import qualified Data.Map as Map
 import Control.Applicative
+import Data.Ix
 import Data.Default
 import Control.Lens
 import Control.Monad.Identity
