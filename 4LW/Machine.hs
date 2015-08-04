@@ -56,6 +56,7 @@ registerBounds = (letter 'A', letter 'T')
 blankRegisters :: Registers
 blankRegisters = listArray registerBounds (repeat minWord)
 
+
 -- | A blank "starting" state of the machine, with everything zeroed.
 blankState :: MachineState
 blankState = MachineState blankRegisters Memory.blankMemory NoAction 0 [] []

@@ -24,4 +24,5 @@ main = do
   putStrLn "\n\n\n\n\n\n"
   putStrLn "Done:"
   putStrLn $ exportString (_memory state') (minWord, wrd "_AAA")
+  putStrLn "Registers:"
   print $ state' ^. registers

@@ -195,10 +195,7 @@ leftShift :: Word -> Word
 leftShift (Word a b c d) = Word b c d (letter ' ')
 
 offset :: Word -> Int -> Word
-offset w diff
-  | diff > 0 = addWord w $ toWord diff
-  | diff == 0 = w
-  | diff < 0 = subWord w $ toWord (diff * (-1))
+offset w diff = valueOfWord +~ diff $ w
 
 -- | Debug / Convenience function to make a word from a string.
 wrd :: String -> Base27.Word
