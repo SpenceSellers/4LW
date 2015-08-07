@@ -83,7 +83,7 @@ toBad = toEither BadInstruction
 readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
 readInstruction addr mem = InstructionParseResult <$> instruction <*> pure instructionLength
     where instructionWords = readInstructionWords addr mem
-          instructionLength = (toLetterLength . WordLength $ length instructionWords)
+          instructionLength = toLetterLength . WordLength $ length instructionWords
           instruction = buildInstruction instructionWords
 
 -- Builds a complete instruction out of the supplied Words.

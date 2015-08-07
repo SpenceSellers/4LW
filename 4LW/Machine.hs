@@ -10,6 +10,7 @@ import Data.Ix
 import Instruction
 import Base27
 import Lengths
+import Registers
 import qualified Memory
 import qualified Io
 import Control.Lens
@@ -24,18 +25,10 @@ import Debug.Trace
 hoistState :: Monad m => State s a -> StateT s m a
 hoistState = StateT . (return .) . runState
 
-stackRegister :: Letter
-stackRegister = letter 'S'
-
-pcRegister :: Letter
-pcRegister = letter 'T'
-
 data MachineAction = NoAction |
                      HaltAction |
                      IOWrite String
                      deriving (Show, Eq)
-
-type Registers = Array Letter Word
 
 -- | Stores the entire machine state from one instruction to the next.
 data MachineState = MachineState {
@@ -48,14 +41,6 @@ data MachineState = MachineState {
     } deriving (Show)
 
 makeLenses ''MachineState
-
-registerBounds :: (Letter, Letter)
-registerBounds = (letter 'A', letter 'T')
-
--- | A set of blank registers.
-blankRegisters :: Registers
-blankRegisters = listArray registerBounds (repeat minWord)
-
 
 -- | A blank "starting" state of the machine, with everything zeroed.
 blankState :: MachineState
@@ -72,7 +57,8 @@ popInBuffer = do
     [] -> return Nothing
 
 setRegister :: Letter -> Word -> State MachineState ()
-setRegister r w = registers %= (\regs -> regs // [(r, w)])
+-- At the moment this will do nothing if the letter is not a valid register.
+setRegister r w = registers %= (\regs -> fromMaybe regs $ updateRegister regs r w)
 
 setMemory :: Word -> Word -> State MachineState ()
 setMemory addr word = memory %= \mem -> Memory.writeWord mem addr word
