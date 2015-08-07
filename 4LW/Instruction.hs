@@ -34,6 +34,7 @@ data Instruction =
     Div DataLocation DataLocation DataLocation |
     Jump DataLocation |
     JumpZero DataLocation DataLocation |
+    JumpEqual DataLocation DataLocation DataLocation |
     FCall DataLocation [DataLocation] |
     Return [DataLocation] |
     Swap DataLocation DataLocation
@@ -140,6 +141,11 @@ constructInstruction (RawInstruction opcode operands)
     | opcode == letter2 "JZ" = toBad $ JumpZero <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
+
+    | opcode == letter2 "JE" = toBad $ JumpEqual <$>
+                                 (operands ^? ix 0) <*>
+                                 (operands ^? ix 1) <*>
+                                 (operands ^? ix 2)
 
     | opcode == letter2 "FN" = toBad $ FCall <$>
                                  (operands ^? ix 0) <*>

@@ -25,12 +25,15 @@ charToInternal c
     | inRange ('A', 'Z') c = extendToWord $ letter c
     | inRange ('a', 'z') c = Base27.Word (letter '_') (letter '_') (letter 'A') (letter . toUpper $ c)
     | inRange ('0', '9') c = Base27.Word (letter '_') (letter '_') (letter 'N') (Base27.toLetter . read $ [c])
+    | c == '\n' = Base27.Word (letter '_') (letter '_') (letter 'C') (letter '_')
 
 internalToChar :: Base27.Word -> Maybe Char
 internalToChar (WordChars '_' '_' '_' c) = Just $ toUpper c
 internalToChar (WordChars '_' '_' 'A' '_') = Just ' '
 internalToChar (WordChars '_' '_' 'A' c) = Just $ toLower c
 internalToChar (WordChars '_' '_' 'N' c) = toDigit (letter c)
+internalToChar (WordChars '_' '_' 'C' '_') = Just '\n'
+internalToChar (WordChars _ _ _ _) = Nothing
 
 toDigit :: Letter -> Maybe Char
 toDigit l = range ('0', '9') ^? ix (getValue l)

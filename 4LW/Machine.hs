@@ -162,7 +162,12 @@ runInstruction (Jump dest) =
 
 runInstruction (JumpZero datloc dest) = do
     dat <- getData datloc
-    when (dat == minWord) (setRegister pcRegister =<< getData dest)
+    when (dat == minWord) (setPC =<< getData dest)
+
+runInstruction (JumpEqual dat1 dat2 dest) = do
+    dat1 <- getData dat1
+    dat2 <- getData dat2
+    when (dat1 == dat2) (setPC =<< getData dest)
 
 runInstruction (FCall addr args) = do
     pushStack =<< getPC
@@ -179,6 +184,8 @@ runInstruction (Return args) = do
     return ()
 
 runInstruction (Swap a b) = do
+    -- Note that the order is important here.
+    -- we definitely need to get the data before we set it.
     aData <- getData a
     bData <- getData b
     setData a bData

@@ -6,6 +6,10 @@ import sys
 import os
 import re
 import string
+
+class UndefinedLabelException(Exception):
+    pass
+
 class Labels:
     def __init__(self):
         self.defs = {}
@@ -13,6 +17,9 @@ class Labels:
 
     def define(self,label, pos):
         self.defs[label] = pos
+
+    def is_defined(self, label):
+        return label in self.defs
 
     def add_use(self,label, pos):
         self.uses.append((label, pos))
@@ -29,6 +36,9 @@ class Labels:
     def replaceAll(self, s):
         news = s
         for label, pos in self.uses:
+            if not self.is_defined(label):
+                raise UndefinedLabelException("Label {} not defined (required at binary pos {})".format(label, pos))
+
             word = self.get_loc(label)
             #print("Replacing {} with {} ({})".format(pos, label, word))
             news = self.replaceWord(news, word, pos)
@@ -44,6 +54,8 @@ def main():
     assembled = ""
     for line in whole.split("\n"):
         assembled += assembleLine(line, len(assembled), labels)
+
+    labels.define('PROG_END', len(assembled))
     assembled = labels.replaceAll(assembled)
     print(assembled)
 
@@ -54,6 +66,7 @@ def assembleLine(line, index, labels):
     splitted = re.split('\s+', real_line)
     if len(splitted) == 0:
         return ""
+
     if splitted[0] == 'label':
         labels.define(splitted[1],index)
         return ""
@@ -90,9 +103,9 @@ def assembleOperand(arg_str, index, labels):
     try:
         loctype = match.group(1)
     except AttributeError:
-        print("Bad parse at " + arg_str + " (index {})".format(index))
+        print("Bad operand parse at " + arg_str + " (index {})".format(index))
         raise
-    data_descrips = re.split('\s+', match.group(2))
+    data_descrips = re.split('\s+', match.group(2).strip())
 
     flags = data_descrips[:-1]
     dat = data_descrips[-1]
@@ -106,8 +119,11 @@ def assembleOperand(arg_str, index, labels):
             opflags.append('D')
         elif flag == 'mem':
             opflags.append('M')
+        else:
+            raise Exception("Unrecognized dataloc flag: {}".format(flag))
+
     if len(opflags) > 2:
-        raise Exception("There cannot be more than two flags on a operand")
+        raise Exception("There cannot be more than two flags on an operand")
 
     flagstr = "{s:_>2}".format(s = ''.join(opflags))
 
@@ -123,6 +139,7 @@ def assembleOperand(arg_str, index, labels):
         raise Exception("Unrecognized data type: " + loctype)
 
     return '_' + flagstr + loctypestr + getDat(dat, index + 4, labels)
+
 def getDat(datstr, index, labels):
     if datstr in [None, '']:
         return '____'

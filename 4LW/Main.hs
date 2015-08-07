@@ -7,6 +7,7 @@ import Data.Ix
 import Base27
 import Memory
 import Instruction
+import Registers
 import System.Environment
 
 sanitizeProg :: [Char] -> [Char]
@@ -19,10 +20,17 @@ main = do
   let filename = head args
   prog <- readFile filename
 
-  let state = memory %~ fromJust . importString (sanitizeProg prog) (wrd "____") $ blankState
+  let state = memory %~ fromJust . importString (sanitizeProg prog) minWord $ blankState
   (_, state') <- runStateT start state
   putStrLn "\n\n\n\n\n\n"
   putStrLn "Done:"
   putStrLn $ exportString (_memory state') (minWord, wrd "_AAA")
+
   putStrLn "Registers:"
   print $ state' ^. registers
+
+  putStrLn "Stack register was at:"
+  print $ fromJust $ state' ^? registers . ix stackRegister
+
+  putStrLn "PC was at: "
+  print $ fromJust $ state' ^? registers . ix pcRegister
