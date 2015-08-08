@@ -6,6 +6,10 @@ import sys
 import os
 import re
 import string
+import shlex
+
+def log(str):
+    print("Assembler: {}".format(str), file=sys.stderr)
 
 class UndefinedLabelException(Exception):
     pass
@@ -47,23 +51,31 @@ class Labels:
 
 def main():
     filename = sys.argv[1]
+    log("Assembling {}".format(filename))
     f = open(filename, 'r')
     whole = f.read()
     f.close()
     labels = Labels()
-    assembled = ""
-    for line in whole.split("\n"):
-        assembled += assembleLine(line, len(assembled), labels)
+
+    log(os.path.dirname(__file__))
+
+    assembled = assembleSection(whole, 0, labels)
 
     labels.define('PROG_END', len(assembled))
     assembled = labels.replaceAll(assembled)
     print(assembled)
 
+def assembleSection(content, index, labels):
+    assembled = ""
+    for l in content.split('\n'):
+        assembled += assembleLine(l, len(assembled) + index, labels)
+    return assembled
+
 def assembleLine(line, index, labels):
 
     m = re.match('^\s*(.*?)(#.*)?$', line)
     real_line = m.group(1)
-    splitted = re.split('\s+', real_line)
+    splitted = shlex.split(real_line)
     if len(splitted) == 0:
         return ""
 
@@ -77,7 +89,21 @@ def assembleLine(line, index, labels):
 
     if splitted[0] == 'data':
         labels.define(splitted[1], index)
-        return ''.join(splitted[2:])
+        data = ''.join(splitted[2:])
+        labels.define('$' + splitted[1], len(data))
+        return data
+
+    if splitted[0] == 'string':
+        labels.define(splitted[1], index)
+        s = toInternalString(' '.join(splitted[2:]))
+        labels.define('$' + splitted[1], len(s))
+        return s
+
+    if splitted[0] == 'import':
+        f = open(splitted[1], 'r')
+        contents = f.read()
+        f.close()
+        return assembleSection(contents, index, labels)
 
     return assembleInstruction(real_line, index, labels)
 
@@ -88,14 +114,19 @@ def assembleInstruction(line, index, labels):
     opcode = splitted[0]
     args = splitted[1:]
     assembled_args = ""
-    argdex = index + 4
+    argdex = index + 4 # index of this particular operand
     for arg in args:
         assembled_args += assembleOperand(arg, argdex, labels)
-        argdex += 8
-    assert len(assembled_args) % 4 == 0
+        argdex += 8 # A full operand is 8 letters long.
+
+    assert len(assembled_args) % 8 == 0
+
+    # The length recorded in the instruction head, in words
     length = toBase27(len(assembled_args)/4 + 1)
+
     if len(length) > 1:
         raise Exception("Length of operands is too long!")
+
     return opcode + length + '_' + assembled_args
 
 def assembleOperand(arg_str, index, labels):
@@ -103,7 +134,7 @@ def assembleOperand(arg_str, index, labels):
     try:
         loctype = match.group(1)
     except AttributeError:
-        print("Bad operand parse at " + arg_str + " (index {})".format(index))
+        log("Bad operand parse at " + arg_str + " (index {})".format(index))
         raise
     data_descrips = re.split('\s+', match.group(2).strip())
 
@@ -152,6 +183,8 @@ def getDat(datstr, index, labels):
         labels.add_use(m.group(1), index)
         return "@@@@"
 
+    raise Exception("Invalid dat type")
+
 def expandWord(s):
     word =  "{:>4s}".format(s).replace(" ", "_")
     if len(word) > 4:
@@ -173,6 +206,29 @@ def toBase27(n):
     for converted in digits:
         s += alpha[converted]
     return s
+
+def toInternalChar(c):
+    if len(c) != 1:
+        raise Exception("Invalid character length")
+
+    if c == ' ': return "__A_"
+
+    if c in string.ascii_uppercase:
+        return "___" + c
+
+    if c in string.ascii_lowercase:
+        return "__A" + c.upper()
+
+    if c in string.digits:
+        return "__N" + chr(ord('A') + int(c))
+
+    if c == '\n': return "__C_"
+
+    raise Exception("Unknown character for internal char: {}".format(c))
+
+def toInternalString(s):
+    return ''.join([toInternalChar(c) for c in s])
+
 
 if __name__ == '__main__':
     main()

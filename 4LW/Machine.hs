@@ -200,7 +200,8 @@ tick = do
       mem = state ^. memory
 
   case instructionResult of
-    Left reason -> trace ("BAD INSTRUCTION: " ++ show reason) $ return ()
+    Left reason -> trace ("BAD INSTRUCTION: " ++ show reason) $ do
+        action .= HaltAction
     Right (InstructionParseResult instruction length) ->
         do
           setPC $ offsetBy pc length
