@@ -5,7 +5,7 @@ module Base27 (Letter, Word(Word) , letter,
                toLetter, offset, wrd,
                extendToWord, pattern LetterV, pattern WordChars,
                minWord, maxWord, letter2,
-               negateWord, addWord, subWord, mulWord,
+               negateWord, addWord, subWord, mulWord, modWord,
                leftShift, rightShift,
                divWord, isLetter,
                firstLetter, secondLetter, thirdLetter, fourthLetter) where
@@ -184,6 +184,9 @@ mulWord w1 w2 = toWord $ (wordValue w1) * (wordValue w2)
 
 divWord :: Base27.Word -> Base27.Word -> Base27.Word
 divWord w1 w2 = toWord $ (wordValue w1) `div` (wordValue w2)
+
+modWord :: Base27.Word -> Base27.Word -> Base27.Word
+modWord w1 w2 = toWord $ (wordValue w1) `mod` (wordValue w2)
 
 negateWord :: Base27.Word -> Base27.Word
 negateWord = subWord (wrd "ZZZZ")

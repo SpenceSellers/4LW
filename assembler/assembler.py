@@ -106,6 +106,15 @@ def assembleLine(line, index, labels):
         f.close()
         return assembleSection(contents, index, labels)
 
+    if splitted[0] == 'preserve':
+        # lines = '\n'.join(["MV [reg {}] [stack P]".format(reg) for reg in splitted[1:]])
+        lines = 'PU [stack P]' + ''.join(['[reg {}]'.format(reg) for reg in splitted[1:]])
+        return assembleSection(lines, index, labels)
+
+    if splitted[0] == 'restore':
+        lines = 'PL [stack P]' + ''.join(['[reg {}]'.format(reg) for reg in splitted[1:]])
+        return assembleSection(lines, index, labels)
+
     return assembleInstruction(real_line, index, labels)
 
 def assembleInstruction(line, index, labels):

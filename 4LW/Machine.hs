@@ -171,6 +171,9 @@ runInstruction (Mul src1 src2 dest) =
 runInstruction (Div src1 src2 dest) =
     setData dest =<< divWord <$> getData src1 <*> getData src2
 
+runInstruction (Modulo src1 src2 dest) =
+    setData dest =<< modWord <$> getData src1 <*> getData src2
+
 runInstruction (Jump dest) =
     setRegister pcRegister =<< getData dest
 
@@ -204,6 +207,17 @@ runInstruction (Swap a b) = do
     bData <- getData b
     setData a bData
     setData b aData
+
+runInstruction (PushAll dest args) = do
+    argDatas <- sequence . map getData $ args
+    sequence . map (setData dest) $ argDatas
+    return ()
+
+runInstruction (PullAll source args) = pullAll source args
+    where pullAll _ [] = return ()
+          pullAll source (arg:xs) = do
+              setData arg =<< getData source
+              pullAll source xs
 
 tick :: State MachineState ()
 tick = do

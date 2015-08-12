@@ -32,12 +32,15 @@ data Instruction =
     Sub DataLocation DataLocation DataLocation |
     Mul DataLocation DataLocation DataLocation |
     Div DataLocation DataLocation DataLocation |
+    Modulo DataLocation DataLocation DataLocation |
     Jump DataLocation |
     JumpZero DataLocation DataLocation |
     JumpEqual DataLocation DataLocation DataLocation |
     FCall DataLocation [DataLocation] |
     Return [DataLocation] |
-    Swap DataLocation DataLocation
+    Swap DataLocation DataLocation |
+    PushAll DataLocation [DataLocation] |
+    PullAll DataLocation [DataLocation]
 
     deriving (Show, Eq)
 
@@ -131,6 +134,11 @@ constructInstruction (RawInstruction opcode operands)
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
 
+    | opcode == letter2 "MD" = toBad $ Modulo <$>
+                                 (operands ^? ix 0) <*>
+                                 (operands ^? ix 1) <*>
+                                 (operands ^? ix 2)
+
     | opcode == letter2 "MV" = toBad $ Move <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
@@ -156,6 +164,14 @@ constructInstruction (RawInstruction opcode operands)
     | opcode == letter2 "SW" = toBad $ Swap <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
+
+    | opcode == letter2 "PU" = toBad $ PushAll <$>
+                                 (operands ^? ix 0) <*>
+                                 (pure . tail $ operands)
+
+    | opcode == letter2 "PL" = toBad $ PullAll <$>
+                                 (operands ^? ix 0) <*>
+                                 (pure . tail $ operands)
 
     | otherwise = Left BadOpcode
 
