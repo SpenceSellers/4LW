@@ -13,6 +13,7 @@ import Lengths
 import Registers
 import qualified Memory
 import qualified Io
+import qualified Stacks
 import Control.Lens
 import Control.Monad
 import Data.Maybe
@@ -20,6 +21,18 @@ import Control.Monad.State.Lazy
 import Control.Applicative
 import Control.Monad.Reader
 import Debug.Trace
+
+returnAddressStackId :: Letter
+returnAddressStackId = letter 'R'
+
+returnValueStackId :: Letter
+returnValueStackId = letter 'V'
+
+argStackId :: Letter
+argStackId = letter 'S'
+
+preserveStackId :: Letter
+preserveStackId = letter 'P'
 
 -- | Brings a function into the State monad.
 hoistState :: Monad m => State s a -> StateT s m a
@@ -34,6 +47,7 @@ data MachineAction = NoAction |
 data MachineState = MachineState {
       _registers :: Registers,
       _memory :: Memory.Memory,
+      _stacks :: Stacks.Stacks,
       _action :: MachineAction,
       _tickNum :: Integer,
       _inBuffer :: [Char],
@@ -44,7 +58,7 @@ makeLenses ''MachineState
 
 -- | A blank "starting" state of the machine, with everything zeroed.
 blankState :: MachineState
-blankState = MachineState blankRegisters Memory.blankMemory NoAction 0 [] []
+blankState = MachineState blankRegisters Memory.blankMemory Stacks.emptyStacks NoAction 0 [] []
 
 -- | Pops a char off of the machine's input buffer.
 popInBuffer :: State MachineState (Maybe Char)
@@ -63,23 +77,23 @@ setRegister r w = registers %= (\regs -> fromMaybe regs $ updateRegister regs r 
 setMemory :: Word -> Word -> State MachineState ()
 setMemory addr word = memory %= \mem -> Memory.writeWord mem addr word
 
-pushStack :: Word -> State MachineState ()
-pushStack word = do
-    regs <- use registers
-    let oldStackAddr = regs ! stackRegister
-    let newStackAddr = offsetBy oldStackAddr (WordLength (-1))
-    setMemory newStackAddr word -- Make sure to use the NEW one.
+pushStack :: Letter -> Word -> State MachineState ()
+pushStack l word = do
+    stks <- use stacks
+    let stack = stks ! l
+    -- Currently does nothing if the stack is full. This will definitely need to change.
+    let newStack = fromMaybe (trace "Stack overflow!" stack) $ Stacks.push stack word
+    let newStacks = stks // [(l, newStack)]
+    stacks .= newStacks
 
-    setRegister stackRegister newStackAddr
-
-popStack :: State MachineState Word
-popStack = do
-    mem <- use memory
-    regs <- use registers
-    let stackAddr = regs ! stackRegister
-    let newAddr = offsetBy stackAddr (WordLength 1)
-    setRegister stackRegister newAddr
-    return $ Memory.readWord mem stackAddr
+popStack :: Letter -> State MachineState Word
+popStack l = do
+    stks <- use stacks
+    let stack = stks ! l
+    let (word, newStack) = fromMaybe (trace "Stack underflow!" (minWord, stack)) $ Stacks.pop stack
+    let newStacks = stks // [(l, newStack)]
+    stacks .= newStacks
+    return word
 
 -- | Gets the Program Counter
 getPC :: State MachineState Word
@@ -103,7 +117,7 @@ getData (Register letter) = do
 
 getData (MemoryLocation loc) = Memory.readWord <$> use memory <*> getData loc
 
-getData (Stack) = popStack
+getData (Stack l) = popStack l
 
 getData (Io selector) = do
   char <- popInBuffer
@@ -124,7 +138,7 @@ setData (Register letter) word = setRegister letter word
 
 setData (MemoryLocation loc) word = flip setMemory word =<< (getData loc)
 
-setData (Stack) word = pushStack word
+setData (Stack letter) word = pushStack letter word
 
 setData (Io selector) word =
     action .= (IOWrite $ catMaybes [Io.internalToChar word])
@@ -170,8 +184,8 @@ runInstruction (JumpEqual dat1 dat2 dest) = do
     when (dat1 == dat2) (setPC =<< getData dest)
 
 runInstruction (FCall addr args) = do
-    pushStack =<< getPC
-    sequence . map (\arg -> pushStack =<< getData arg) $ args
+    pushStack returnAddressStackId =<< getPC
+    sequence . map (\arg -> (pushStack argStackId) =<< getData arg) $ args
     setPC =<< getData addr
 
 runInstruction (Return args) = do
@@ -179,8 +193,8 @@ runInstruction (Return args) = do
     -- PC, and THEN pushes the args on. That way it's possible to return
     -- items on the stack.
     argDatas <- sequence . map getData $ args
-    setPC =<< popStack
-    sequence . map pushStack $ argDatas
+    setPC =<< popStack returnAddressStackId
+    sequence . map (pushStack returnValueStackId) $ argDatas
     return ()
 
 runInstruction (Swap a b) = do

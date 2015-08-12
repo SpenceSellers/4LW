@@ -20,6 +20,7 @@ class Labels:
         self.uses = []
 
     def define(self,label, pos):
+        log("defining {} as {}".format(label, pos))
         self.defs[label] = pos
 
     def is_defined(self, label):

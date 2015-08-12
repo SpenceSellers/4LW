@@ -16,7 +16,7 @@ data DataLocation =
     Register Letter |          -- A register
     Constant Word |            -- A fixed constant word
     Io Letter |                -- Std IO. Letter/Word will be used as a selector later.
-    Stack |
+    Stack Letter |
     MemoryLocation DataLocation |      -- A location in main memory
     Negated DataLocation |     -- The real result but negated
     Incremented DataLocation | -- The real result but incremented
@@ -171,7 +171,7 @@ parseOperands_ ((Word _ flag1 flag2 control):opdata:xs) ops
     -- | control == letter 'M' =  parseOperands_ xs (applyFlag flag (MemoryLocation opdata): ops)
     | control == letter 'C' = build (Constant opdata)
     | control == letter 'I' = build (Io (opdata ^. fourthLetter))
-    | control == letter 'S' = build Stack
+    | control == letter 'S' = build (Stack (opdata ^. fourthLetter))
     where build instruction = parseOperands_ xs (applyFlags [flag1, flag2] instruction:ops)
 
 parseOperands_ (x:xs) ops = Nothing -- Odd number of words.
