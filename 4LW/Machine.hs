@@ -237,7 +237,6 @@ tick = do
 
 start :: StateT MachineState IO ()
 start = do
-    hoistState $ setRegister stackRegister (wrd "ZZZZ")
     lift $ hSetBuffering stdin NoBuffering
     run
 

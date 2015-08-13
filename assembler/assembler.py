@@ -100,6 +100,12 @@ def assembleLine(line, index, labels):
         labels.define('$' + splitted[1], len(s))
         return s
 
+    if splitted[0] == 'term_string':
+        labels.define(splitted[1], index)
+        s = toInternalString(' '.join(splitted[2:])) + 'ZZZZ'
+        labels.define('$' + splitted[1], len(s)-4)
+        return s
+
     if splitted[0] == 'import':
         f = open(splitted[1], 'r')
         contents = f.read()
@@ -115,13 +121,17 @@ def assembleLine(line, index, labels):
         lines = 'PL [stack P]' + ''.join(['[reg {}]'.format(reg) for reg in splitted[1:]])
         return assembleSection(lines, index, labels)
 
+    if splitted[0] == 'call':
+        lines = "FN [const :{}]".format(splitted[1]) + ' '.join(splitted[2:])
+        return assembleSection(lines, index, labels)
+
     return assembleInstruction(real_line, index, labels)
 
 def assembleInstruction(line, index, labels):
     splitted = re.findall("\s*(\[.*?\]|\S+)", line)
     if len(splitted) == 0:
         return ""
-    opcode = splitted[0]
+    opcode = splitted[0].upper()
     args = splitted[1:]
     assembled_args = ""
     argdex = index + 4 # index of this particular operand

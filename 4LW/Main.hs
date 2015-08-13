@@ -29,8 +29,8 @@ main = do
   putStrLn "Registers:"
   print $ state' ^. registers
 
-  putStrLn "Stack register was at:"
-  print $ fromJust $ state' ^? registers . ix stackRegister
-
-  putStrLn "PC was at: "
+  putStr "PC was at: "
   print $ fromJust $ state' ^? registers . ix pcRegister
+
+  putStr "Ticks: "
+  print $ state' ^. tickNum
