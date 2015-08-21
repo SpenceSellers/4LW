@@ -8,6 +8,19 @@ import re
 import string
 import shlex
 
+FLAG_MAP = {'neg': 'N',
+            'inc': 'I',
+            'dec': 'D',
+            'mem': 'M',
+            'timesfour': 'F'
+            }
+
+LOCTYPE_MAP = {
+    'const': 'C',
+    'reg': 'R',
+    'stack': 'S',
+    'io': 'I'}
+
 def log(str):
     print("Assembler: {}".format(str), file=sys.stderr)
 
@@ -50,146 +63,144 @@ class Labels:
         assert len(news) == len(s)
         return news
 
-def main():
-    filename = sys.argv[1]
-    log("Assembling {}".format(filename))
-    f = open(filename, 'r')
-    whole = f.read()
-    f.close()
-    labels = Labels()
+class Assembler:
+    def __init__(self, filename):
+        self.filename = os.path.abspath(filename)
+        self.labels = Labels()
 
-    log(os.path.dirname(__file__))
 
-    assembled = assembleSection(whole, 0, labels)
+    def assemble(self):
+        log("Assembling {}".format(self.filename))
+        f = open(self.filename, 'r')
+        whole = f.read()
+        f.close()
 
-    labels.define('PROG_END', len(assembled))
-    assembled = labels.replaceAll(assembled)
-    print(assembled)
 
-def assembleSection(content, index, labels):
-    assembled = ""
-    for l in content.split('\n'):
-        assembled += assembleLine(l, len(assembled) + index, labels)
-    return assembled
+        log(os.path.dirname(__file__))
 
-def assembleLine(line, index, labels):
+        assembled = self.assembleSection(whole, 0, self.labels)
 
-    m = re.match('^\s*(.*?)(#.*)?$', line)
-    real_line = m.group(1)
-    splitted = shlex.split(real_line)
-    if len(splitted) == 0:
-        return ""
+        self.labels.define('PROG_END', len(assembled))
+        assembled = self.labels.replaceAll(assembled)
+        return assembled
 
-    if splitted[0] == 'label':
-        labels.define(splitted[1],index)
-        return ""
+    def assembleSection(self, content, index, labels):
+        assembled = ""
+        for l in content.split('\n'):
+            assembled += self.assembleLine(l, len(assembled) + index, labels)
+        return assembled
 
-    if splitted[0] == 'constant':
-        labels.define(splitted[1],splitted[2])
-        return ""
+    def assembleLine(self, line, index, labels):
 
-    if splitted[0] == 'data':
-        labels.define(splitted[1], index)
-        data = ''.join(splitted[2:])
-        labels.define('$' + splitted[1], len(data))
-        return data
+        m = re.match('^\s*(.*?)(#.*)?$', line)
+        real_line = m.group(1)
+        splitted = shlex.split(real_line)
+        if len(splitted) == 0:
+            return ""
 
-    if splitted[0] == 'string':
-        labels.define(splitted[1], index)
-        s = toInternalString(' '.join(splitted[2:]))
-        labels.define('$' + splitted[1], len(s))
-        return s
+        if splitted[0] == 'label':
+            labels.define(splitted[1],index)
+            return ""
 
-    if splitted[0] == 'term_string':
-        labels.define(splitted[1], index)
-        s = toInternalString(' '.join(splitted[2:])) + 'ZZZZ'
-        labels.define('$' + splitted[1], len(s)-4)
-        return s
+        if splitted[0] == 'constant':
+            labels.define(splitted[1],splitted[2])
+            return ""
 
-    if splitted[0] == 'import':
-        f = open(splitted[1], 'r')
+        if splitted[0] == 'data':
+            labels.define(splitted[1], index)
+            data = ''.join(splitted[2:])
+            labels.define('$' + splitted[1], len(data))
+            return data
+
+        if splitted[0] == 'string':
+            labels.define(splitted[1], index)
+            s = toInternalString(' '.join(splitted[2:]))
+            labels.define('$' + splitted[1], len(s))
+            return s
+
+        if splitted[0] == 'term_string':
+            labels.define(splitted[1], index)
+            s = toInternalString(' '.join(splitted[2:])) + 'ZZZZ'
+            labels.define('$' + splitted[1], len(s)-4)
+            return s
+
+        if splitted[0] == 'import':
+            return self.import_file(splitted[1], index, labels)
+
+        if splitted[0] == 'preserve':
+            # lines = '\n'.join(["MV [reg {}] [stack P]".format(reg) for reg in splitted[1:]])
+            lines = 'PU [stack P]' + ''.join(['[reg {}]'.format(reg) for reg in splitted[1:]])
+            return self.assembleSection(lines, index, labels)
+
+        if splitted[0] == 'restore':
+            lines = 'PL [stack P]' + ''.join(['[reg {}]'.format(reg) for reg in splitted[1:]])
+            return self.assembleSection(lines, index, labels)
+
+        if splitted[0] == 'call':
+            lines = "FN [const :{}]".format(splitted[1]) + ' '.join(splitted[2:])
+            return self.assembleSection(lines, index, labels)
+
+        return self.assembleInstruction(real_line, index, labels)
+
+    def import_file(self, filename, index, labels):
+        if not os.path.isabs(filename):
+            filename = os.path.join(os.path.dirname(self.filename), filename)
+        f = open(filename, 'r')
         contents = f.read()
         f.close()
-        return assembleSection(contents, index, labels)
+        return self.assembleSection(contents, index, labels)
 
-    if splitted[0] == 'preserve':
-        # lines = '\n'.join(["MV [reg {}] [stack P]".format(reg) for reg in splitted[1:]])
-        lines = 'PU [stack P]' + ''.join(['[reg {}]'.format(reg) for reg in splitted[1:]])
-        return assembleSection(lines, index, labels)
+    def assembleInstruction(self, line, index, labels):
+        splitted = re.findall("\s*(\[.*?\]|\S+)", line)
+        if len(splitted) == 0:
+            return ""
+        opcode = splitted[0].upper()
+        args = splitted[1:]
+        assembled_args = ""
+        argdex = index + 4 # index of this particular operand
+        for arg in args:
+            assembled_args += self.assembleOperand(arg, argdex, labels)
+            argdex += 8 # A full operand is 8 letters long.
 
-    if splitted[0] == 'restore':
-        lines = 'PL [stack P]' + ''.join(['[reg {}]'.format(reg) for reg in splitted[1:]])
-        return assembleSection(lines, index, labels)
+        assert len(assembled_args) % 8 == 0
 
-    if splitted[0] == 'call':
-        lines = "FN [const :{}]".format(splitted[1]) + ' '.join(splitted[2:])
-        return assembleSection(lines, index, labels)
+        # The length recorded in the instruction head, in words
+        length = toBase27(len(assembled_args)/4 + 1)
 
-    return assembleInstruction(real_line, index, labels)
+        if len(length) > 1:
+            raise Exception("Length of operands is too long!")
 
-def assembleInstruction(line, index, labels):
-    splitted = re.findall("\s*(\[.*?\]|\S+)", line)
-    if len(splitted) == 0:
-        return ""
-    opcode = splitted[0].upper()
-    args = splitted[1:]
-    assembled_args = ""
-    argdex = index + 4 # index of this particular operand
-    for arg in args:
-        assembled_args += assembleOperand(arg, argdex, labels)
-        argdex += 8 # A full operand is 8 letters long.
+        return opcode + length + '_' + assembled_args
 
-    assert len(assembled_args) % 8 == 0
+    def assembleOperand(self, arg_str, index, labels):
+        match = re.match("\[\s*(\S*)\s*(.*?)\]", arg_str)
+        try:
+            loctype = match.group(1)
+        except AttributeError:
+            log("Bad operand parse at " + arg_str + " (index {})".format(index))
+            raise
+        data_descrips = re.split('\s+', match.group(2).strip())
 
-    # The length recorded in the instruction head, in words
-    length = toBase27(len(assembled_args)/4 + 1)
+        flags = data_descrips[:-1]
+        dat = data_descrips[-1]
+        opflags = []
+        for flag in flags:
+            try:
+                opflags.append(FLAG_MAP[flag.lower()])
+            except:
+                raise Exception("Unrecognized dataloc flag: {}".format(flag))
 
-    if len(length) > 1:
-        raise Exception("Length of operands is too long!")
+        if len(opflags) > 2:
+            raise Exception("There cannot be more than two flags on an operand")
 
-    return opcode + length + '_' + assembled_args
+        flagstr = "{s:_>2}".format(s = ''.join(opflags))
 
-def assembleOperand(arg_str, index, labels):
-    match = re.match("\[\s*(\S*)\s*(.*?)\]", arg_str)
-    try:
-        loctype = match.group(1)
-    except AttributeError:
-        log("Bad operand parse at " + arg_str + " (index {})".format(index))
-        raise
-    data_descrips = re.split('\s+', match.group(2).strip())
+        try:
+            loctypestr = LOCTYPE_MAP[loctype.lower()]
+        except:
+            raise Exception("Unrecognized data type: " + loctype)
 
-    flags = data_descrips[:-1]
-    dat = data_descrips[-1]
-    opflags = []
-    for flag in flags:
-        if flag == "neg":
-            opflags.append('N')
-        elif flag == "inc":
-            opflags.append('I')
-        elif flag == 'dec':
-            opflags.append('D')
-        elif flag == 'mem':
-            opflags.append('M')
-        else:
-            raise Exception("Unrecognized dataloc flag: {}".format(flag))
-
-    if len(opflags) > 2:
-        raise Exception("There cannot be more than two flags on an operand")
-
-    flagstr = "{s:_>2}".format(s = ''.join(opflags))
-
-    if loctype == 'reg':
-        loctypestr = 'R'
-    elif loctype == 'const':
-        loctypestr = 'C'
-    elif loctype == 'io':
-        loctypestr = 'I'
-    elif loctype == 'stack':
-        loctypestr = 'S'
-    else:
-        raise Exception("Unrecognized data type: " + loctype)
-
-    return '_' + flagstr + loctypestr + getDat(dat, index + 4, labels)
+        return '_' + flagstr + loctypestr + getDat(dat, index + 4, labels)
 
 def getDat(datstr, index, labels):
     if datstr in [None, '']:
@@ -249,6 +260,9 @@ def toInternalChar(c):
 def toInternalString(s):
     return ''.join([toInternalChar(c) for c in s])
 
+def main():
+    asm = Assembler(sys.argv[1])
+    print(asm.assemble())
 
 if __name__ == '__main__':
     main()
