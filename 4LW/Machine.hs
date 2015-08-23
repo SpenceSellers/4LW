@@ -133,6 +133,13 @@ getData (Decremented loc) = offset <$> getData loc <*> pure (-1)
 
 getData (TimesFour loc) = mulWord <$> getData loc <*> pure (toWord 4)
 
+getData (FirstLetter loc)  = (extendToWord . view firstLetter)  <$> getData loc
+getData (SecondLetter loc) = (extendToWord . view secondLetter) <$> getData loc
+getData (ThirdLetter loc)  = (extendToWord . view thirdLetter)  <$> getData loc
+getData (FourthLetter loc) = (extendToWord . view fourthLetter) <$> getData loc
+
+
+
 -- | Applies a data write to any location, be it a register, main memory, etc.
 setData :: DataLocation -> Word -> State MachineState ()
 setData (Constant const) word = return () -- No-op for now. Raise interrupt later.
@@ -156,6 +163,18 @@ setData (Decremented loc) word =
 
 setData (TimesFour loc) word =
     setData loc (mulWord word (toWord 4))
+
+setData (FirstLetter loc) word =
+    setData loc (extendToWord . view firstLetter $ word)
+
+setData (SecondLetter loc) word =
+    setData loc (extendToWord . view secondLetter $ word)
+
+setData (ThirdLetter loc) word =
+    setData loc (extendToWord . view thirdLetter $ word)
+
+setData (FourthLetter loc) word =
+    setData loc (extendToWord . view fourthLetter $ word)
 
 -- | Applies an instruction to the state of the Machine.
 runInstruction :: Instruction -> State MachineState ()

@@ -7,12 +7,17 @@ import os
 import re
 import string
 import shlex
+import uuid
 
 FLAG_MAP = {'neg': 'N',
             'inc': 'I',
-            'dec': 'D',
+            'dec': 'J',
             'mem': 'M',
-            'timesfour': 'F'
+            'timesfour': 'F',
+            'first': 'A',
+            'second': 'B',
+            'third': 'C',
+            'fourth': 'D'
             }
 
 LOCTYPE_MAP = {
@@ -67,7 +72,22 @@ class Assembler:
     def __init__(self, filename):
         self.filename = os.path.abspath(filename)
         self.labels = Labels()
+        self.literals = []
 
+    def add_literal(self, data, index):
+        self.literals.append((data, index))
+
+    def insert_literals(self, index):
+        idx = index
+        s = ""
+        for data, mention_index in self.literals:
+            literal_id = uuid.uuid4()
+            self.labels.define(literal_id, idx)
+            self.labels.add_use(literal_id, mention_index)
+            idx += len(data)
+            s += data
+        self.literals = []
+        return s
 
     def assemble(self):
         log("Assembling {}".format(self.filename))
@@ -95,6 +115,11 @@ class Assembler:
         m = re.match('^\s*(.*?)(#.*)?$', line)
         real_line = m.group(1)
         splitted = shlex.split(real_line)
+        try:
+            first, rest = real_line.split(' ', 1)
+        except:
+            first, rest = None, None
+
         if len(splitted) == 0:
             return ""
 
@@ -137,8 +162,13 @@ class Assembler:
             return self.assembleSection(lines, index, labels)
 
         if splitted[0] == 'call':
-            lines = "FN [const :{}]".format(splitted[1]) + ' '.join(splitted[2:])
+            args = rest.split(' ', 1)
+            log(args)
+            lines = "FN [const :{}]".format(args[0]) + ' '.join(args[1:])
             return self.assembleSection(lines, index, labels)
+
+        if splitted[0] == 'literals':
+            return self.insert_literals(index)
 
         return self.assembleInstruction(real_line, index, labels)
 
@@ -200,21 +230,29 @@ class Assembler:
         except:
             raise Exception("Unrecognized data type: " + loctype)
 
-        return '_' + flagstr + loctypestr + getDat(dat, index + 4, labels)
+        return '_' + flagstr + loctypestr + self.getDat(dat, index + 4, labels)
 
-def getDat(datstr, index, labels):
-    if datstr in [None, '']:
-        return '____'
-    if re.match("[A-Z_]+", datstr):
-        return expandWord(datstr)
-    if re.match("[0-9]+", datstr):
-        return expandWord(toBase27(int(datstr)))
-    m = re.match(":(\S+)", datstr)
-    if m:
-        labels.add_use(m.group(1), index)
-        return "@@@@"
+    def getDat(self, datstr, index, labels):
+        if datstr in [None, '']:
+            return '____'
+        if re.match("[A-Z_]+", datstr):
+            return expandWord(datstr)
+        if re.match("[0-9]+", datstr):
+            return expandWord(toBase27(int(datstr)))
+        m = re.match(":(\S+)", datstr)
+        if m:
+            labels.add_use(m.group(1), index)
+            return "@@@@"
 
-    raise Exception("Invalid dat type")
+        m = re.match("""s(.?)\"(.*)\"""", datstr)
+        if m:
+            s = toInternalString(m.group(2))
+            if m.group(1) == 't': # Z terminated
+                s += 'ZZZZ'
+            self.add_literal(s, index)
+            return "++++"
+
+        raise Exception("Invalid dat type: {}".format(datstr))
 
 def expandWord(s):
     word =  "{:>4s}".format(s).replace(" ", "_")
@@ -249,9 +287,10 @@ def toInternalChar(c):
 
     if c in string.ascii_lowercase:
         return "__A" + c.upper()
-
+    if c == '0':
+        return "__N_"
     if c in string.digits:
-        return "__N" + chr(ord('A') + int(c))
+        return "__N" + chr(ord('A') + int(c) - 1)
 
     if c == '\n': return "__C_"
 

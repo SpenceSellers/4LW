@@ -21,7 +21,11 @@ data DataLocation =
     Negated DataLocation |     -- The real result but negated
     Incremented DataLocation | -- The real result but incremented
     Decremented DataLocation |  -- The real result but decremented
-    TimesFour DataLocation
+    TimesFour DataLocation |
+    FirstLetter DataLocation |
+    SecondLetter DataLocation |
+    ThirdLetter DataLocation |
+    FourthLetter DataLocation
     deriving (Show, Eq)
 
 -- | An Instruction is an action that the machine can perform.
@@ -201,8 +205,12 @@ applyFlag flag loc
     | flag == letter 'N' = Negated loc
     | flag == letter 'M' = MemoryLocation loc
     | flag == letter 'I' = Incremented loc
-    | flag == letter 'D' = Decremented loc
+    | flag == letter 'J' = Decremented loc
     | flag == letter 'F' = TimesFour loc
+    | flag == letter 'A' = FirstLetter loc
+    | flag == letter 'B' = SecondLetter loc
+    | flag == letter 'C' = ThirdLetter loc
+    | flag == letter 'D' = FourthLetter loc
     | otherwise = error "Bad flag!"
 
 -- | Applies multiple DataLocation flags, specified by letter.
