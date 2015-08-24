@@ -102,6 +102,9 @@ class Assembler:
 
         self.labels.define('PROG_END', len(assembled))
         assembled = self.labels.replaceAll(assembled)
+
+        if len(self.literals) > 0:
+            log("== WARNING == Literals not inserted")
         return assembled
 
     def assembleSection(self, content, index, labels):
@@ -163,7 +166,6 @@ class Assembler:
 
         if splitted[0] == 'call':
             args = rest.split(' ', 1)
-            log(args)
             lines = "FN [const :{}]".format(args[0]) + ' '.join(args[1:])
             return self.assembleSection(lines, index, labels)
 
@@ -203,16 +205,22 @@ class Assembler:
         return opcode + length + '_' + assembled_args
 
     def assembleOperand(self, arg_str, index, labels):
-        match = re.match("\[\s*(\S*)\s*(.*?)\]", arg_str)
+        insides_regex = re.compile(r'\S*".*?"|\S+')
+        reg1 = re.compile(r'\[(.*)\]', re.VERBOSE)
+        match = re.match(reg1, arg_str)
         try:
-            loctype = match.group(1)
+            insides_raw = match.group(1)
         except AttributeError:
-            log("Bad operand parse at " + arg_str + " (index {})".format(index))
+            log("Bad operand parse at " + arg_str + " (index {}). Missing brackets?".format(index))
             raise
-        data_descrips = re.split('\s+', match.group(2).strip())
+        insides = re.findall(insides_regex, insides_raw)
+        loctype = insides[0]
 
-        flags = data_descrips[:-1]
-        dat = data_descrips[-1]
+        flags = insides[1:-1]
+        if len(insides) > 1:
+            dat = insides[-1]
+        else:
+            dat = None
         opflags = []
         for flag in flags:
             try:
