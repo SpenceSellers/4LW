@@ -1,0 +1,10 @@
+# Membenchmark
+MV [const 200] [reg C]
+label top
+MV [reg C] [reg mem C]
+AD [reg C] [const 4] [reg C]
+SB [reg C] [const 100200] [reg B]
+JZ [reg B] [const :end]
+JP [const :top]
+label end
+HL

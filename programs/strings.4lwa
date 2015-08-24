@@ -1,0 +1,38 @@
+# strings.4lwa
+
+FN [const :memcmp] [const :s1] [const :s2] [const 5]
+FN [const :printBase10] [stack V]
+HL
+
+# (addr1: addr) (addr2: addr) (length: words) -- (result : bool)
+label memcmp
+    preserve A B C
+    MV [stack S] [reg C] # C is length
+    MV [stack S] [reg B] # B is addr2
+    MV [stack S] [reg A] # A is addr1
+
+    label _mem_loop
+    JZ [reg C] [const :_mem_endtrue] # If we're out of length, we're done.
+    JE [reg mem A] [reg mem B] [const :_mem_notfalse]
+    JP [const :_mem_endfalse] # Compare failed, gotta leave.
+    label _mem_notfalse # This compare worked
+    MV [reg dec C] [reg C]
+    AD [reg A] [const 4] [reg A]
+    AD [reg B] [const 4] [reg B]
+    JP [const :_mem_loop]
+
+    label _mem_endtrue
+    MV [const ZZZZ] [stack V]
+    JP [const :_mem_done]
+
+    label _mem_endfalse
+    MV [const ____] [stack V]
+
+    label _mem_done
+    restore C B A
+    RT
+
+import base10.4lwa
+
+string s1 "This is a test"
+string s2 "This is a test"
