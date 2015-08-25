@@ -25,13 +25,15 @@ FLAG_MAP = {'neg': 'N',
 
 single_letter = Word(srange('[A-Z]'), exact = 1)
 
-identifier = Word(alphas)
+identifier = Word(alphas + '_', alphas + '_' + nums)
+
+filename = Word(alphas + nums + '_' + '.')
 
 base27 = Word(alphas + '_')
 
 opcode = Word(srange('[A-Z]'), exact = 2)
 
-flags = ZeroOrMore(oneOf("inc dec mem timesfour first second third fourth"))\
+flags = ZeroOrMore(oneOf("inc dec mem neg timesfour first second third fourth"))\
     .setParseAction(lambda s,l,t: [[FLAG_MAP[a] for a in t]])
 
 dattype = oneOf("const reg io stack")\
@@ -68,21 +70,28 @@ preserve = (Keyword("preserve") + Group(ZeroOrMore(single_letter)))\
         asm.Instruction('PU',
         [asm.Operand('S', [], asm.ConstWord('P'))] + [asm.Operand('R', [], asm.ConstWord(reg)) for reg in t[1].asList()]))
 
-line = MatchFirst([instruction, label, fcall, preserve]) - Optional(Literal('#') + restOfLine).suppress() + LineEnd().suppress()
+restore = (Keyword("restore") + Group(ZeroOrMore(single_letter)))\
+    .setParseAction(lambda s,l,t:
+        asm.Instruction('PL',
+        [asm.Operand('S', [], asm.ConstWord('P'))] + [asm.Operand('R', [], asm.ConstWord(reg)) for reg in t[1].asList()]))
+
+import_ = (Keyword('import') + filename)\
+    .setParseAction(lambda s,l,t: asm.Import(t[1]))
+
+string = (Keyword('string') + identifier + quotedString)\
+    .setParseAction(lambda s,l,t: asm.String(t[1], t[2][1:-1]))
+
+term_string = (Keyword('term_string') + identifier + quotedString)\
+    .setParseAction(lambda s,l,t: asm.TerminatedString(t[1], t[2][1:-1]))
+
+emptyLine = Empty()
+
+line = MatchFirst([instruction, label, fcall, preserve, restore, string, term_string, import_, emptyLine]) + Optional(Literal('#') + restOfLine).suppress() + LineEnd().suppress()
 
 program = ZeroOrMore(line) + StringEnd()
 
-proglist = program.parseString("""call here
-HL
-label here
-preserve A B C D
-MV [const 20] [io]
-RT
-HL
-""").asList()
+def parse_program(str):
+    proglist = program.parseString(str)
+    return asm.Program(proglist)
 
-print('\n'.join([repr(p) for p in proglist]))
-
-print(asm.BakerSequence([l.bake() for l in proglist]).render_total())
-
-#print([p.render() for p in proglist])
+#print('\n'.join([repr(p) for p in proglist]))

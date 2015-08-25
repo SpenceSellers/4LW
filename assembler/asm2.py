@@ -1,6 +1,30 @@
 import string
+import bakers
+import asmparse
+import sys
+import os
 
-class Instruction:
+class Bakeable:
+    def bake(self):
+        raise NotImplementedError()
+
+    def __repr__(self):
+        return "<{}>".format(self.__class__.__name__)
+
+    def render_all(self):
+        return self.bake().render_total()
+
+class Program(Bakeable):
+    def __init__(self, bakeables):
+        self.pieces = bakeables
+
+    def bake(self):
+        return bakers.BakerSequence([b.bake() for b in self.pieces])
+
+    def __repr__(self):
+        return "Program {}".format(self.pieces)
+
+class Instruction(Bakeable):
     def __init__(self, opcode, operands):
         assert len(opcode) == 2
         self.opcode = opcode
@@ -10,14 +34,14 @@ class Instruction:
     def bake(self):
         oplen = toBase27(len(self.operands) * 2 + 1)
         assert len(oplen) == 1
-        head = Baked("{opcode}{len}_".format(opcode=self.opcode, len = oplen))
+        head = bakers.Baked("{opcode}{len}_".format(opcode=self.opcode, len = oplen))
 
-        return BakerSequence([head] + [opr.bake() for opr in self.operands])
+        return bakers.BakerSequence([head] + [opr.bake() for opr in self.operands])
 
     def __repr__(self):
         return "<{} {}>".format(self.opcode, self.operands)
 
-class Operand:
+class Operand(Bakeable):
     def __init__(self, type, flags, payload):
         self.type = type
         assert len(self.type) == 1
@@ -32,12 +56,12 @@ class Operand:
     def bake(self):
         flagstr = "{s:_>2}".format(s = ''.join(self.flags))
         head = "_{flags}{type}".format(type = self.type, flags = flagstr)
-        return BakerSequence([Baked(head), self.payload.bake()])
+        return bakers.BakerSequence([bakers.Baked(head), self.payload.bake()])
 
     def __repr__(self):
         return "[Operand {} {} {}]".format(self.type, self.flags, self.payload)
 
-class Label:
+class Label(Bakeable):
     def __init__(self, label):
         self.label = label
 
@@ -45,107 +69,56 @@ class Label:
         return "<@label {}>".format(self.label)
 
     def bake(self):
-        return LabelBaker(self.label)
+        return bakers.LabelBaker(self.label)
 
 
-class ConstWord:
+class ConstWord(Bakeable):
     def __init__(self, word):
         word = expandWord(word)
         assert len(word) == 4
         self.word = word
 
     def bake(self):
-        return Baked(self.word)
+        return bakers.Baked(self.word)
 
     def __repr__(self):
         return "(Word {})".format(self.word)
 
-class RefWord:
+class RefWord(Bakeable):
     def __init__(self, label):
         self.label = label
 
     def bake(self):
-        return Pointing(self.label)
+        return bakers.Pointing(self.label)
 
     def __repr__(self):
         return "(RefWord {})".format(self.label)
 
-class Baker:
-    def render(self, table):
-        return ''
-
-    def report(self):
-        return {}
-
-    def length(self):
-        return 0
-
-    def render_total(self):
-        locs = self.report()
-        return self.render(locs)
-
-class BakerSequence(Baker):
-    def __init__(self, seq):
-        self.seq = seq
-
-    def render(self, table):
-        result = ''
-        for baker in self.seq:
-            chunk = baker.render(table)
-            assert len(chunk) == baker.length()
-            result += chunk
-        return result
-
-    def report(self):
-        locs = {}
-        idx = 0
-        for baker in self.seq:
-            new_locs = baker.report()
-            for label, sub_pos in new_locs.items():
-                locs[label] = idx + sub_pos
-            idx += baker.length()
-        return locs
-
-    def length(self):
-        c = 0
-        for baker in self.seq:
-            c += baker.length()
-        return c
-
-class Baked(Baker):
-    def __init__(self, s):
+class String(Bakeable):
+    def __init__(self, label, s):
         self.s = s
-
-    def render(self, table):
-        return self.s
-
-    def length(self):
-        return len(self.s)
-
-class LabelBaker(Baker):
-    def __init__(self, label):
         self.label = label
 
-    def render(self, table):
-        return ''
+    def bake(self):
+        internal_s = toInternalString(self.s)
+        return bakers.Baked(internal_s, label = self.label)
 
-    def report(self):
-        return {self.label: 0}
-
-    def length(self):
-        return 0
-
-class Pointing(Baker):
-    def __init__(self, label):
+class TerminatedString(Bakeable):
+    def __init__(self, label, s):
+        self.s = s
         self.label = label
+        
+    def bake(self):
+        internal_s = toInternalString(self.s) + 'ZZZZ'
+        return bakers.Baked(internal_s, label = self.label)
 
-    def render(self, table):
-        pointer = table[self.label]
-        result = expandWord(toBase27(pointer))
-        return result
+class Import(Bakeable):
+    def __init__(self, filename):
+        self.filename = filename
 
-    def length(self):
-        return 4
+    def bake(self):
+        text = open(self.filename, 'r').read()
+        return asmparse.parse_program(text).bake()
 
 def expandWord(s):
     word =  "{:>4s}".format(s).replace(" ", "_")
@@ -191,3 +164,13 @@ def toInternalChar(c):
 
 def toInternalString(s):
     return ''.join([toInternalChar(c) for c in s])
+
+def main():
+    filename = sys.argv[1]
+    f = open(filename, 'r')
+    raw_prog = f.read()
+
+    print(asmparse.parse_program(raw_prog).render_all())
+
+if __name__ == '__main__':
+    main()
