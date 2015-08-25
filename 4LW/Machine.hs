@@ -38,6 +38,11 @@ preserveStackId = letter 'P'
 hoistState :: Monad m => State s a -> StateT s m a
 hoistState = StateT . (return .) . runState
 
+data IOConfig = IOConfig {
+    ioPutChar :: Char -> IO ()
+    ioGetChar :: IO (Maybe Char)
+}
+
 data MachineAction = NoAction |
                      HaltAction |
                      IOWrite String
