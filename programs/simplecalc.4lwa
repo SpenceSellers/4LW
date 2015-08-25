@@ -9,7 +9,7 @@ MV [const 0] [reg C]
 
 label loop
 
-call printTerminated [const st"Value is"]
+call printTerminated [const :valis]
 call printWord [reg C]
 call printTerminated [const :b10]
 call printBase10 [reg C]
@@ -18,13 +18,13 @@ call printTerminated [const :inputstr]
 call readLine [const :buffer] [const 20]
 #MV [stack V] [const 0] # Delete
 
-FN [const :memcmp] [const :buffer] [const s"inc"] [const 3]
+FN [const :memcmp] [const :buffer] [const :inc] [const 3]
 JE [stack V] [const ZZZZ] [const :increment]
 
-FN [const :memcmp] [const :buffer] [const s"dec"] [const 3]
+FN [const :memcmp] [const :buffer] [const :inc] [const 3]
 JE [stack V] [const ZZZZ] [const :decrement]
 
-FN [const :memcmp] [const :buffer] [const s"rst"] [const 3]
+FN [const :memcmp] [const :buffer] [const :inc] [const 3]
 JE [stack V] [const ZZZZ] [const :reset]
 
 call printTerminated [const :invalid]
@@ -45,9 +45,12 @@ JP [const :loop]
 
 HL
 string buffer "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-# term_string valis "Value is "
+term_string valis "Value is "
+
+string inc "inc"
+string dec "dec"
+string rst "rst"
+
 term_string b10 " or in base 10 "
 term_string inputstr "Command "
 term_string invalid "That is not a valid command"
-
-literals
