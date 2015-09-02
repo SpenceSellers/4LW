@@ -11,11 +11,14 @@ limit = 27^3
 -- Something more type-safe would be better, but the constructor
 -- will be hidden anyway.
 data SizeLimitedStack = SizeLimitedStack Int [Word]
-    deriving (Show)
+
 
 type Stack = SizeLimitedStack
 
 type Stacks = Array Letter Stack
+
+instance Show SizeLimitedStack where
+    show (SizeLimitedStack size words) = "stack " ++ show words
 
 emptyStacks :: Stacks
 emptyStacks = listArray (letter '_', letter 'Z') (repeat emptyStack)

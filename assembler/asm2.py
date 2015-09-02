@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import string
 import bakers
 import asmparse
@@ -107,7 +109,7 @@ class TerminatedString(Bakeable):
     def __init__(self, label, s):
         self.s = s
         self.label = label
-        
+
     def bake(self):
         internal_s = toInternalString(self.s) + 'ZZZZ'
         return bakers.Baked(internal_s, label = self.label)

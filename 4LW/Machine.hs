@@ -39,7 +39,7 @@ hoistState :: Monad m => State s a -> StateT s m a
 hoistState = StateT . (return .) . runState
 
 data IOConfig = IOConfig {
-    ioPutChar :: Char -> IO ()
+    ioPutChar :: Char -> IO (),
     ioGetChar :: IO (Maybe Char)
 }
 
@@ -226,8 +226,7 @@ runInstruction (Return args) = do
     -- items on the stack.
     argDatas <- sequence . map getData $ args
     setPC =<< popStack returnAddressStackId
-    sequence . map (pushStack returnValueStackId) $ argDatas
-    return ()
+    sequence_ . map (pushStack returnValueStackId) $ argDatas
 
 runInstruction (Swap a b) = do
     -- Note that the order is important here.
@@ -239,8 +238,7 @@ runInstruction (Swap a b) = do
 
 runInstruction (PushAll dest args) = do
     argDatas <- sequence . map getData $ args
-    sequence . map (setData dest) $ argDatas
-    return ()
+    sequence_ . map (setData dest) $ argDatas
 
 runInstruction (PullAll source args) = pullAll source args
     where pullAll _ [] = return ()
