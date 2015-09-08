@@ -5,25 +5,21 @@ function print preserving A B {
     AD [reg A] [reg B] [reg B]              # B is now end of string
 
     loop {
-        JE [reg A] [reg B] [const :_print_end]
+        JE [reg A] [reg B] [const :@break]
         MV [reg mem A] [io]
         AD [reg A] [const 4] [reg A]
     }
-    label _print_end
 }
 
 function printTerminated preserving A B {
-    preserve A B
     MV [stack S] [reg A] # String ptr
 
     loop {
         MV [reg mem A] [reg B]
-        JZ [reg neg B] [const :_print_term_end]
+        JZ [reg neg B] [const :@break]
         MV [reg B] [io]
         AD [reg A] [const 4] [reg A]
     }
-
-    label _print_term_end
 }
 
 function printNewline {
@@ -46,18 +42,17 @@ function readLine preserving A B C D {
     MV [const 0] [reg D] # Length of read
 
     loop {
-        JE [reg B] [reg D] [const :_readLine_done] # We've reached length limit.
+        JE [reg B] [reg D] [const :@break] # We've reached length limit.
 
         call readChar
         MV [stack V] [reg C]
 
-        JE [reg C] [const __C_] [const :_readLine_done]     # Is it an enter?
+        JE [reg C] [const __C_] [const :@break]     # Is it an enter?
         MV [reg inc D] [reg D]
         MV [reg C] [reg mem A]
         AD [reg A] [const 4] [reg A] # Move buffer loc
     }
 
-    label _readLine_done
 
     MV [reg D] [stack V]
 }

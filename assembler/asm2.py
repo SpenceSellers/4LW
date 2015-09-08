@@ -35,7 +35,7 @@ class Function(Bakeable):
 
     def bake(self):
         elems = []
-        elems.append(Label(self.name).bake()) # Function label
+        label = Label(self.name).bake() # Function label
         preserves = Instruction('PU', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in self.preserves]).bake()
         elems.append(preserves)
         elems.extend([b.bake() for b in self.pieces]) # Actual body
@@ -43,7 +43,8 @@ class Function(Bakeable):
         elems.append(restores)
         elems.append(Instruction('RT',[]).bake())
 
-        return bakers.BakerSequence(elems)
+        return bakers.BakerSequence([label, bakers.CaptureScopeBaker(bakers.BakerSequence(elems))])
+        #return bakers.BakerSequence([label] + elems)
 
     def __repr__(self):
         return "Function {}: {}".format(self.name, self.pieces)
@@ -59,7 +60,8 @@ class Loop(Bakeable):
         elems.extend([b.bake() for b in self.pieces])
         jumpback = Instruction('JP', [Operand('C', [], RefWord(name))])
         elems.append(jumpback.bake())
-        return bakers.BakerSequence(elems)
+        elems.append(Label('@break').bake())
+        return bakers.CaptureScopeBaker(bakers.BakerSequence(elems))
 
 class FunctionCall(Bakeable):
     def __init__(self, fname, args = [], to = None):

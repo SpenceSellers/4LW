@@ -1,6 +1,11 @@
 import asm2 as asm
 import string
+import copy
+import sys
+import uuid
 
+def log(s):
+    print(s, file=sys.stderr)
 class Baker:
     def render(self, table):
         return ''
@@ -45,6 +50,43 @@ class BakerSequence(Baker):
 
     def __repr__(self):
         return "BakerSequence: {}".format(self.seq)
+
+class CaptureScopeBaker(Baker):
+    def __init__(self, baker):
+        self.scopeid = str(uuid.uuid4())
+        self.inner = baker
+
+    def render(self, table):
+         # We have to restore the original names of our scoped items.
+
+         # We just need the original names
+        innertable = copy.copy(self.inner.report())
+        union = copy.copy(table)
+
+        for label, value in innertable.items():
+             # Find the new name, get the value, and apply it to the old name.
+            scopedname = self.enscope(label)
+            union[label] = table[scopedname]
+
+        return self.inner.render(union)
+
+    def report(self):
+         # We need the labels to propagate outwards so that global positions
+         # can be calculated, but they shouldn't be able to be used.
+        innertable = self.inner.report()
+        scopedtable = {}
+        for label, sub_pos in innertable.items():
+             # Hide these labels behind the scope id.
+            newlabel = self.enscope(label)
+            scopedtable[newlabel] = sub_pos
+        return scopedtable
+
+    def length(self):
+        return self.inner.length()
+
+    def enscope(self, label):
+        return str(self.scopeid) + ':' + str(label)
+
 
 class Baked(Baker):
     def __init__(self, s, label = None):
@@ -99,6 +141,8 @@ class Pointing(Baker):
         except:
             raise Exception("Unknown label in pointer: {}".format(self.label))
         result = asm.expandWord(asm.toBase27(pointer))
+        if len(result) != 4:
+            raise Exception("Pointing baker returns pointer that is too large: {}".format(result))
         return result
 
     def length(self):

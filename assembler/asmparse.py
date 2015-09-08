@@ -25,7 +25,7 @@ FLAG_MAP = {'neg': 'N',
 
 single_letter = Word(srange('[A-Z_]'), exact = 1)
 
-identifier = Word(alphas + '_', alphas + '_' + nums)
+identifier = Word(alphas + '_' + '@', alphas + '_' + nums)
 
 filename = Word(alphas + nums + '_' + '.')
 

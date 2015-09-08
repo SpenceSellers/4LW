@@ -7,16 +7,15 @@ label toBase10
     JZ [reg A] [const :_base_num_is_zero]
 
     loop {
-        JZ [reg A] [const :_baseloopend]
+        JZ [reg A] [const :@break]
         MD [reg A] [const 10] [reg B] # A mod 10
         AD [reg B] [const __N_] [reg B] # make it a number char
         MV [reg B] [stack V] # We have a digit, save it
         MV [reg inc C] [reg C] # Inc C
         DV [reg A] [const 10] [reg A] # The new A
     }
-
+    
     label _baseloopend
-
     MV [reg C] [stack V] # Top of stack is number of values.
     restore C B A
     RT
@@ -31,10 +30,9 @@ function printBase10 preserving A B C{
     MV [stack V] [reg C] # Length of number
 
     loop {
-        JZ [reg C] [const :_printBaseEnd] # If no more numbers, exit
+        JZ [reg C] [const :@break] # If no more numbers, exit
         MV [stack V] [io]           # Print the number
         MV [reg dec C] [reg C]          # decrement
     }
 
-    label _printBaseEnd
 }
