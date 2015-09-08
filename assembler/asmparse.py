@@ -61,9 +61,10 @@ instruction = (opcode + Group(ZeroOrMore(operand)))\
 label = (Keyword("label") + identifier)\
     .setParseAction(lambda s,l,t: asm.Label(t[1]))
 
-fcall = (Keyword("call") + identifier + Group(ZeroOrMore(operand)))\
-    .setParseAction(lambda s,l,t:
-        asm.Instruction('FN', [asm.Operand('C', [], asm.RefWord(t[1]))] + t[2].asList()))
+fcall = (Keyword("call") + identifier + Group(ZeroOrMore(operand)) + Optional(Keyword('to').suppress() + operand, default = None))\
+    .setParseAction(lambda s,l,t: asm.FunctionCall(t[1], args = t[2].asList(), to = t[3]))
+        #asm.Instruction('FN', [asm.Operand('C', [], asm.RefWord(t[1]))] + t[2].asList()))
+
 
 preserve = (Keyword("preserve") + Group(ZeroOrMore(single_letter)))\
     .setParseAction(lambda s,l,t:

@@ -64,21 +64,23 @@ class Loop(Bakeable):
 class FunctionCall(Bakeable):
     def __init__(self, fname, args = [], to = None):
         self.fname = fname
+        assert type(args) == list, "Type of fcall args is {}".format(type(args))
         self.args = args
         self.to = to
 
     def bake(self):
         elems = []
-        elems.append(Instruction('FN', args))
+        ins = Instruction('FN', [Operand('C', [], RefWord(self.fname))] + self.args)
+        elems.append(ins)
         if self.to:
-            elems.append(Instruction('MV', [Operand('S', [], ConstWord('P')), self.to]))
+            elems.append(Instruction('MV', [Operand('S', [], ConstWord('V')), self.to]))
         return bakers.BakerSequence([e.bake() for e in elems])
 
 class Instruction(Bakeable):
     def __init__(self, opcode, operands):
         assert len(opcode) == 2
         self.opcode = opcode
-        assert type(operands) == list
+        assert type(operands) == list, "Operands are {}".format(operands)
         self.operands = operands
 
     def bake(self):
