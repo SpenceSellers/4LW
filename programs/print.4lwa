@@ -1,89 +1,78 @@
 
-label print
-    preserve A B
+function print preserving A B {
     MV [stack S] [reg B]                    # B is length
     MV [stack S] [reg A]                    # A is string addr
     AD [reg A] [reg B] [reg B]              # B is now end of string
 
-    label _print_loop
-    JE [reg A] [reg B] [const :_print_end]
-    MV [reg mem A] [io]
-    AD [reg A] [const 4] [reg A]
-    JP [const :_print_loop]
+    loop {
+        JE [reg A] [reg B] [const :_print_end]
+        MV [reg mem A] [io]
+        AD [reg A] [const 4] [reg A]
+    }
     label _print_end
+}
 
-    restore B A
-    RT
-
-label printTerminated
+function printTerminated preserving A B {
     preserve A B
     MV [stack S] [reg A] # String ptr
 
-    label _print_term_loop
+    loop {
         MV [reg mem A] [reg B]
         JZ [reg neg B] [const :_print_term_end]
         MV [reg B] [io]
         AD [reg A] [const 4] [reg A]
-        JP [const :_print_term_loop]
+    }
 
     label _print_term_end
-    restore B A
-    RT
+}
 
-label printNewline
+function printNewline {
     MV [const __C_] [io]
-    RT
+}
 
 # -- (Char)
-label readChar
-    preserve A
+function readChar preserving A {
     label _readChar_wait
     MV [io] [reg A]
     JE [reg A] [const ZZZZ] [const :_readChar_wait]
     MV [reg A] [stack V]
-    restore A
-    RT
+}
 
 # (Buffer: addr) (Buffer length: words) -- (read length)
-label readLine
-    preserve A B C D
+function readLine preserving A B C D {
     MV [stack S] [reg B] # Buffer Length
     MV [stack S] [reg A] # Buffer Addr
 
     MV [const 0] [reg D] # Length of read
 
-    label _readLine_loop
-    JE [reg B] [reg D] [const :_readLine_done] # We've reached length limit.
+    loop {
+        JE [reg B] [reg D] [const :_readLine_done] # We've reached length limit.
 
-    call readChar
-    MV [stack V] [reg C]
+        call readChar
+        MV [stack V] [reg C]
 
-    JE [reg C] [const __C_] [const :_readLine_done]     # Is it an enter?
-    MV [reg inc D] [reg D]
-    MV [reg C] [reg mem A]
-    AD [reg A] [const 4] [reg A] # Move buffer loc
-    JP [const :_readLine_loop]
+        JE [reg C] [const __C_] [const :_readLine_done]     # Is it an enter?
+        MV [reg inc D] [reg D]
+        MV [reg C] [reg mem A]
+        AD [reg A] [const 4] [reg A] # Move buffer loc
+    }
 
     label _readLine_done
 
     MV [reg D] [stack V]
-    restore D C B A
-    RT
+}
 
 # (Word: word) --
-label printWord
-    preserve A
+function printWord preserving A {
     MV [stack S] [reg A]
     MV [reg first A] [io]
     MV [reg second A] [io]
     MV [reg third A] [io]
     MV [reg fourth A] [io]
-    restore A
-    RT
+}
 
 # Char Char Char Char -- Word
-label parseWord
-    preserve A B
+function parseWord preserving A B {
     MV [stack fourth S] [reg A]
 
     ML [stack fourth S] [const A_] [reg B]
@@ -96,19 +85,17 @@ label parseWord
     AD [reg B] [reg A] [reg A]
 
     MV [reg A] [stack V]
+}
 
-    restore B A
-    RT
+function readWord {
+    call readChar
+    MV [stack V] [stack S]
+    call readChar
+    MV [stack V] [stack S]
+    call readChar
+    MV [stack V] [stack S]
+    call readChar
+    MV [stack V] [stack S]
 
-label readWord
-    call readChar
-    MV [stack V] [stack S]
-    call readChar
-    MV [stack V] [stack S]
-    call readChar
-    MV [stack V] [stack S]
-    call readChar
-    MV [stack V] [stack S]
-    
     FN [const :parseWord]
-    RT
+}

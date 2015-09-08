@@ -6,14 +6,14 @@ label toBase10
     # This algorithm won't work if the number is zero.
     JZ [reg A] [const :_base_num_is_zero]
 
-    label _basetop
-    JZ [reg A] [const :_baseloopend]
-    MD [reg A] [const 10] [reg B] # A mod 10
-    AD [reg B] [const __N_] [reg B] # make it a number char
-    MV [reg B] [stack V] # We have a digit, save it
-    MV [reg inc C] [reg C] # Inc C
-    DV [reg A] [const 10] [reg A] # The new A
-    JP [const :_basetop]
+    loop {
+        JZ [reg A] [const :_baseloopend]
+        MD [reg A] [const 10] [reg B] # A mod 10
+        AD [reg B] [const __N_] [reg B] # make it a number char
+        MV [reg B] [stack V] # We have a digit, save it
+        MV [reg inc C] [reg C] # Inc C
+        DV [reg A] [const 10] [reg A] # The new A
+    }
 
     label _baseloopend
 
@@ -26,18 +26,15 @@ label toBase10
     MV [const 1] [reg C] # One value
     JP [const :_baseloopend] # Jump to end
 
-label printBase10
-    preserve A B C
+function printBase10 preserving A B C{
     FN [const :toBase10] [stack S]
     MV [stack V] [reg C] # Length of number
 
-    label _printBaseLoop
-    JZ [reg C] [const :_printBaseEnd] # If no more numbers, exit
-    MV [stack V] [io]           # Print the number
-    MV [reg dec C] [reg C]          # decrement
-    JP [const :_printBaseLoop]
+    loop {
+        JZ [reg C] [const :_printBaseEnd] # If no more numbers, exit
+        MV [stack V] [io]           # Print the number
+        MV [reg dec C] [reg C]          # decrement
+    }
 
     label _printBaseEnd
-    restore C B A
-    RT
-    
+}
