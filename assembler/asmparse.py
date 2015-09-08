@@ -23,7 +23,7 @@ FLAG_MAP = {'neg': 'N',
             'fourth': 'D'
 }
 
-single_letter = Word(srange('[A-Z]'), exact = 1)
+single_letter = Word(srange('[A-Z_]'), exact = 1)
 
 identifier = Word(alphas + '_', alphas + '_' + nums)
 
@@ -84,9 +84,20 @@ string = (Keyword('string') + identifier + quotedString)\
 term_string = (Keyword('term_string') + identifier + quotedString)\
     .setParseAction(lambda s,l,t: asm.TerminatedString(t[1], t[2][1:-1]))
 
+function = Forward()
+loop = Forward()
+
 emptyLine = Empty()
 
-line = MatchFirst([instruction, label, fcall, preserve, restore, string, term_string, import_, emptyLine]) + Optional(Literal('#') + restOfLine).suppress() + LineEnd().suppress()
+line = MatchFirst([instruction, label, fcall, preserve, restore, string, term_string, import_, function, loop, emptyLine]) + Optional(Literal('#') + restOfLine).suppress() + LineEnd().suppress()
+
+preservables = Group(OneOrMore(single_letter))
+
+function << (Keyword('function') + identifier + Optional(Keyword('preserving').suppress() + preservables, default=[]) + '{' + Group(ZeroOrMore(line)) + '}')\
+    .setParseAction(lambda s,l,t: asm.Function(t[1], t[4], preserve = t[2]))
+
+loop << (Keyword('loop') + '{' + Group(ZeroOrMore(line)) + '}')\
+    .setParseAction(lambda s,l,t: asm.Loop(t[2]))
 
 program = ZeroOrMore(line) + StringEnd()
 

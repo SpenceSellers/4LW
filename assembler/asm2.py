@@ -5,6 +5,7 @@ import bakers
 import asmparse
 import sys
 import os
+import uuid
 
 class Bakeable:
     def bake(self):
@@ -25,6 +26,53 @@ class Program(Bakeable):
 
     def __repr__(self):
         return "Program {}".format(self.pieces)
+
+class Function(Bakeable):
+    def __init__(self, name, bakeables, preserve = []):
+        self.name = name
+        self.preserves = preserve
+        self.pieces = bakeables
+
+    def bake(self):
+        elems = []
+        elems.append(Label(self.name).bake()) # Function label
+        preserves = Instruction('PU', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in self.preserves]).bake()
+        elems.append(preserves)
+        elems.extend([b.bake() for b in self.pieces]) # Actual body
+        restores = Instruction('PL', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in reversed(self.preserves)]).bake()
+        elems.append(restores)
+        elems.append(Instruction('RT',[]).bake())
+
+        return bakers.BakerSequence(elems)
+
+    def __repr__(self):
+        return "Function {}: {}".format(self.name, self.pieces)
+
+class Loop(Bakeable):
+    def __init__(self, bakeables):
+        self.pieces = bakeables
+
+    def bake(self):
+        name = uuid.uuid4()
+        elems = []
+        elems.append(Label(name).bake())
+        elems.extend([b.bake() for b in self.pieces])
+        jumpback = Instruction('JP', [Operand('C', [], RefWord(name))])
+        elems.append(jumpback.bake())
+        return bakers.BakerSequence(elems)
+
+class FunctionCall(Bakeable):
+    def __init__(self, fname, args = [], to = None):
+        self.fname = fname
+        self.args = args
+        self.to = to
+
+    def bake(self):
+        elems = []
+        elems.append(Instruction('FN', args))
+        if self.to:
+            elems.append(Instruction('MV', [Operand('S', [], ConstWord('P')), self.to]))
+        return bakers.BakerSequence([e.bake() for e in elems])
 
 class Instruction(Bakeable):
     def __init__(self, opcode, operands):
