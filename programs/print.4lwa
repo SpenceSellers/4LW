@@ -44,16 +44,13 @@ function readLine preserving A B C D {
     loop {
         JE [reg B] [reg D] [const :@break] # We've reached length limit.
 
-        call readChar
-        MV [stack V] [reg C]
+        call readChar to [reg C]
 
         JE [reg C] [const __C_] [const :@break]     # Is it an enter?
         MV [reg inc D] [reg D]
         MV [reg C] [reg mem A]
         AD [reg A] [const 4] [reg A] # Move buffer loc
     }
-
-
     MV [reg D] [stack V]
 }
 
@@ -92,5 +89,5 @@ function readWord {
     call readChar
     MV [stack V] [stack S]
 
-    FN [const :parseWord]
+    call parseWord
 }

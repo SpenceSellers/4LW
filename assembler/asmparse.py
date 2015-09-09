@@ -87,10 +87,11 @@ term_string = (Keyword('term_string') + identifier + quotedString)\
 
 function = Forward()
 loop = Forward()
+if_ = Forward()
 
 emptyLine = Empty()
 
-line = MatchFirst([instruction, label, fcall, preserve, restore, string, term_string, import_, function, loop, emptyLine]) + Optional(Literal('#') + restOfLine).suppress() + LineEnd().suppress()
+line = MatchFirst([instruction, label, fcall, preserve, restore, string, term_string, import_, function, loop, if_, emptyLine]) + Optional(Literal('#') + restOfLine).suppress() + LineEnd().suppress()
 
 preservables = Group(OneOrMore(single_letter))
 
@@ -99,6 +100,9 @@ function << (Keyword('function') + identifier + Optional(Keyword('preserving').s
 
 loop << (Keyword('loop') + '{' + Group(ZeroOrMore(line)) + '}')\
     .setParseAction(lambda s,l,t: asm.Loop(t[2]))
+
+if_ << (Keyword('if') + '{' + Group(ZeroOrMore(line)) + '}' + Keyword('then') + '{' + Group(ZeroOrMore(line)) +'}')\
+    .setParseAction(lambda s,l,t: asm.If(t[2].asList(), t[6].asList()))
 
 program = ZeroOrMore(line) + StringEnd()
 

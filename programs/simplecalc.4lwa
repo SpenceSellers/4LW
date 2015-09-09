@@ -18,13 +18,13 @@ call printTerminated [const :inputstr]
 call readLine [const :buffer] [const 20]
 #MV [stack V] [const 0] # Delete
 
-FN [const :memcmp] [const :buffer] [const :inc] [const 3]
+call memcmp [const :buffer] [const :inc] [const 3]
 JE [stack V] [const ZZZZ] [const :increment]
 
-FN [const :memcmp] [const :buffer] [const :dec] [const 3]
+call memcmp [const :buffer] [const :dec] [const 3]
 JE [stack V] [const ZZZZ] [const :decrement]
 
-FN [const :memcmp] [const :buffer] [const :rst] [const 3]
+call memcmp [const :buffer] [const :rst] [const 3]
 JE [stack V] [const ZZZZ] [const :reset]
 
 call printTerminated [const :invalid]

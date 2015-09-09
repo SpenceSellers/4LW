@@ -6,6 +6,7 @@ import asmparse
 import sys
 import os
 import uuid
+import copy
 
 class Bakeable:
     def bake(self):
@@ -62,6 +63,24 @@ class Loop(Bakeable):
         elems.append(jumpback.bake())
         elems.append(Label('@break').bake())
         return bakers.CaptureScopeBaker(bakers.BakerSequence(elems))
+
+class If(Bakeable):
+    def __init__(self, condition, then, otherwise = None):
+        self.cond = condition
+        self.then = then
+        self.otherwise = otherwise
+
+    def bake(self):
+        elems = []
+        cond = copy.copy(self.cond)
+        cond.append(Instruction('JP', [Operand('C', [], RefWord('@endif'))]))
+        then = copy.copy(self.then)
+        then.insert(0, Label('@true'))
+        then.append(Label('@endif'))
+        then.append(Label('@false'))
+        elems += cond
+        elems += then
+        return bakers.CaptureScopeBaker(bakers.BakerSequence([b.bake() for b in elems]))
 
 class FunctionCall(Bakeable):
     def __init__(self, fname, args = [], to = None):

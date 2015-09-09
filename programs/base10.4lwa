@@ -14,7 +14,7 @@ label toBase10
         MV [reg inc C] [reg C] # Inc C
         DV [reg A] [const 10] [reg A] # The new A
     }
-    
+
     label _baseloopend
     MV [reg C] [stack V] # Top of stack is number of values.
     restore C B A
@@ -26,7 +26,7 @@ label toBase10
     JP [const :_baseloopend] # Jump to end
 
 function printBase10 preserving A B C{
-    FN [const :toBase10] [stack S]
+    call toBase10 [stack S]
     MV [stack V] [reg C] # Length of number
 
     loop {
@@ -34,5 +34,4 @@ function printBase10 preserving A B C{
         MV [stack V] [io]           # Print the number
         MV [reg dec C] [reg C]          # decrement
     }
-
 }
