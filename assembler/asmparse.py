@@ -1,6 +1,10 @@
 from pyparsing import *
 import asm2 as asm
 
+def trace(x):
+    print("aa {}".format(x))
+    return x
+
 # This will oddly set the default whitespace for all pyparsing.
 # We just want to avoid newlines.
 Word.setDefaultWhitespaceChars(" \t")
@@ -85,6 +89,7 @@ string = (Keyword('string') + identifier + quotedString)\
 term_string = (Keyword('term_string') + identifier + quotedString)\
     .setParseAction(lambda s,l,t: asm.TerminatedString(t[1], t[2][1:-1]))
 
+block = Forward()
 function = Forward()
 loop = Forward()
 if_ = Forward()
@@ -95,14 +100,19 @@ line = MatchFirst([instruction, label, fcall, preserve, restore, string, term_st
 
 preservables = Group(OneOrMore(single_letter))
 
-function << (Keyword('function') + identifier + Optional(Keyword('preserving').suppress() + preservables, default=[]) + '{' + Group(ZeroOrMore(line)) + '}')\
-    .setParseAction(lambda s,l,t: asm.Function(t[1], t[4], preserve = t[2]))
+block << ('{' + Group(ZeroOrMore(line)) + '}')\
+    .setParseAction(lambda s,l,t: [t[1].asList()])
 
-loop << (Keyword('loop') + '{' + Group(ZeroOrMore(line)) + '}')\
-    .setParseAction(lambda s,l,t: asm.Loop(t[2]))
+function << (Keyword('function') + identifier + Optional(Keyword('preserving').suppress() + preservables, default=[]) + block)\
+    .setParseAction(lambda s,l,t: asm.Function(t[1], t[3], preserve = t[2]))
 
-if_ << (Keyword('if') + '{' + Group(ZeroOrMore(line)) + '}' + Keyword('then') + '{' + Group(ZeroOrMore(line)) +'}')\
-    .setParseAction(lambda s,l,t: asm.If(t[2].asList(), t[6].asList()))
+loop << (Keyword('loop') + block)\
+    .setParseAction(lambda s,l,t: asm.Loop(t[1]))
+
+if_ << (Keyword('if') + block + Keyword('then') + block + \
+    Optional(Keyword('else') + block, default=None)\
+        .setParseAction(lambda s,l,t: t[1]))\
+    .setParseAction(lambda s,l,t: asm.If(t[1], t[3], otherwise = t[4]))
 
 program = ZeroOrMore(line) + StringEnd()
 

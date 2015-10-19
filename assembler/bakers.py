@@ -6,6 +6,7 @@ import uuid
 
 def log(s):
     print(s, file=sys.stderr)
+
 class Baker:
     def render(self, table):
         return ''

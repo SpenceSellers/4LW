@@ -5,11 +5,11 @@ function memcmp preserving A B C {
     MV [stack S] [reg C] # C is length
     MV [stack S] [reg B] # B is addr2
     MV [stack S] [reg A] # A is addr1
-
     loop {
         JZ [reg C] [const :_mem_endtrue] # If we're out of length, we're done.
         JE [reg mem A] [reg mem B] [const :_mem_notfalse]
         JP [const :_mem_endfalse] # Compare failed, gotta leave.
+
         label _mem_notfalse # This compare worked
         MV [reg dec C] [reg C]
         AD [reg A] [const 4] [reg A]

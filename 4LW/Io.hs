@@ -8,6 +8,9 @@ import Data.Char
 import Data.Ix
 import Control.Lens
 import Debug.Trace
+
+__ = letter '_'
+
 readToBuffer :: [Char] -> IO [Char]
 readToBuffer buf = do
     isReady <- hReady stdin
@@ -23,9 +26,13 @@ charToInternal c
     | c == ' ' = wrd "__A_"
     | c == '_' = wrd "____"
     | inRange ('A', 'Z') c = extendToWord $ letter c
-    | inRange ('a', 'z') c = Base27.Word (letter '_') (letter '_') (letter 'A') (letter . toUpper $ c)
-    | inRange ('0', '9') c = Base27.Word (letter '_') (letter '_') (letter 'N') (Base27.toLetter . read $ [c])
-    | c == '\n' = Base27.Word (letter '_') (letter '_') (letter 'C') (letter '_')
+    | inRange ('a', 'z') c = Base27.Word __ __ (letter 'A') (letter . toUpper $ c)
+    | inRange ('0', '9') c = Base27.Word __ __ (letter 'N') (Base27.toLetter . read $ [c])
+    | c == '\n' = Base27.Word __ __ (letter 'C') (letter '_')
+    | c == ':' = Base27.Word __ __ (letter 'P') (letter 'C')
+    | c == '%' = Base27.Word __ __ (letter 'P') (letter 'P')
+    | c == '!' = Base27.Word __ __ (letter 'P') (letter 'X')
+
 
 internalToChar :: Base27.Word -> Maybe Char
 internalToChar (WordChars '_' '_' '_' c) = Just $ toUpper c
@@ -33,6 +40,9 @@ internalToChar (WordChars '_' '_' 'A' '_') = Just ' '
 internalToChar (WordChars '_' '_' 'A' c) = Just $ toLower c
 internalToChar (WordChars '_' '_' 'N' c) = toDigit (letter c)
 internalToChar (WordChars '_' '_' 'C' '_') = Just '\n'
+internalToChar (WordChars '_' '_' 'P' 'C') = Just ':'
+internalToChar (WordChars '_' '_' 'P' 'P') = Just '%'
+internalToChar (WordChars '_' '_' 'P' 'X') = Just '!'
 internalToChar (WordChars a b c d) = trace (a:b:c:d:" Invalid") Nothing
 
 toDigit :: Letter -> Maybe Char

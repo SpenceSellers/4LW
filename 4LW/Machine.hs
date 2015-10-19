@@ -144,7 +144,6 @@ getData (ThirdLetter loc)  = (extendToWord . view thirdLetter)  <$> getData loc
 getData (FourthLetter loc) = (extendToWord . view fourthLetter) <$> getData loc
 
 
-
 -- | Applies a data write to any location, be it a register, main memory, etc.
 setData :: DataLocation -> Word -> State MachineState ()
 setData (Constant const) word = return () -- No-op for now. Raise interrupt later.

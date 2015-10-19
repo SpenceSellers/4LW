@@ -8,6 +8,19 @@ import os
 import uuid
 import copy
 
+def log(s):
+    print(s, file=sys.stderr)
+
+def trace(obj, desc = 'Traced'):
+    log("{}: {}".format(desc, obj))
+    return obj
+
+charTable = {
+    '\n': '__C_',
+    ':': '__PC',
+    '!': '__PX',
+    '%': '__PP',
+}
 class Bakeable:
     def bake(self):
         raise NotImplementedError()
@@ -43,7 +56,6 @@ class Function(Bakeable):
         restores = Instruction('PL', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in reversed(self.preserves)]).bake()
         elems.append(restores)
         elems.append(Instruction('RT',[]).bake())
-
         return bakers.BakerSequence([label, bakers.CaptureScopeBaker(bakers.BakerSequence(elems))])
         #return bakers.BakerSequence([label] + elems)
 
@@ -69,6 +81,7 @@ class If(Bakeable):
         self.cond = condition
         self.then = then
         self.otherwise = otherwise
+        print("Otherwise is " + otherwise)
 
     def bake(self):
         elems = []
@@ -80,6 +93,12 @@ class If(Bakeable):
         then.append(Label('@false'))
         elems += cond
         elems += then
+
+        if self.otherwise:
+            log(type(self.otherwise))
+            elems += self.otherwise
+
+        log("Elems is {} ".format(elems))
         return bakers.CaptureScopeBaker(bakers.BakerSequence([b.bake() for b in elems]))
 
 class FunctionCall(Bakeable):
@@ -96,6 +115,9 @@ class FunctionCall(Bakeable):
         if self.to:
             elems.append(Instruction('MV', [Operand('S', [], ConstWord('V')), self.to]))
         return bakers.BakerSequence([e.bake() for e in elems])
+
+    def __repr__(self):
+        return "<FunctionCall {} args {}>".format(self.fname, self.args)
 
 class Instruction(Bakeable):
     def __init__(self, opcode, operands):
@@ -132,7 +154,7 @@ class Operand(Bakeable):
         return bakers.BakerSequence([bakers.Baked(head), self.payload.bake()])
 
     def __repr__(self):
-        return "[Operand {} {} {}]".format(self.type, self.flags, self.payload)
+        return "[Opr {} {} {}]".format(self.type, self.flags if self.flags else '', self.payload)
 
 class Label(Bakeable):
     def __init__(self, label):
@@ -231,7 +253,9 @@ def toInternalChar(c):
     if c in string.digits:
         return "__N" + chr(ord('A') + int(c) - 1)
 
-    if c == '\n': return "__C_"
+    if c in charTable:
+        return charTable[c]
+
 
     raise Exception("Unknown character for internal char: {}".format(c))
 
