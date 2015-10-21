@@ -15,16 +15,16 @@ call printTerminated [const :b10]
 call printBase10 [reg C]
 call printNewline
 call printTerminated [const :inputstr]
-call readLine [const :buffer] [const 20]
+call readLineTerm [const :buffer] [const 20]
 #MV [stack V] [const 0] # Delete
 
-call memcmp [const :buffer] [const :inc] [const 3]
+call strEq [const :buffer] [const :inc]
 JE [stack V] [const ZZZZ] [const :increment]
 
-call memcmp [const :buffer] [const :dec] [const 3]
+call strEq [const :buffer] [const :dec]
 JE [stack V] [const ZZZZ] [const :decrement]
 
-call memcmp [const :buffer] [const :rst] [const 3]
+call strEq [const :buffer] [const :rst]
 JE [stack V] [const ZZZZ] [const :reset]
 
 call printTerminated [const :invalid]
@@ -47,9 +47,9 @@ HL
 string buffer "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 term_string valis "Value is "
 
-string inc "inc"
-string dec "dec"
-string rst "rst"
+term_string inc "inc"
+term_string dec "dec"
+term_string rst "rst"
 
 term_string b10 " or in base 10 "
 term_string inputstr "Command "

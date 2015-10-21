@@ -214,6 +214,11 @@ runInstruction (JumpEqual dat1 dat2 dest) = do
     dat2 <- getData dat2
     when (dat1 == dat2) (setPC =<< getData dest)
 
+runInstruction (JumpNotEqual dat1 dat2 dest) = do
+    dat1 <- getData dat1
+    dat2 <- getData dat2
+    when (dat1 /= dat2) (setPC =<< getData dest)
+         
 runInstruction (FCall addr args) = do
     pushStack returnAddressStackId =<< getPC
     sequence . map (\arg -> (pushStack argStackId) =<< getData arg) $ args

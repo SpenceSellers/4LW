@@ -34,3 +34,7 @@ push (SizeLimitedStack size s) word
 pop :: Stack -> Maybe (Word, Stack)
 pop (SizeLimitedStack _ []) = Nothing
 pop (SizeLimitedStack size (x:xs)) = Just (x, SizeLimitedStack (size - 1) xs)
+
+size :: Stack -> Int
+size (SizeLimitedStack size _) = size
+

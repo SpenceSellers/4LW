@@ -54,6 +54,19 @@ function readLine preserving A B C D {
     MV [reg D] [stack V]
 }
 
+# (Buffer: addr) (Buffer length: words) --
+function readLineTerm preserving A B L {
+    MV [stack S] [reg L]
+    MV [stack S] [reg A]
+
+    MV [reg A] [stack S]
+    MV [reg L] [stack S]
+    call readLine to [reg B]
+    AD [reg A] [reg timesfour B] [reg A]
+    MV [const ZZZZ] [reg mem A]
+    
+}
+
 # (Word: word) --
 function printWord preserving A {
     MV [stack S] [reg A]

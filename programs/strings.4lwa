@@ -25,3 +25,29 @@ function memcmp preserving A B C {
 
     label _mem_done
 }
+
+# (a: Term string) (b: term string) -- (bool)
+function strEq preserving A B {
+    MV [stack S] [reg A]
+    MV [stack S] [reg B]
+    
+    loop {
+        
+        JN [reg mem A] [reg mem B] [const :fail]
+
+        # They have to be the same, remember!
+        JZ [reg neg mem A] [const :success]
+        AD [reg A] [const 4] [reg A]
+        AD [reg B] [const 4] [reg B]
+    }
+
+    label fail
+    MV [const 0] [stack V]
+    JP [const :@return]
+
+    label success
+    MV [const ZZZZ] [stack V]
+    JP [const :@return]
+
+    
+}

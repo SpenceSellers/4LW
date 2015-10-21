@@ -53,6 +53,7 @@ class Function(Bakeable):
         preserves = Instruction('PU', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in self.preserves]).bake()
         elems.append(preserves)
         elems.extend([b.bake() for b in self.pieces]) # Actual body
+        elems.append(Label("@return").bake())
         restores = Instruction('PL', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in reversed(self.preserves)]).bake()
         elems.append(restores)
         elems.append(Instruction('RT',[]).bake())
@@ -70,6 +71,7 @@ class Loop(Bakeable):
         name = uuid.uuid4()
         elems = []
         elems.append(Label(name).bake())
+        elems.append(Label('@continue').bake())
         elems.extend([b.bake() for b in self.pieces])
         jumpback = Instruction('JP', [Operand('C', [], RefWord(name))])
         elems.append(jumpback.bake())
