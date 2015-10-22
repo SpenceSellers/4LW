@@ -21,6 +21,14 @@ class Baker:
         locs = self.report()
         return self.render(locs)
 
+    def debug_labels(self):
+        s = ''
+        locs = self.report()
+        for name, index in locs.items():
+            s += "{}: {}\n".format(name, index)
+        return s
+            
+
 class BakerSequence(Baker):
     def __init__(self, seq):
         self.seq = seq

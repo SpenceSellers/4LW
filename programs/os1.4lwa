@@ -1,4 +1,6 @@
 JP [const :start]
+reserve dynamic_start 1
+
 import print.4lwa
 import strings.4lwa
 import base10.4lwa
@@ -25,6 +27,12 @@ loop {
     call strEq [const :cmd_buffer] [const :coredump_str]
     JZ [stack neg V] [const :run_coredump]
 
+    call strEq [const :cmd_buffer] [const :write_str]
+    JZ [stack neg V] [const :run_write]
+
+    call strEq [const :cmd_buffer] [const :jump_str]
+    JZ [stack neg V] [const :run_jump]
+
     JP [const :badcmd]
     
     label run_poke
@@ -46,6 +54,14 @@ loop {
     label run_coredump
     call coredump_cmd
     JP [const :@continue]
+
+    label run_write
+    call write_cmd
+    JP [const :@continue]
+
+    label run_jump
+    call jump_cmd
+    JP [const :@continue]
     
     label badcmd
     call printTerminated [const :badcmd_str]
@@ -53,14 +69,15 @@ loop {
 }
 
 function poke_cmd preserving A B {
+    call printTerminated [const :address_str]
     call readWord to [reg A]
     call printNewline
     call readWord to [reg B]
     MV [reg B] [reg mem A] 
-    
 }
 
 function peek_cmd {
+    call printTerminated [const :address_str]
     call readWord
     call printNewline
     MV [stack mem V] [stack S]
@@ -78,8 +95,28 @@ function base10_cmd {
     call printBase10 [stack V]
 }
 
-function coredump_cmd preserving A {
-    call coreDump [const 0] [const A__]
+function coredump_cmd preserving A B {
+    call printTerminated [const :address_str]
+    call readWord to [reg A]
+    call printNewline
+    call printTerminated [const :address_str]
+    call readWord to [reg B]
+    call printNewline
+    call coreDump [reg A] [reg B]
+}
+
+function write_cmd preserving A {
+    call printTerminated [const :address_str]
+    call readWord to [reg A]
+    call printNewline
+    call enterRaw [reg A]
+}
+
+function jump_cmd {
+    call printTerminated [const :address_str]
+    call readWord
+    call printNewline
+    JP [stack V]
 }
 
 # (start: addr) (end: addr) -- io
@@ -93,8 +130,33 @@ function coreDump preserving A B {
         MV [reg inc A] [reg A]
     }
 }
+function readLetter preserving A {
+    call readChar to [reg A]
+    JN [reg third A] [const _] [const :notletter]
+    MV [reg fourth A] [stack V]
+    JP [const :@return]
+    
+    label notletter
+    MV [const ZZZZ] [stack V]
+}
 
+function enterRaw preserving A B C {
+    MV [stack S] [reg A]
+    loop {
+        call readLetter to [reg B]
+        JZ [reg neg B] [const :@return]
+        MV [reg first mem A] [reg C]
+        ML [reg C] [const A___] [reg C]
+        SB [reg mem A] [reg C] [reg mem A]
+        ML [reg B] [const A___] [reg B]
+        AD [reg mem A] [reg B] [reg mem A]
+        
+        
+        MV [reg inc A] [reg A]
+    }
+}
 term_string entercmd_str "Command: "
+term_string address_str "Addr: "
 string cmd_buffer "XXXXXXXXXXXXXXXXXXXX"
 
 term_string poke_str "poke"
@@ -102,4 +164,6 @@ term_string peek_str "peek"
 term_string base27_str "base27"
 term_string base10_str "base10"
 term_string coredump_str "coredump"
+term_string write_str "write"
+term_string jump_str "jump"
 term_string badcmd_str "Bad command"

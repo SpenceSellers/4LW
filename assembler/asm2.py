@@ -31,6 +31,9 @@ class Bakeable:
     def render_all(self):
         return self.bake().render_total()
 
+    def debug_labels(self):
+        return self.bake().debug_labels()
+
 class Program(Bakeable):
     def __init__(self, bakeables):
         self.pieces = bakeables
@@ -168,7 +171,14 @@ class Label(Bakeable):
     def bake(self):
         return bakers.LabelBaker(self.label)
 
+class Reserved(Bakeable):
+    def __init__(self, label, length):
+        self.label = label
+        self.length = length
 
+    def bake(self):
+        return bakers.Baked('____' * self.length, self.label)
+    
 class ConstWord(Bakeable):
     def __init__(self, word):
         word = expandWord(word)
@@ -269,7 +279,11 @@ def main():
     f = open(filename, 'r')
     raw_prog = f.read()
 
-    print(asmparse.parse_program(raw_prog).render_all())
+    prog = asmparse.parse_program(raw_prog)
+
+    #print(prog.debug_labels())
+    
+    print(prog.render_all())
 
 if __name__ == '__main__':
     main()

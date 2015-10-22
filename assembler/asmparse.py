@@ -89,6 +89,9 @@ string = (Keyword('string') + identifier + quotedString)\
 term_string = (Keyword('term_string') + identifier + quotedString)\
     .setParseAction(lambda s,l,t: asm.TerminatedString(t[1], t[2][1:-1]))
 
+words = (Keyword('reserve') + identifier + Word(nums))\
+        .setParseAction(lambda s,l,t: asm.Reserved(t[1], int(t[2])))
+
 block = Forward()
 function = Forward()
 loop = Forward()
@@ -96,7 +99,7 @@ if_ = Forward()
 
 emptyLine = Empty()
 
-line = MatchFirst([instruction, label, fcall, preserve, restore, string, term_string, import_, function, loop, if_, emptyLine]) + Optional(Literal('#') + restOfLine).suppress() + LineEnd().suppress()
+line = MatchFirst([instruction, label, fcall, preserve, restore, string, term_string, words,  import_, function, loop, if_, emptyLine]) + Optional(Literal('#') + restOfLine).suppress() + LineEnd().suppress()
 
 preservables = Group(OneOrMore(single_letter))
 
