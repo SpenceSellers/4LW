@@ -48,6 +48,8 @@ function strEq preserving A B {
     label success
     MV [const ZZZZ] [stack V]
     JP [const :@return]
+}
 
+function tokens preserving A B C {
     
 }
