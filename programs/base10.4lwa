@@ -38,8 +38,7 @@ function printBase10 preserving A B C {
 
 # -- (word number)
 function readBase10Char preserving A {
-    call readChar
-    MV [stack V] [reg A]
+    call readChar to [reg A]
     JE [reg third A] [const N] [const :parsenum]
 
     MV [const ZZZZ] [stack V]

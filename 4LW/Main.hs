@@ -21,7 +21,7 @@ main = do
   prog <- readFile filename
 
   let state = memory %~ fromJust . importString (sanitizeProg prog) minWord $ blankState
-  (_, state') <- runStateT start state
+  (_, state') <- runStateT (start 1000) state
   putStrLn "\n\n\n\n\n\n"
   putStrLn "Done:"
   putStrLn $ exportString (_memory state') (minWord, wrd "_AAA")

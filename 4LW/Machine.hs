@@ -21,6 +21,7 @@ import Control.Monad.State.Lazy
 import Control.Applicative
 import Control.Monad.Reader
 import Debug.Trace
+import Control.Concurrent
 
 returnAddressStackId :: Letter
 returnAddressStackId = letter 'R'
@@ -266,27 +267,28 @@ tick = do
           setPC $ offsetBy pc length
           runInstruction instruction
 
-start :: StateT MachineState IO ()
-start = do
+start :: Int -> StateT MachineState IO ()
+start ticktime = do
     lift $ hSetBuffering stdin NoBuffering
-    run
+    run ticktime
 
-run :: StateT MachineState IO ()
-run = do
+run :: Int -> StateT MachineState IO ()
+run ticktime = do
   input <- lift $ Io.readToBuffer []
   inBuffer <>= input
 
   hoistState tick -- Run the tick
-
+  case ticktime of 
+    0 -> return ()
+    n -> lift $ threadDelay n
   state <- hoistState $ get
   let currentAction = view action state
   --let ticknum = view tickNum state
   action .= NoAction -- Clear action
-
   case currentAction of
-    NoAction -> run
+    NoAction -> run ticktime
     HaltAction -> return ()
     IOWrite str -> do
         lift $ putStr str
         lift $ hFlush stdout
-        run
+        run ticktime

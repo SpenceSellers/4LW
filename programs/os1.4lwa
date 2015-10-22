@@ -19,7 +19,11 @@ loop {
     call strEq [const :cmd_buffer] [const :base27_str]
     JZ [stack neg V] [const :run_base27]
 
-    
+    call strEq [const :cmd_buffer] [const :base10_str]
+    JZ [stack neg V] [const :run_base10]
+
+    call strEq [const :cmd_buffer] [const :coredump_str]
+    JZ [stack neg V] [const :run_coredump]
 
     JP [const :badcmd]
     
@@ -33,6 +37,14 @@ loop {
 
     label run_base27
     call base27_cmd
+    JP [const :@continue]
+
+    label run_base10
+    call base10_cmd
+    JP [const :@continue]
+
+    label run_coredump
+    call coredump_cmd
     JP [const :@continue]
     
     label badcmd
@@ -60,10 +72,34 @@ function base27_cmd {
     call printWord [stack V]
 }
 
+function base10_cmd {
+    call readWord
+    call printNewline
+    call printBase10 [stack V]
+}
+
+function coredump_cmd preserving A {
+    call coreDump [const 0] [const A__]
+}
+
+# (start: addr) (end: addr) -- io
+function coreDump preserving A B {
+    MV [stack S] [reg B]
+    MV [stack S] [reg A]
+
+    loop {
+        JE [reg A] [reg B] [const :@break]
+        MV [reg first mem A] [io]
+        MV [reg inc A] [reg A]
+    }
+}
+
 term_string entercmd_str "Command: "
 string cmd_buffer "XXXXXXXXXXXXXXXXXXXX"
 
 term_string poke_str "poke"
 term_string peek_str "peek"
 term_string base27_str "base27"
+term_string base10_str "base10"
+term_string coredump_str "coredump"
 term_string badcmd_str "Bad command"
