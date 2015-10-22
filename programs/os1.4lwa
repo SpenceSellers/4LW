@@ -11,9 +11,28 @@ loop {
     call readLineTerm [const :cmd_buffer] [const 10]
 
     call strEq [const :cmd_buffer] [const :poke_str]
-    JZ [stack V] [const :badcmd]
-    call poke_cmd
+    JZ [stack neg V] [const :run_poke]
 
+    call strEq [const :cmd_buffer] [const :peek_str]
+    JZ [stack neg V] [const :run_peek]
+
+    call strEq [const :cmd_buffer] [const :base27_str]
+    JZ [stack neg V] [const :run_base27]
+
+    
+
+    JP [const :badcmd]
+    
+    label run_poke
+    call poke_cmd
+    JP [const :@continue]
+
+    label run_peek
+    call peek_cmd
+    JP [const :@continue]
+
+    label run_base27
+    call base27_cmd
     JP [const :@continue]
     
     label badcmd
@@ -23,6 +42,7 @@ loop {
 
 function poke_cmd preserving A B {
     call readWord to [reg A]
+    call printNewline
     call readWord to [reg B]
     MV [reg B] [reg mem A] 
     
@@ -30,8 +50,14 @@ function poke_cmd preserving A B {
 
 function peek_cmd {
     call readWord
+    call printNewline
     MV [stack mem V] [stack S]
     call printWord [stack S]
+}
+
+function base27_cmd {
+    call readBase10Line
+    call printWord [stack V]
 }
 
 term_string entercmd_str "Command: "
@@ -39,4 +65,5 @@ string cmd_buffer "XXXXXXXXXXXXXXXXXXXX"
 
 term_string poke_str "poke"
 term_string peek_str "peek"
+term_string base27_str "base27"
 term_string badcmd_str "Bad command"

@@ -1,4 +1,3 @@
-
 function print preserving A B {
     MV [stack S] [reg B]                    # B is length
     MV [stack S] [reg A]                    # A is string addr
