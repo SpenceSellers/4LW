@@ -16,10 +16,14 @@ def trace(obj, desc = 'Traced'):
     return obj
 
 charTable = {
+    '_': '____',
     '\n': '__C_',
     ':': '__PC',
     '!': '__PX',
     '%': '__PP',
+    '.': '__PD',
+    '-': '__PM',
+    '|': '__PB',
 }
 class Bakeable:
     def bake(self):
@@ -39,7 +43,8 @@ class Program(Bakeable):
         self.pieces = bakeables
 
     def bake(self):
-        return bakers.BakerSequence([b.bake() for b in self.pieces])
+        end_label = Label("@end").bake()
+        return bakers.BakerSequence([b.bake() for b in self.pieces] + [end_label])
 
     def __repr__(self):
         return "Program {}".format(self.pieces)

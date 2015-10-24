@@ -32,6 +32,11 @@ charToInternal c
     | c == ':' = Base27.Word __ __ (letter 'P') (letter 'C')
     | c == '%' = Base27.Word __ __ (letter 'P') (letter 'P')
     | c == '!' = Base27.Word __ __ (letter 'P') (letter 'X')
+    | c == '.' = Base27.Word __ __ (letter 'P') (letter 'D')
+    | c == '-' = Base27.Word __ __ (letter 'P') (letter 'M')
+    | c == '|' = Base27.Word __ __ (letter 'P') (letter 'B')
+    | c == '(' = Base27.Word __ __ (letter 'B') (letter 'A')
+    | c == ')' = Base27.Word __ __ (letter 'B') (letter 'B')
 
 
 internalToChar :: Base27.Word -> Maybe Char
@@ -43,6 +48,12 @@ internalToChar (WordChars '_' '_' 'C' '_') = Just '\n'
 internalToChar (WordChars '_' '_' 'P' 'C') = Just ':'
 internalToChar (WordChars '_' '_' 'P' 'P') = Just '%'
 internalToChar (WordChars '_' '_' 'P' 'X') = Just '!'
+internalToChar (WordChars '_' '_' 'P' 'D') = Just '.'
+internalToChar (WordChars '_' '_' 'P' 'M') = Just '-'
+internalToChar (WordChars '_' '_' 'P' 'B') = Just '|'
+internalToChar (WordChars '_' '_' 'B' 'A') = Just '('
+internalToChar (WordChars '_' '_' 'B' 'B') = Just ')'
+
 internalToChar (WordChars a b c d) = trace (a:b:c:d:" Invalid") Nothing
 
 toDigit :: Letter -> Maybe Char

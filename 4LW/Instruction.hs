@@ -38,6 +38,7 @@ data Instruction =
     Mul DataLocation DataLocation DataLocation |
     Div DataLocation DataLocation DataLocation |
     Modulo DataLocation DataLocation DataLocation |
+    Mask DataLocation DataLocation DataLocation |
     Jump DataLocation |
     JumpZero DataLocation DataLocation |
     JumpEqual DataLocation DataLocation DataLocation |

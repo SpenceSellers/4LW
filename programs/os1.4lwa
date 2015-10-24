@@ -1,11 +1,18 @@
 JP [const :start]
-reserve dynamic_start 1
 
+#import dynmem.4lwa
 import print.4lwa
 import strings.4lwa
 import base10.4lwa
 
 label start
+
+call printTerminated [const :welcome_str]
+call printNewline
+SB [const ZZZZ] [const :@end] [reg M]
+call printBase10 [reg M]
+call printTerminated [const :freemem_str]
+call printNewline
 
 loop {
     call printNewline
@@ -155,6 +162,9 @@ function enterRaw preserving A B C {
         MV [reg inc A] [reg A]
     }
 }
+term_string welcome_str "Welcome to 4LW OS"
+term_string freemem_str " letters of memory free"
+
 term_string entercmd_str "Command: "
 term_string address_str "Addr: "
 string cmd_buffer "XXXXXXXXXXXXXXXXXXXX"
