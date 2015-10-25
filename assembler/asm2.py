@@ -24,6 +24,8 @@ charTable = {
     '.': '__PD',
     '-': '__PM',
     '|': '__PB',
+    '(': '__BA',
+    ')': '__BB',
 }
 class Bakeable:
     def bake(self):
@@ -183,7 +185,7 @@ class Reserved(Bakeable):
 
     def bake(self):
         return bakers.Baked('____' * self.length, self.label)
-    
+
 class ConstWord(Bakeable):
     def __init__(self, word):
         word = expandWord(word)
@@ -287,7 +289,7 @@ def main():
     prog = asmparse.parse_program(raw_prog)
 
     #print(prog.debug_labels())
-    
+
     print(prog.render_all())
 
 if __name__ == '__main__':
