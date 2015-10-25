@@ -52,9 +52,12 @@ base27dat = base27\
 referenceDat = (":" + identifier)\
     .setParseAction(lambda s,l,t: asm.RefWord(t[1]))
 
+constLetterDat = ("'" + CharsNotIn('', exact=1) + "'")\
+    .setParseAction(lambda s,l,t: asm.ConstWord(asm.expandWord(asm.toInternalChar(t[1]))))
+
 emptyDat = Empty().setParseAction(lambda s,l,t: asm.ConstWord('____'))
 
-dat = MatchFirst([base10dat, base27dat, referenceDat, emptyDat])
+dat = MatchFirst([base10dat, base27dat, referenceDat, constLetterDat, emptyDat])
 
 operand = (Literal('[').suppress() + dattype + flags + dat + Literal(']').suppress())\
     .setParseAction(lambda s,l,t: asm.Operand(t[0], t[1], t[2]))

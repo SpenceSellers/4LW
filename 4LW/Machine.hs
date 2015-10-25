@@ -127,8 +127,8 @@ getData (Stack l) = popStack l
 
 getData (Io selector) = do
   char <- popInBuffer
-  case char of
-    Just c -> return $ Io.charToInternal c
+  case char >>= Io.charToInternal of
+    Just c -> return $ c
     Nothing -> return $ maxWord
 
 getData (Negated loc) = negateWord <$> getData loc
@@ -219,7 +219,7 @@ runInstruction (JumpNotEqual dat1 dat2 dest) = do
     dat1 <- getData dat1
     dat2 <- getData dat2
     when (dat1 /= dat2) (setPC =<< getData dest)
-         
+
 runInstruction (FCall addr args) = do
     pushStack returnAddressStackId =<< getPC
     sequence . map (\arg -> (pushStack argStackId) =<< getData arg) $ args
@@ -278,7 +278,7 @@ run ticktime = do
   inBuffer <>= input
 
   hoistState tick -- Run the tick
-  case ticktime of 
+  case ticktime of
     0 -> return ()
     n -> lift $ threadDelay n
   state <- hoistState $ get
