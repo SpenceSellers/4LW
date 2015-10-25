@@ -1,4 +1,4 @@
-# (string: addr) (length) -- 
+# (string: addr) (length) --
 function print preserving A B {
     MV [stack S] [reg B]                    # B is length
     MV [stack S] [reg A]                    # A is string addr
@@ -10,7 +10,7 @@ function print preserving A B {
         AD [reg A] [const 4] [reg A]
     }
 }
-# (string: addr) -- 
+# (string: addr) --
 function printTerminated preserving A B {
     MV [stack S] [reg A] # String ptr
 
@@ -21,7 +21,7 @@ function printTerminated preserving A B {
         AD [reg A] [const 4] [reg A]
     }
 }
-# -- 
+# --
 function printNewline {
     MV [const __C_] [io]
 }
@@ -64,7 +64,7 @@ function readLineTerm preserving A B L {
     call readLine to [reg B]
     AD [reg A] [reg timesfour B] [reg A]
     MV [const ZZZZ] [reg mem A]
-    
+
 }
 
 # (Word: word) --
@@ -104,4 +104,55 @@ function readWord {
     MV [stack V] [stack S]
 
     call parseWord
+}
+# (formatString: addr) [varargs] --
+# Note that due to stack stuff the arguments have to be pushed on very backwardsly
+
+function printf preserving A B {
+    MV [stack S] [reg A]
+    label loopStart
+    loop {
+
+        JE [reg mem A] [const ZZZZ] [const :@return]
+        JE [reg mem A] [const '%'] [const :special]
+        MV [reg mem A] [io]
+
+        label next
+        AD [reg A] [const 4] [reg A]
+        JP [const :@continue]
+
+        label special
+        AD [reg A] [const 4] [reg A]
+        JE [reg mem A] [const 'w'] [const :wword]
+        JE [reg mem A] [const 's'] [const :wstring]
+        JE [reg mem A] [const 'n'] [const :wnewline]
+        JE [reg mem A] [const 'c'] [const :wchar]
+
+        # TODO error here
+
+
+        label wword
+        call printWord [stack S]
+        JP [const :next]
+
+        label wstring
+        call printTerminated [stack S]
+        JP [const :next]
+
+        label wnewline
+        call printNewline
+        JP [const :next]
+
+        label wchar
+        MV [stack S] [io]
+        JP [const :next]
+
+
+    }
+
+
+
+
+
+
 }

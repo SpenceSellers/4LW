@@ -53,7 +53,7 @@ data Instruction =
 
 
 data BadInstruction =
-     BadInstruction | BadOpcode | BadOperands deriving Show
+     BadInstruction | BadOpcode | BadOperands | ZeroLengthInstruction deriving Show
 
 -- | An InstructionParseResult is just the instruction, and how long
 --  the instruction was, so we can change the Program Counter register
@@ -103,7 +103,7 @@ buildInstruction raw = constructInstruction =<< assembleRaw raw
 
 -- Assembles a RawInstruction out of the supplied Words
 assembleRaw :: [Word] -> Either BadInstruction RawInstruction
-assembleRaw [] = Left BadInstruction
+assembleRaw [] = Left ZeroLengthInstruction
 assembleRaw (opWord:rawOperands) = RawInstruction <$> pure opcode <*> operands
     where opcode = (opWord ^. firstLetter, opWord ^. secondLetter)
           operands = toEither BadOperands $ parseOperands rawOperands
