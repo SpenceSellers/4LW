@@ -38,6 +38,9 @@ loop {
     call strEq [const :cmd_buffer] [const :jump_str]
     JZ [stack neg V] [const :run_jump]
 
+    call strEq [const :cmd_buffer] [const :shutdown_str]
+    JZ [stack neg V] [const :run_shutdown]
+
     JP [const :badcmd]
 
     label run_poke
@@ -66,6 +69,10 @@ loop {
 
     label run_jump
     call jump_cmd
+    JP [const :@continue]
+
+    label run_shutdown
+    call shutdown_cmd
     JP [const :@continue]
 
     label badcmd
@@ -124,6 +131,11 @@ function jump_cmd {
     JP [stack V]
 }
 
+function shutdown_cmd {
+    call printTerminated [const :shutting_down_str]
+    HL
+}
+
 # (start: addr) (end: addr) -- io
 function coreDump preserving A B {
     MV [stack S] [reg B]
@@ -166,6 +178,8 @@ term_string freemem_str " letters of memory free %n"
 term_string entercmd_str "Command: "
 term_string address_str "Addr: "
 string cmd_buffer "XXXXXXXXXXXXXXXXXXXX"
+term_string badcmd_str "Bad command"
+term_string shutting_down_str "Shutting down!"
 
 term_string poke_str "poke"
 term_string peek_str "peek"
@@ -174,4 +188,6 @@ term_string base10_str "base10"
 term_string coredump_str "coredump"
 term_string write_str "write"
 term_string jump_str "jump"
-term_string badcmd_str "Bad command"
+term_string shutdown_str "shutdown"
+
+

@@ -203,6 +203,9 @@ runInstruction (Div src1 src2 dest) =
 runInstruction (Modulo src1 src2 dest) =
     setData dest =<< modWord <$> getData src1 <*> getData src2
 
+runInstruction (And src1 src2 dest) =
+    setData dest =<< andWord <$> getData src1 <*> getData src2
+
 runInstruction (Jump dest) =
     setRegister pcRegister =<< getData dest
 
@@ -219,6 +222,16 @@ runInstruction (JumpNotEqual dat1 dat2 dest) = do
     dat1 <- getData dat1
     dat2 <- getData dat2
     when (dat1 /= dat2) (setPC =<< getData dest)
+
+runInstruction (JumpGreater dat1 dat2 dest) = do
+    dat1 <- getData dat1
+    dat2 <- getData dat2
+    when (dat1 > dat2) (setPC =<< getData dest)
+
+runInstruction (JumpLesser dat1 dat2 dest) = do
+    dat1 <- getData dat1
+    dat2 <- getData dat2
+    when (dat1 < dat2) (setPC =<< getData dest)
 
 runInstruction (FCall addr args) = do
     pushStack returnAddressStackId =<< getPC

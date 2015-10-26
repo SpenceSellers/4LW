@@ -38,11 +38,13 @@ data Instruction =
     Mul DataLocation DataLocation DataLocation |
     Div DataLocation DataLocation DataLocation |
     Modulo DataLocation DataLocation DataLocation |
-    Mask DataLocation DataLocation DataLocation |
+    And DataLocation DataLocation DataLocation |
     Jump DataLocation |
     JumpZero DataLocation DataLocation |
     JumpEqual DataLocation DataLocation DataLocation |
     JumpNotEqual DataLocation DataLocation DataLocation |
+    JumpGreater DataLocation DataLocation DataLocation |
+    JumpLesser DataLocation DataLocation DataLocation |
     FCall DataLocation [DataLocation] |
     Return [DataLocation] |
     Swap DataLocation DataLocation |
@@ -148,6 +150,11 @@ constructInstruction (RawInstruction opcode operands)
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
 
+    | opcode == letter2 "AN" = toBadOpLen $ And <$>
+                                 (operands ^? ix 0) <*>
+                                 (operands ^? ix 1) <*>
+                                 (operands ^? ix 2)
+
     | opcode == letter2 "MV" = toBadOpLen $ Move <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
@@ -168,6 +175,17 @@ constructInstruction (RawInstruction opcode operands)
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
+
+    | opcode == letter2 "JG" = toBadOpLen $ JumpGreater <$>
+                                 (operands ^? ix 0) <*>
+                                 (operands ^? ix 1) <*>
+                                 (operands ^? ix 2)
+
+    | opcode == letter2 "JL" = toBadOpLen $ JumpLesser <$>
+                                 (operands ^? ix 0) <*>
+                                 (operands ^? ix 1) <*>
+                                 (operands ^? ix 2)
+
 
     | opcode == letter2 "FN" = toBadOpLen $ FCall <$>
                                  (operands ^? ix 0) <*>

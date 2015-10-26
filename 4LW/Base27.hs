@@ -5,9 +5,9 @@ module Base27 (Letter, Word(Word) , letter,
                toLetter, offset, wrd, toWord,
                extendToWord, pattern LetterV, pattern WordChars,
                minWord, maxWord, letter2, valueOfWord,
-               negateWord, addWord, subWord, mulWord, modWord,
+               negateWord, addWord, subWord, mulWord, modWord, andWord,
                leftShift, rightShift,
-               divWord, isLetter,
+               divWord, isLetter, letters,
                firstLetter, secondLetter, thirdLetter, fourthLetter) where
 import Prelude hiding (Word)
 import Data.Char hiding (isLetter)
@@ -81,6 +81,9 @@ toLetterSafe num
 convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
 
+andLetter :: Letter -> Letter -> Letter
+andLetter a b = toLetter (((getValue a) + (getValue b)) `mod` 27)
+                
 ---------------------
 -------- WORDS ------
 ---------------------
@@ -168,6 +171,9 @@ toWordDigits val = (a, b, c, d)
           (br, b) = quotRem cr 27
           (_, a) = quotRem br 27
 
+letters :: Traversal' Word Letter
+letters f (Word a b c d) = Word <$> (f a) <*> (f b) <*> (f c) <*> (f d)
+                
 -- | Extends a letter to a word with the same numeric value.
 extendToWord :: Letter -> Base27.Word
 extendToWord l = Word (letter '_') (letter '_') (letter '_') l
@@ -197,6 +203,9 @@ rightShift (Word a b c d) = Word (letter ' ') a b c
 leftShift :: Word -> Word
 leftShift (Word a b c d) = Word b c d (letter ' ')
 
+andWord :: Word -> Word -> Word
+andWord a b = zipWord andLetter a b
+    
 offset :: Word -> Int -> Word
 offset w diff = valueOfWord +~ diff $ w
 
@@ -218,3 +227,7 @@ lettersFromString = sequence . fmap letterSafe
 
 letter2 :: String -> (Letter, Letter)
 letter2 (a:b:[]) = (letter a, letter b)
+
+zipWord :: (Letter -> Letter -> Letter ) -> Word -> Word -> Word
+zipWord f (Word a b c d) (Word w x y z) =
+    Word (f a w) (f b x) (f c y) (f d z)

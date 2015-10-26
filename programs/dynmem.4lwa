@@ -1,0 +1,63 @@
+reserve dynamic_start 1
+
+function dynmemInit {
+    MV [const UZZZ] [const :dynamic_start]
+}
+
+function tagOfMem {
+    SB [stack S] [const 4] [stack V]
+}
+
+function memOfTag {
+    AD [stack S] [const 4] [stack V]
+}
+
+# (Tag addr) -- (Tag Addr)
+function nextTag preserving A {
+    MV [stack S] [reg A]
+    call tagLen [reg A]
+    call memOfTag [reg A]
+    AD [stack V] [stack V] [stack V]
+}
+
+# (Tag addr) -- (length (words))
+function getTagLen {
+    MD [stack S] [const A___] [stack V]
+}
+# (Tag addr) (Length in words, max ZZZ) --
+function setTagLen preserving A B {
+    MV [stack S] [reg B] # Len
+    MV [stack S] [reg A] # Tag addr
+    
+}
+
+# (Tag addr) -- (Tag addr)
+label prevTag
+
+# (Tag addr) -- (Bool)
+function isAllocated preserving A {
+    JE [stack first mem S] [const ___U] [const :unalloc]
+    MV [const ZZZZ] [stack V]
+    JP [:@return]
+    
+    label unalloc
+    MV [const 0] [stack V]
+}
+
+# (Length in words) -- (Mem addr)
+function malloc preserving A B{
+    MV [stack S] [reg B] # Length we want to reserve.
+    MV [const :dynamic_start] [reg A] # Tag we're at.
+
+    loop {
+        call isAllocated [reg A]
+        JZ [stack V] [const :next] # It's allocated, move on
+        call getTagLen [reg A]
+        JL [reg B] [stack V] [const :next] # Too short
+
+        
+
+        label next
+        call nextTag [reg A] to [reg A]
+    }
+}
