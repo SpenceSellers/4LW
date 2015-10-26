@@ -53,7 +53,7 @@ data Instruction =
 
 
 data BadInstruction =
-     BadInstruction | BadOpcode | BadOperands | ZeroLengthInstruction deriving Show
+     BadInstruction | BadOpcode (Letter, Letter)| BadOperands | BadOperandsLength | ZeroLengthInstruction deriving Show
 
 -- | An InstructionParseResult is just the instruction, and how long
 --  the instruction was, so we can change the Program Counter register
@@ -89,6 +89,8 @@ convertEither new (Left e) = Left new
 
 toBad = toEither BadInstruction
 
+toBadOpLen = toEither BadOperandsLength
+
 -- | readInstruction will attempt to build an entire Instruction out of the address
 -- and memory region supplied to it.
 readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
@@ -121,71 +123,71 @@ constructInstruction :: RawInstruction -> Either BadInstruction Instruction
 constructInstruction (RawInstruction opcode operands)
     | opcode == letter2 "__" = Right Nop
     | opcode == letter2 "HL" = Right Halt
-    | opcode == letter2 "AD" = toBad $ Add <$>
+    | opcode == letter2 "AD" = toBadOpLen $ Add <$>
                                 (operands ^? ix 0) <*>
                                 (operands ^? ix 1) <*>
                                 (operands ^? ix 2)
 
-    | opcode == letter2 "SB" = toBad $ Sub <$>
+    | opcode == letter2 "SB" = toBadOpLen $ Sub <$>
                                 (operands ^? ix 0) <*>
                                 (operands ^? ix 1) <*>
                                 (operands ^? ix 2)
 
-    | opcode == letter2 "ML" = toBad $ Mul <$>
+    | opcode == letter2 "ML" = toBadOpLen $ Mul <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
 
-    | opcode == letter2 "DV" = toBad $ Div <$>
+    | opcode == letter2 "DV" = toBadOpLen $ Div <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
 
-    | opcode == letter2 "MD" = toBad $ Modulo <$>
+    | opcode == letter2 "MD" = toBadOpLen $ Modulo <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
 
-    | opcode == letter2 "MV" = toBad $ Move <$>
+    | opcode == letter2 "MV" = toBadOpLen $ Move <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
 
-    | opcode == letter2 "JP" = toBad $ Jump <$>
+    | opcode == letter2 "JP" = toBadOpLen $ Jump <$>
                                  (operands ^? ix 0)
 
-    | opcode == letter2 "JZ" = toBad $ JumpZero <$>
+    | opcode == letter2 "JZ" = toBadOpLen $ JumpZero <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
 
-    | opcode == letter2 "JE" = toBad $ JumpEqual <$>
+    | opcode == letter2 "JE" = toBadOpLen $ JumpEqual <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
 
-    | opcode == letter2 "JN" = toBad $ JumpNotEqual <$>
+    | opcode == letter2 "JN" = toBadOpLen $ JumpNotEqual <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1) <*>
                                  (operands ^? ix 2)
 
-    | opcode == letter2 "FN" = toBad $ FCall <$>
+    | opcode == letter2 "FN" = toBadOpLen $ FCall <$>
                                  (operands ^? ix 0) <*>
                                  (pure . tail $ operands)
 
     | opcode == letter2 "RT" = Right $ Return operands
 
-    | opcode == letter2 "SW" = toBad $ Swap <$>
+    | opcode == letter2 "SW" = toBadOpLen $ Swap <$>
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
 
-    | opcode == letter2 "PU" = toBad $ PushAll <$>
+    | opcode == letter2 "PU" = toBadOpLen $ PushAll <$>
                                  (operands ^? ix 0) <*>
                                  (pure . tail $ operands)
 
-    | opcode == letter2 "PL" = toBad $ PullAll <$>
+    | opcode == letter2 "PL" = toBadOpLen $ PullAll <$>
                                  (operands ^? ix 0) <*>
                                  (pure . tail $ operands)
 
-    | otherwise = Left BadOpcode
+    | otherwise = Left $ BadOpcode opcode
 
 
 -- | Given the list of words that make up the operands (arguments) to an

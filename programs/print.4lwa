@@ -146,13 +146,5 @@ function printf preserving A B {
         label wchar
         MV [stack S] [io]
         JP [const :next]
-
-
     }
-
-
-
-
-
-
 }

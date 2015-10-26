@@ -7,12 +7,10 @@ import base10.4lwa
 
 label start
 
-call printTerminated [const :welcome_str]
-call printNewline
+call printf [const :welcome_str]
 SB [const ZZZZ] [const :@end] [reg M]
 call printBase10 [reg M]
-call printTerminated [const :freemem_str]
-call printNewline
+call printf [const :freemem_str]
 
 loop {
     call printNewline
@@ -41,7 +39,7 @@ loop {
     JZ [stack neg V] [const :run_jump]
 
     JP [const :badcmd]
-    
+
     label run_poke
     call poke_cmd
     JP [const :@continue]
@@ -69,7 +67,7 @@ loop {
     label run_jump
     call jump_cmd
     JP [const :@continue]
-    
+
     label badcmd
     call printTerminated [const :badcmd_str]
     call printNewline
@@ -80,7 +78,7 @@ function poke_cmd preserving A B {
     call readWord to [reg A]
     call printNewline
     call readWord to [reg B]
-    MV [reg B] [reg mem A] 
+    MV [reg B] [reg mem A]
 }
 
 function peek_cmd {
@@ -142,7 +140,7 @@ function readLetter preserving A {
     JN [reg third A] [const _] [const :notletter]
     MV [reg fourth A] [stack V]
     JP [const :@return]
-    
+
     label notletter
     MV [const ZZZZ] [stack V]
 }
@@ -157,13 +155,13 @@ function enterRaw preserving A B C {
         SB [reg mem A] [reg C] [reg mem A]
         ML [reg B] [const A___] [reg B]
         AD [reg mem A] [reg B] [reg mem A]
-        
-        
+
+
         MV [reg inc A] [reg A]
     }
 }
-term_string welcome_str "Welcome to 4LW OS"
-term_string freemem_str " letters of memory free"
+term_string welcome_str "Welcome to 4LW OS %n"
+term_string freemem_str " letters of memory free %n"
 
 term_string entercmd_str "Command: "
 term_string address_str "Addr: "
