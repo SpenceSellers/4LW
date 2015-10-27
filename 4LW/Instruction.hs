@@ -22,6 +22,7 @@ data DataLocation =
     Incremented DataLocation | -- The real result but incremented
     Decremented DataLocation |  -- The real result but decremented
     TimesFour DataLocation |
+    PlusFour DataLocation |
     FirstLetter DataLocation |
     SecondLetter DataLocation |
     ThirdLetter DataLocation |
@@ -205,6 +206,7 @@ applyFlag flag loc
     | flag == letter 'B' = SecondLetter loc
     | flag == letter 'C' = ThirdLetter loc
     | flag == letter 'D' = FourthLetter loc
+    | flag == letter 'P' = PlusFour loc
     | otherwise = error "Bad flag!"
 
 -- | Applies multiple DataLocation flags, specified by letter.

@@ -1,7 +1,9 @@
 reserve dynamic_start 1
 
 function dynmemInit {
-    MV [const UZZZ] [const :dynamic_start]
+    MV [const AAAA] [const mem :dynamic_start]
+    call setUnallocated [const mem :dynamic_start]
+    call setTagLen [const mem :dynamic_start] [const ZZZ]
 }
 
 function tagOfMem {
@@ -15,49 +17,89 @@ function memOfTag {
 # (Tag addr) -- (Tag Addr)
 function nextTag preserving A {
     MV [stack S] [reg A]
-    call tagLen [reg A]
+    call getTagLen [reg A]
     call memOfTag [reg A]
-    AD [stack V] [stack V] [stack V]
+    AD [stack V] [stack timesfour V] [stack V]
+
 }
 
 # (Tag addr) -- (length (words))
 function getTagLen {
-    MD [stack S] [const A___] [stack V]
+    AN [stack S] [const _AAA] [stack V]
 }
+
 # (Tag addr) (Length in words, max ZZZ) --
 function setTagLen preserving A B {
     MV [stack S] [reg B] # Len
     MV [stack S] [reg A] # Tag addr
-    
+    AN [reg mem A] [const A___] [reg mem A] # Mask out lower three letters
+    AD [reg mem A] [reg B] [reg mem A]
 }
 
-# (Tag addr) -- (Tag addr)
-label prevTag
+# (Tag addr) --
+function setAllocated {
+    call setTagFlag [stack S] [const A]
+}
 
-# (Tag addr) -- (Bool)
+# (Tag addr) --
+function setUnallocated {
+    call setTagFlag [stack S] [const U]
+}
+
+# (Tag word) -- Bool
 function isAllocated preserving A {
-    JE [stack first mem S] [const ___U] [const :unalloc]
+    JE [stack first mem S] [const U] [const :unalloc]
     MV [const ZZZZ] [stack V]
-    JP [:@return]
-    
+    JP [const :@return]
+
     label unalloc
     MV [const 0] [stack V]
 }
 
+
+# (Tag addr) (Flag letter) --
+function setTagFlag preserving A B {
+    MV [stack S] [reg B] # Flag
+    MV [stack S] [reg A] # Tag addr
+    AN [reg mem A] [const _AAA] [reg mem A]
+    ML [reg B] [const A___] [reg B]
+    AD [reg mem A] [reg B] [reg mem A]
+}
+
 # (Length in words) -- (Mem addr)
-function malloc preserving A B{
+function malloc preserving A B C {
     MV [stack S] [reg B] # Length we want to reserve.
-    MV [const :dynamic_start] [reg A] # Tag we're at.
+    MV [const mem :dynamic_start] [reg A] # Tag we're at.
 
     loop {
         call isAllocated [reg A]
         JZ [stack V] [const :next] # It's allocated, move on
-        call getTagLen [reg A]
-        JL [reg B] [stack V] [const :next] # Too short
+        call getTagLen [reg A] to [reg C] # Temporarily store length in C
+        JG [reg B] [reg C] [const :next] # Too short
 
-        
+        # We've found the tag we're going to use.
+
+        # Modify our unallocated tag.
+        call setTagLen [reg A] [reg B]
+        call setAllocated [reg A]
+
+        SB [reg C] [reg B] [reg B] # B now contains the NEXT tag's length.
+
+        # Set up the next tag.
+        call nextTag [reg A] to [reg C] # C is the new tag.
+        call setUnallocated [reg C]
+        call setTagLen [reg C] [reg B]
+
+        call memOfTag [reg A] to [stack V]
+        JP [const :@return]
+
 
         label next
         call nextTag [reg A] to [reg A]
     }
+}
+
+function debugHeap preserving A {
+    MV [const mem :dynamic_start] [reg A]
+
 }

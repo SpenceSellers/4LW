@@ -95,8 +95,9 @@ pushStack l word = do
 popStack :: Letter -> State MachineState Word
 popStack l = do
     stks <- use stacks
+    pc <- use registers
     let stack = stks ! l
-    let (word, newStack) = fromMaybe (trace "Stack underflow!" (minWord, stack)) $ Stacks.pop stack
+    let (word, newStack) = fromMaybe (trace ("Stack underflow! on " ++ show l ++ " at " ++ show pc) (minWord, stack)) $ Stacks.pop stack
     let newStacks = stks // [(l, newStack)]
     stacks .= newStacks
     return word
@@ -135,6 +136,7 @@ getData (Negated loc) = negateWord <$> getData loc
 getData (Incremented loc) = offset <$> getData loc <*> pure 1
 getData (Decremented loc) = offset <$> getData loc <*> pure (-1)
 getData (TimesFour loc) = mulWord <$> getData loc <*> pure (toWord 4)
+getData (PlusFour loc) = offset <$> getData loc <*> pure 4
 getData (FirstLetter loc)  = (extendToWord . view firstLetter)  <$> getData loc
 getData (SecondLetter loc) = (extendToWord . view secondLetter) <$> getData loc
 getData (ThirdLetter loc)  = (extendToWord . view thirdLetter)  <$> getData loc
@@ -164,6 +166,9 @@ setData (Decremented loc) word =
 
 setData (TimesFour loc) word =
     setData loc (mulWord word (toWord 4))
+
+setData (PlusFour loc) word =
+    setData loc (offset word 4)
 
 setData (FirstLetter loc) word =
     setData loc (extendToWord . view firstLetter $ word)

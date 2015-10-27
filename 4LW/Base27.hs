@@ -4,7 +4,7 @@ module Base27 (Letter, Word(Word) , letter,
                letterSafe, getValue,
                toLetter, offset, wrd, toWord,
                extendToWord, pattern LetterV, pattern WordChars,
-               minWord, maxWord, letter2, valueOfWord,
+               minWord, maxWord, letter2, valueOfWord, wordValue,
                negateWord, addWord, subWord, mulWord, modWord, andWord,
                leftShift, rightShift,
                divWord, isLetter, letters,
@@ -83,7 +83,7 @@ convertBase from to = digits to . unDigits from
 
 andLetter :: Letter -> Letter -> Letter
 andLetter a b = toLetter (((getValue a) + (getValue b)) `mod` 27)
-                
+
 ---------------------
 -------- WORDS ------
 ---------------------
@@ -173,7 +173,7 @@ toWordDigits val = (a, b, c, d)
 
 letters :: Traversal' Word Letter
 letters f (Word a b c d) = Word <$> (f a) <*> (f b) <*> (f c) <*> (f d)
-                
+
 -- | Extends a letter to a word with the same numeric value.
 extendToWord :: Letter -> Base27.Word
 extendToWord l = Word (letter '_') (letter '_') (letter '_') l
@@ -205,7 +205,7 @@ leftShift (Word a b c d) = Word b c d (letter ' ')
 
 andWord :: Word -> Word -> Word
 andWord a b = zipWord andLetter a b
-    
+
 offset :: Word -> Int -> Word
 offset w diff = valueOfWord +~ diff $ w
 
