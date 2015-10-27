@@ -38,7 +38,7 @@ base27 = Word(alphas + '_')
 
 opcode = Word(srange('[A-Z]'), exact = 2)
 
-flags = ZeroOrMore(oneOf("inc dec mem neg timesfour first second third fourth"))\
+flags = ZeroOrMore(oneOf("inc dec mem neg timesfour plusfour first second third fourth"))\
     .setParseAction(lambda s,l,t: [[FLAG_MAP[a] for a in t]])
 
 dattype = oneOf("const reg io stack")\

@@ -1,16 +1,18 @@
 JP [const :start]
 
-#import dynmem.4lwa
+import dynmem.4lwa
 import print.4lwa
 import strings.4lwa
 import base10.4lwa
 
 label start
 
-#call dynmemInit
-#call malloc [const 10] to [reg E]
-#call malloc [const 20] to [reg E]
-# call debugHeap
+call dynmemInit
+call malloc [const 10] to [reg E]
+call malloc [const 20] to [reg E]
+call free [reg E]
+call malloc [const 20] to [reg E]
+call debugHeap
 
 
 call printf [const :welcome_str]

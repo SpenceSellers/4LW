@@ -82,7 +82,7 @@ convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
 
 andLetter :: Letter -> Letter -> Letter
-andLetter a b = toLetter (((getValue a) + (getValue b)) `mod` 27)
+andLetter a b = toLetter (((getValue a) * (getValue b)) `mod` 27)
 
 ---------------------
 -------- WORDS ------
