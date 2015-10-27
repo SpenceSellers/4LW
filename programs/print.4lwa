@@ -79,29 +79,21 @@ function printWord preserving A {
 # Char Char Char Char -- Word
 function parseWord preserving A B {
     MV [stack fourth S] [reg A]
-
     ML [stack fourth S] [const A_] [reg B]
     AD [reg B] [reg A] [reg A]
-
     ML [stack fourth S] [const A__] [reg B]
     AD [reg B] [reg A] [reg A]
-
     ML [stack fourth S] [const A___] [reg B]
     AD [reg B] [reg A] [reg A]
-
     MV [reg A] [stack V]
 }
 
 # -- (Word)
 function readWord {
-    call readChar
-    MV [stack V] [stack S]
-    call readChar
-    MV [stack V] [stack S]
-    call readChar
-    MV [stack V] [stack S]
-    call readChar
-    MV [stack V] [stack S]
+    call readChar to [stack S]
+    call readChar to [stack S]
+    call readChar to [stack S]
+    call readChar to [stack S]
 
     call parseWord
 }

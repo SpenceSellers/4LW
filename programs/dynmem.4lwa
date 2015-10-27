@@ -1,7 +1,7 @@
 reserve dynamic_start 1
 
 function dynmemInit {
-    MV [const AAAA] [const mem :dynamic_start]
+    MV [const B___] [const mem :dynamic_start]
     call setUnallocated [const mem :dynamic_start]
     call setTagLen [const mem :dynamic_start] [const ZZZ]
 }
@@ -99,7 +99,16 @@ function malloc preserving A B C {
     }
 }
 
-function debugHeap preserving A {
+function debugHeap preserving A{
     MV [const mem :dynamic_start] [reg A]
+    loop {
+        call memOfTag [reg A]
+        call getTagLen [reg A]
+        MV [reg first mem A] [stack S]
+        call printf [stack V] [stack V] [reg A] [const :describe_node_str]
 
+        call nextTag [reg A] to [reg A]
+    }
 }
+
+term_string describe_node_str "Tag %w Region %w flag %c length %w%n"
