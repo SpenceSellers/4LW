@@ -21,7 +21,7 @@ FLAG_MAP = {'neg': 'N',
             'dec': 'J',
             'mem': 'M',
             'timesfour': 'F',
-            'plusfour': 'P'
+            'plusfour': 'P',
             'first': 'A',
             'second': 'B',
             'third': 'C',
