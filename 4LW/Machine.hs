@@ -132,13 +132,9 @@ getData (Io selector) = do
     Nothing -> return $ maxWord
 
 getData (Negated loc) = negateWord <$> getData loc
-
 getData (Incremented loc) = offset <$> getData loc <*> pure 1
-
 getData (Decremented loc) = offset <$> getData loc <*> pure (-1)
-
 getData (TimesFour loc) = mulWord <$> getData loc <*> pure (toWord 4)
-
 getData (FirstLetter loc)  = (extendToWord . view firstLetter)  <$> getData loc
 getData (SecondLetter loc) = (extendToWord . view secondLetter) <$> getData loc
 getData (ThirdLetter loc)  = (extendToWord . view thirdLetter)  <$> getData loc
@@ -181,6 +177,16 @@ setData (ThirdLetter loc) word =
 setData (FourthLetter loc) word =
     setData loc (extendToWord . view fourthLetter $ word)
 
+bifunction :: (Word -> Word -> Word) -> DataLocation -> DataLocation -> DataLocation -> State MachineState ()
+bifunction f src1 src2 dest =
+    setData dest =<< f <$> getData src1 <*> getData src2
+
+jumpCompare :: (Word -> Word -> Bool) -> DataLocation -> DataLocation -> DataLocation -> State MachineState ()
+jumpCompare f src1 src2 jumpdest = do
+    dat1 <- getData src1
+    dat2 <- getData src2
+    when (f dat1 dat2) (setPC =<< getData jumpdest)
+
 -- | Applies an instruction to the state of the Machine.
 runInstruction :: Instruction -> State MachineState ()
 runInstruction Nop = return ()
@@ -188,23 +194,12 @@ runInstruction Instruction.Halt = action .= HaltAction
 runInstruction (Move src dest) =
     setData dest =<< getData src
 
-runInstruction (Add src1 src2 dest) =
-    setData dest =<< addWord <$> getData src1 <*> getData src2
-
-runInstruction (Sub src1 src2 dest) =
-    setData dest =<< subWord <$> getData src1 <*> getData src2
-
-runInstruction (Mul src1 src2 dest) =
-    setData dest =<< mulWord <$> getData src1 <*> getData src2
-
-runInstruction (Div src1 src2 dest) =
-    setData dest =<< divWord <$> getData src1 <*> getData src2
-
-runInstruction (Modulo src1 src2 dest) =
-    setData dest =<< modWord <$> getData src1 <*> getData src2
-
-runInstruction (And src1 src2 dest) =
-    setData dest =<< andWord <$> getData src1 <*> getData src2
+runInstruction (Add src1 src2 dest) = bifunction addWord src1 src2 dest
+runInstruction (Sub src1 src2 dest) = bifunction subWord src1 src2 dest
+runInstruction (Mul src1 src2 dest) = bifunction addWord src1 src2 dest
+runInstruction (Div src1 src2 dest) = bifunction divWord src1 src2 dest
+runInstruction (Modulo src1 src2 dest) = bifunction modWord src1 src2 dest
+runInstruction (And src1 src2 dest) = bifunction modWord src1 src2 dest
 
 runInstruction (Jump dest) =
     setRegister pcRegister =<< getData dest
@@ -213,25 +208,10 @@ runInstruction (JumpZero datloc dest) = do
     dat <- getData datloc
     when (dat == minWord) (setPC =<< getData dest)
 
-runInstruction (JumpEqual dat1 dat2 dest) = do
-    dat1 <- getData dat1
-    dat2 <- getData dat2
-    when (dat1 == dat2) (setPC =<< getData dest)
-
-runInstruction (JumpNotEqual dat1 dat2 dest) = do
-    dat1 <- getData dat1
-    dat2 <- getData dat2
-    when (dat1 /= dat2) (setPC =<< getData dest)
-
-runInstruction (JumpGreater dat1 dat2 dest) = do
-    dat1 <- getData dat1
-    dat2 <- getData dat2
-    when (dat1 > dat2) (setPC =<< getData dest)
-
-runInstruction (JumpLesser dat1 dat2 dest) = do
-    dat1 <- getData dat1
-    dat2 <- getData dat2
-    when (dat1 < dat2) (setPC =<< getData dest)
+runInstruction (JumpEqual dat1 dat2 dest) = jumpCompare (==) dat1 dat2 dest
+runInstruction (JumpNotEqual dat1 dat2 dest) = jumpCompare (/=) dat1 dat2 dest
+runInstruction (JumpGreater dat1 dat2 dest) = jumpCompare (>) dat1 dat2 dest
+runInstruction (JumpLesser dat1 dat2 dest) = jumpCompare (<) dat1 dat2 dest
 
 runInstruction (FCall addr args) = do
     pushStack returnAddressStackId =<< getPC

@@ -119,41 +119,24 @@ readInstructionWords addr mem = Memory.readWords mem addr len
           len = WordLength . Base27.getValue $ Memory.readLetter mem (offsetBy addr lengthOffset)
           -- realLen = if len == WordLength 0 then WordLength 1 else len
 
+threeArgInstruction :: (DataLocation -> DataLocation -> DataLocation -> Instruction) -> Operands -> Either BadInstruction Instruction
+threeArgInstruction inst operands = toBadOpLen $ inst <$>
+    (operands ^? ix 0) <*>
+    (operands ^? ix 1) <*>
+    (operands ^? ix 2)
+
 -- | Takes a RawInstruction and figures out what it really is.
 -- the resulting Instruction will be actually usable by 4LW.
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
 constructInstruction (RawInstruction opcode operands)
     | opcode == letter2 "__" = Right Nop
     | opcode == letter2 "HL" = Right Halt
-    | opcode == letter2 "AD" = toBadOpLen $ Add <$>
-                                (operands ^? ix 0) <*>
-                                (operands ^? ix 1) <*>
-                                (operands ^? ix 2)
-
-    | opcode == letter2 "SB" = toBadOpLen $ Sub <$>
-                                (operands ^? ix 0) <*>
-                                (operands ^? ix 1) <*>
-                                (operands ^? ix 2)
-
-    | opcode == letter2 "ML" = toBadOpLen $ Mul <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1) <*>
-                                 (operands ^? ix 2)
-
-    | opcode == letter2 "DV" = toBadOpLen $ Div <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1) <*>
-                                 (operands ^? ix 2)
-
-    | opcode == letter2 "MD" = toBadOpLen $ Modulo <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1) <*>
-                                 (operands ^? ix 2)
-
-    | opcode == letter2 "AN" = toBadOpLen $ And <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1) <*>
-                                 (operands ^? ix 2)
+    | opcode == letter2 "AD" = threeArgInstruction Add operands
+    | opcode == letter2 "SB" = threeArgInstruction Sub operands
+    | opcode == letter2 "ML" = threeArgInstruction Mul operands
+    | opcode == letter2 "DV" = threeArgInstruction Div operands
+    | opcode == letter2 "MD" = threeArgInstruction Modulo operands
+    | opcode == letter2 "AN" = threeArgInstruction And operands
 
     | opcode == letter2 "MV" = toBadOpLen $ Move <$>
                                  (operands ^? ix 0) <*>
@@ -166,26 +149,10 @@ constructInstruction (RawInstruction opcode operands)
                                  (operands ^? ix 0) <*>
                                  (operands ^? ix 1)
 
-    | opcode == letter2 "JE" = toBadOpLen $ JumpEqual <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1) <*>
-                                 (operands ^? ix 2)
-
-    | opcode == letter2 "JN" = toBadOpLen $ JumpNotEqual <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1) <*>
-                                 (operands ^? ix 2)
-
-    | opcode == letter2 "JG" = toBadOpLen $ JumpGreater <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1) <*>
-                                 (operands ^? ix 2)
-
-    | opcode == letter2 "JL" = toBadOpLen $ JumpLesser <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1) <*>
-                                 (operands ^? ix 2)
-
+    | opcode == letter2 "JE" = threeArgInstruction JumpEqual operands
+    | opcode == letter2 "JN" = threeArgInstruction JumpNotEqual operands
+    | opcode == letter2 "JG" = threeArgInstruction JumpGreater operands
+    | opcode == letter2 "JL" = threeArgInstruction JumpLesser operands
 
     | opcode == letter2 "FN" = toBadOpLen $ FCall <$>
                                  (operands ^? ix 0) <*>
