@@ -7,12 +7,21 @@ import base10.4lwa
 
 label start
 
-call dynmemInit [const B___] [const BZZZ]
+call dynmemInit [const B___] [const ET__]
 
-call malloc [const 10] to [reg E]
-call malloc [const 20] to [reg E]
-call free [reg E]
-call malloc [const 40] to [reg E]
+call malloc [const 1] to [stack A]
+call malloc [const 1] to [stack A]
+call malloc [const 1] to [stack A]
+call free [stack A]
+call free [stack A]
+call free [stack A]
+call defragHeap
+
+call malloc [const 5] to [stack A]
+call malloc [const 2] to [stack A]
+call free [stack A]
+call defragHeap
+
 call debugHeap
 
 

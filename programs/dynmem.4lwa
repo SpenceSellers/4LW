@@ -40,6 +40,11 @@ function getTagLen {
     AN [stack mem S] [const _AAA] [stack V]
 }
 
+# (Tag addr) -- (length words)
+function tagTotalLen {
+    call getTagLen to [stack inc V]
+}
+
 # (Tag addr) (Length in words, max ZZZ) --
 function setTagLen preserving A B {
     MV [stack S] [reg B] # Len
@@ -137,6 +142,46 @@ function malloc preserving A B C {
 function free {
     call tagOfMem [stack S]
     call setUnallocated [stack V]
+}
+
+function defragHeap preserving A B C {
+    MV [const mem :dynamic_start] [reg B] # Following tag
+    call nextTag [reg B] to [reg A] # Leading tag.
+
+    loop {
+         # Are we at the end of the heap?
+         call isTagStop [reg A]
+         JZ [stack neg V] [const :done]
+
+         # Check if both tags are unallocated.
+         call isAllocated [reg B]
+         JZ [stack neg V] [const :next]
+
+         call isAllocated [reg A]
+         JZ [stack neg V] [const :next]
+
+         # So they're both unallocated. Let's join them.
+
+         # Get the length of BOTH allocs.
+         call getTagLen [reg B]
+         call tagTotalLen [reg A] # We want to include the tag of A.
+         AD [stack V] [stack V] [reg C] # Reg C is new length.
+
+         JG [reg C] [const _ZZZ] [const :next] # Too long to fit in one alloc, give up.
+
+         call setTagLen [reg B] [reg C] # Set following tag to be the length of both.
+
+         # We could zero the old tag if we wanted, but it doesn't hurt being left there.
+
+
+         label next
+         MV [reg A] [reg B]
+         call nextTag [reg A] to [reg A]
+    }
+
+    label done
+    
+
 }
 
 function debugHeap preserving A B {
