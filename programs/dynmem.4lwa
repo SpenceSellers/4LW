@@ -3,7 +3,7 @@ reserve dynamic_start 1
 function dynmemInit {
     MV [const B___] [const mem :dynamic_start]
     call setUnallocated [const mem :dynamic_start]
-    call setTagLen [const mem :dynamic_start] [const 100]
+    call setTagLen [const mem :dynamic_start] [const ZZZ]
 
     call nextTag [const mem :dynamic_start]
     MV [const ZZZZ] [stack mem V]
@@ -90,9 +90,8 @@ function malloc preserving A B C {
         JZ [stack neg V] [const :next] # It's allocated, move on
 
         call getTagLen [reg A] to [reg C] # Temporarily store old length in C
-        call printWord [reg B]
-        call printWord [reg C]
-        call printNewline
+        JE [reg B] [reg C] [const :replaceSameLength] # We found an unused tag with the same length.
+
         JG [reg inc B] [reg C] [const :next] # Too short. Inc is for the tag.
 
         # We've found the tag we're going to use.
@@ -115,6 +114,13 @@ function malloc preserving A B C {
         label next
         call nextTag [reg A] to [reg A]
     }
+
+    label replaceSameLength
+    call setAllocated [reg A]
+    MV [reg A] [stack V]
+    JP [const :@return]
+
+
     label outOfSpace
     MV [const ZZZZ] [stack V]
 }

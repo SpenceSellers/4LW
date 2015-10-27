@@ -8,10 +8,11 @@ import base10.4lwa
 label start
 
 call dynmemInit
+
 call malloc [const 10] to [reg E]
 call malloc [const 20] to [reg E]
 call free [reg E]
-call malloc [const 20] to [reg E]
+call malloc [const 40] to [reg E]
 call debugHeap
 
 
