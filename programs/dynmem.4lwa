@@ -1,12 +1,21 @@
 reserve dynamic_start 1
 
-function dynmemInit {
-    MV [const B___] [const mem :dynamic_start]
+# (Start addr) (End addr) --
+function dynmemInit preserving A B C {
+    MV [stack S] [reg B] # End
+    MV [stack S] [reg A] # Start
+    SB [reg B] [reg A] [reg C] # Length in letters
+    DV [reg C] [const 4] [reg C] # Length in words.
+
+    JG [reg C] [const _ZZZ] [const :memerr] # Max alloc length is ZZZ words.
+
+    MV [reg A] [const mem :dynamic_start]
     call setUnallocated [const mem :dynamic_start]
-    call setTagLen [const mem :dynamic_start] [const ZZZ]
+    call setTagLen [const mem :dynamic_start] [reg C]
+
 
     call nextTag [const mem :dynamic_start]
-    MV [const ZZZZ] [stack mem V]
+    MV [const ZZZZ] [stack mem V] # Write
 }
 
 function tagOfMem {
@@ -14,7 +23,7 @@ function tagOfMem {
 }
 
 function memOfTag {
-    AD [stack S] [const 4] [stack V]
+    MV [stack plusfour S] [stack V]
 }
 
 # (Tag addr) -- (Tag Addr)
@@ -117,7 +126,7 @@ function malloc preserving A B C {
 
     label replaceSameLength
     call setAllocated [reg A]
-    MV [reg A] [stack V]
+    MV [reg plusfour A] [stack V]
     JP [const :@return]
 
 
@@ -145,4 +154,9 @@ function debugHeap preserving A B {
     }
 }
 
+label memerr
+call printTerminated [const :memerr_str]
+HL
+
 term_string describe_node_str "Tag %w Region %w flag %c length %w%n"
+term_string memerr_str "Dynmem err"

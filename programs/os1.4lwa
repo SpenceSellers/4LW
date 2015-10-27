@@ -7,7 +7,7 @@ import base10.4lwa
 
 label start
 
-call dynmemInit
+call dynmemInit [const B___] [const BZZZ]
 
 call malloc [const 10] to [reg E]
 call malloc [const 20] to [reg E]
@@ -48,6 +48,12 @@ loop {
     call strEq [const :cmd_buffer] [const :jump_str]
     JZ [stack neg V] [const :run_jump]
 
+    call strEq [const :cmd_buffer] [const :echo_str]
+    JZ [stack neg V] [const :run_echo]
+
+    call strEq [const :cmd_buffer] [const :memdebug_str]
+    JZ [stack neg V] [const :run_memdebug]
+
     JP [const :badcmd]
 
     label run_poke
@@ -76,6 +82,14 @@ loop {
 
     label run_jump
     call jump_cmd
+    JP [const :@continue]
+
+    label run_echo
+    call echo_cmd
+    JP [const :@continue]
+
+    label run_memdebug
+    call memdebug_cmd
     JP [const :@continue]
 
     label badcmd
@@ -134,6 +148,17 @@ function jump_cmd {
     JP [stack V]
 }
 
+function echo_cmd preserving A {
+    call malloc [const 20] to [reg A]
+    call readLineTerm [reg A] [const 20]
+    call printTerminated [reg A]
+    call free [reg A]
+}
+
+function memdebug_cmd {
+    call debugHeap
+}
+
 # (start: addr) (end: addr) -- io
 function coreDump preserving A B {
     MV [stack S] [reg B]
@@ -184,4 +209,6 @@ term_string base10_str "base10"
 term_string coredump_str "coredump"
 term_string write_str "write"
 term_string jump_str "jump"
+term_string echo_str "echo"
+term_string memdebug_str "memdebug"
 term_string badcmd_str "Bad command"

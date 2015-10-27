@@ -56,11 +56,11 @@ function readLine preserving A B C D {
 
 # (Buffer: addr) (Buffer length: words) --
 function readLineTerm preserving A B L {
-    MV [stack S] [reg L]
-    MV [stack S] [reg A]
+    MV [stack S] [reg L] # Buffer length
+    MV [stack S] [reg A] # Buffer addr
 
     MV [reg A] [stack S]
-    MV [reg L] [stack S]
+    MV [reg L] [stack S] # TODO watch out for terminator.
     call readLine to [reg B]
     AD [reg A] [reg timesfour B] [reg A]
     MV [const ZZZZ] [reg mem A]
