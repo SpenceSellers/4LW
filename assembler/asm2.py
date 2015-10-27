@@ -7,6 +7,7 @@ import sys
 import os
 import uuid
 import copy
+import argparse
 
 def log(s):
     print(s, file=sys.stderr)
@@ -27,6 +28,7 @@ charTable = {
     '(': '__BA',
     ')': '__BB',
 }
+
 class Bakeable:
     def bake(self):
         raise NotImplementedError()
@@ -40,6 +42,27 @@ class Bakeable:
     def debug_labels(self):
         return self.bake().debug_labels()
 
+    def labels(self):
+        return self.bake().report()
+
+    def top_level_labels(self):
+        labels = self.labels()
+        toplevels = {}
+        for label, pos in labels.items():
+            if ':' not in label:
+                toplevels[label] = pos
+
+        return toplevels
+    
+class Positioned(Bakeable):
+    def __init__(self, pos, inner):
+        self.pos = pos
+        self.inner = inner
+
+    def bake(self):
+        return bakers.PositionShiftedBaker(self.pos, self.inner.bake())
+
+    
 class Program(Bakeable):
     def __init__(self, bakeables):
         self.pieces = bakeables
@@ -282,15 +305,23 @@ def toInternalString(s):
     return ''.join([toInternalChar(c) for c in s])
 
 def main():
-    filename = sys.argv[1]
+    argsp = argparse.ArgumentParser()
+    argsp.add_argument('filename')
+    argsp.add_argument('--debugLabels', dest="debug_labels", action='store_true')
+    argsp.add_argument('--position', '-P', type=int, default=0, dest='position')
+
+    args = argsp.parse_args()
+    filename = args.filename
     f = open(filename, 'r')
     raw_prog = f.read()
+    raw_prog_parsed = asmparse.parse_program(raw_prog)
+    prog = Positioned(args.position,raw_prog_parsed)
 
-    prog = asmparse.parse_program(raw_prog)
-
-    #print(prog.debug_labels())
+    if args.debug_labels:
+        print(prog.debug_labels())
 
     print(prog.render_all())
+    print(prog.top_level_labels())
 
 if __name__ == '__main__':
     main()

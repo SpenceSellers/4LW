@@ -27,6 +27,22 @@ class Baker:
         for name, index in locs.items():
             s += "{}: {}\n".format(name, index)
         return s
+
+class PositionShiftedBaker(Baker):
+    def __init__(self, shift, internal):
+        self.shift = shift
+        self.internal = internal
+
+    def render(self, table):
+        return self.internal.render(table)
+
+    def report(self):
+        interior = self.internal.report()
+        actual = {}
+        for label, sub_pos in interior.items():
+            actual[label] = sub_pos + self.shift
+
+        return actual
             
 
 class BakerSequence(Baker):
