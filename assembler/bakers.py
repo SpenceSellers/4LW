@@ -44,7 +44,20 @@ class PositionShiftedBaker(Baker):
 
         return actual
             
+class InjectAbsolute(Baker):
+    def __init__(self, injected, internal):
+        self.internal = internal
+        self.injected = injected
 
+    def render(self, table):
+        return self.internal.render(table)
+
+    def report(self):
+        reported = copy.copy(self.internal.report())
+        for label, pos in self.injected.items():
+            reported[label] = pos
+        return reported
+        
 class BakerSequence(Baker):
     def __init__(self, seq):
         self.seq = seq

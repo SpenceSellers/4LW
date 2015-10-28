@@ -9,27 +9,14 @@ label start
 
 call dynmemInit [const B___] [const ET__]
 
-call malloc [const 1] to [stack A]
-call malloc [const 1] to [stack A]
-call malloc [const 1] to [stack A]
-call free [stack A]
-call free [stack A]
-call free [stack A]
-call defragHeap
-
-call malloc [const 5] to [stack A]
-call malloc [const 2] to [stack A]
-call free [stack A]
-call defragHeap
-
-call debugHeap
-
+#call debugHeap
 
 call printf [const :welcome_str]
 SB [const ZZZZ] [const :@end] [reg M]
 call printBase10 [reg M]
 call printf [const :freemem_str]
 
+label commandLine
 
 loop {
     call printNewline

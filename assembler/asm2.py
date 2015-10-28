@@ -8,6 +8,7 @@ import os
 import uuid
 import copy
 import argparse
+import json
 
 def log(s):
     print(s, file=sys.stderr)
@@ -42,11 +43,11 @@ class Bakeable:
     def debug_labels(self):
         return self.bake().debug_labels()
 
-    def labels(self):
+    def symbols(self):
         return self.bake().report()
 
-    def top_level_labels(self):
-        labels = self.labels()
+    def top_level_symbols(self):
+        labels = self.symbols()
         toplevels = {}
         for label, pos in labels.items():
             if ':' not in label:
@@ -61,7 +62,14 @@ class Positioned(Bakeable):
 
     def bake(self):
         return bakers.PositionShiftedBaker(self.pos, self.inner.bake())
+ 
+class Injected(Bakeable):
+    def __init__(self, table, inner):
+        self.table = table
+        self.inner = inner
 
+    def bake(self):
+        return bakers.InjectAbsolute(self.table, self.inner.bake())
     
 class Program(Bakeable):
     def __init__(self, bakeables):
@@ -304,24 +312,76 @@ def toInternalChar(c):
 def toInternalString(s):
     return ''.join([toInternalChar(c) for c in s])
 
+def letter_to_int(c):
+    if c == '_': return 0
+    c = c.upper()
+    if c not in string.ascii_uppercase:
+        raise ValueError("{} is not a valid letter".format(c))
+    return ord(c) - ord('A') + 1
+
+def base27to10(s):
+    place = 0
+    accum = 0
+    for letter in reversed(s):
+        accum += letter_to_int(letter) * (27**place)
+        place += 1
+    return accum
+    
+def parse_num(s):
+    try:
+        return int(s)
+    except:
+        pass
+
+    return base27to10(s)
+
 def main():
     argsp = argparse.ArgumentParser()
     argsp.add_argument('filename')
-    argsp.add_argument('--debugLabels', dest="debug_labels", action='store_true')
-    argsp.add_argument('--position', '-P', type=int, default=0, dest='position')
+    argsp.add_argument('--debugLabels', '-D', dest="debug_labels", action='store_true')
+    argsp.add_argument('--position', '-P', type=str, default=0, dest='position')
+    argsp.add_argument('--symboltable', '-S', dest='symbol_table', action = 'store_true', help="Generates a symbol table")
+    argsp.add_argument('-l', '--link', dest='link', type=str, help="Links with an external symbol table, generated with -S")
+    argsp.add_argument('--whereis', '-W', dest='whereis', type=str, help="Use with a number/word to search for a label at a position, or with a :-prefixed string to search for a label.")
+    
+    
 
     args = argsp.parse_args()
     filename = args.filename
     f = open(filename, 'r')
     raw_prog = f.read()
     raw_prog_parsed = asmparse.parse_program(raw_prog)
-    prog = Positioned(args.position,raw_prog_parsed)
 
+    injected_symbols = {}
+    if args.link:
+        symbols_file = open(args.link, 'r')
+        injected_symbols = json.load(symbols_file)
+        symbols_file.close()
+        
+    prog = Injected(injected_symbols, Positioned(parse_num(args.position), raw_prog_parsed))
+    
     if args.debug_labels:
         print(prog.debug_labels())
-
-    print(prog.render_all())
-    print(prog.top_level_labels())
+        
+    elif args.symbol_table:
+        table = prog.top_level_symbols()
+        print(json.dumps(table, indent=4))
+    elif args.whereis:
+        table = prog.symbols()
+        if args.whereis.startswith(':'):
+            search_str = args.whereis[1:]
+            for label, pos in table.items():
+                if search_str in label:
+                    print("{} at {} ({})".format(label, expandWord(toBase27(pos)), pos))
+        else:
+            search_pos = parse_num(args.whereis)
+            for label, pos in table.items():
+                if pos == search_pos:
+                    print("{} at {}".format(label, pos))
+                
+    else:
+        print(prog.render_all())
+    #print(prog.top_level_labels())
 
 if __name__ == '__main__':
     main()
