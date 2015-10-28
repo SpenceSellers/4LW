@@ -60,6 +60,8 @@ emptyDat = Empty().setParseAction(lambda s,l,t: asm.ConstWord('____'))
 
 dat = MatchFirst([base10dat, base27dat, referenceDat, constLetterDat, emptyDat])
 
+nonEmptyDat = MatchFirst([base10dat, base27dat, referenceDat, constLetterDat])
+
 operand = (Literal('[').suppress() + dattype + flags + dat + Literal(']').suppress())\
     .setParseAction(lambda s,l,t: asm.Operand(t[0], t[1], t[2]))
 
@@ -96,6 +98,9 @@ term_string = (Keyword('term_string') + identifier + quotedString)\
 words = (Keyword('reserve') + identifier + Word(nums))\
         .setParseAction(lambda s,l,t: asm.Reserved(t[1], int(t[2])))
 
+array = (Keyword('array') + identifier + Group(ZeroOrMore(nonEmptyDat)))\
+        .setParseAction(lambda s,l,t: asm.Array(t[1], t[2].asList()))
+
 block = Forward()
 function = Forward()
 loop = Forward()
@@ -103,7 +108,7 @@ if_ = Forward()
 
 emptyLine = Empty()
 
-line = MatchFirst([instruction, label, fcall, preserve, restore, string, term_string, words,  import_, function, loop, if_, emptyLine]) + Optional(Literal('#') + restOfLine).suppress() + LineEnd().suppress()
+line = MatchFirst([instruction, label, fcall, preserve, restore, string, term_string, words, array, import_, function, loop, if_, emptyLine]) + Optional(Literal('#') + restOfLine).suppress() + LineEnd().suppress()
 
 preservables = Group(OneOrMore(single_letter))
 

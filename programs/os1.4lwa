@@ -5,6 +5,8 @@ import print.4lwa
 import strings.4lwa
 import base10.4lwa
 
+array command_strs :poke_str :peek_str :base27_str :base10_str :coredump_str :write_str :jump_str :echo_str :memdebug_str :runinst_str ZZZZ
+array command_fns :poke_cmd :peek_cmd :base27_cmd :base10_cmd :coredump_cmd :write_cmd :jump_cmd :echo_cmd :memdebug_cmd :runinst_cmd ZZZZ
 label start
 
 call dynmemInit [const B___] [const ET__]
@@ -22,71 +24,19 @@ loop {
     call printNewline
     call printTerminated [const :entercmd_str]
     call readLineTerm [const :cmd_buffer] [const 10]
+    MV [const 0] [reg A]
+    loop {
+        AD [const :command_strs] [reg timesfour A] [reg B]
+        JZ [reg neg mem B] [const :badcmd]
+        call strEq [const :cmd_buffer] [reg mem B]
+        JZ [stack V] [const :next]
+        AD [const :command_fns] [reg timesfour A] [reg B]
+        FN [reg mem B]
+        JP [const :commandLine]
 
-    call strEq [const :cmd_buffer] [const :poke_str]
-    JZ [stack neg V] [const :run_poke]
-
-    call strEq [const :cmd_buffer] [const :peek_str]
-    JZ [stack neg V] [const :run_peek]
-
-    call strEq [const :cmd_buffer] [const :base27_str]
-    JZ [stack neg V] [const :run_base27]
-
-    call strEq [const :cmd_buffer] [const :base10_str]
-    JZ [stack neg V] [const :run_base10]
-
-    call strEq [const :cmd_buffer] [const :coredump_str]
-    JZ [stack neg V] [const :run_coredump]
-
-    call strEq [const :cmd_buffer] [const :write_str]
-    JZ [stack neg V] [const :run_write]
-
-    call strEq [const :cmd_buffer] [const :jump_str]
-    JZ [stack neg V] [const :run_jump]
-
-    call strEq [const :cmd_buffer] [const :echo_str]
-    JZ [stack neg V] [const :run_echo]
-
-    call strEq [const :cmd_buffer] [const :memdebug_str]
-    JZ [stack neg V] [const :run_memdebug]
-
-    JP [const :badcmd]
-
-    label run_poke
-    call poke_cmd
-    JP [const :@continue]
-
-    label run_peek
-    call peek_cmd
-    JP [const :@continue]
-
-    label run_base27
-    call base27_cmd
-    JP [const :@continue]
-
-    label run_base10
-    call base10_cmd
-    JP [const :@continue]
-
-    label run_coredump
-    call coredump_cmd
-    JP [const :@continue]
-
-    label run_write
-    call write_cmd
-    JP [const :@continue]
-
-    label run_jump
-    call jump_cmd
-    JP [const :@continue]
-
-    label run_echo
-    call echo_cmd
-    JP [const :@continue]
-
-    label run_memdebug
-    call memdebug_cmd
-    JP [const :@continue]
+        label next
+        MV [reg inc A] [reg A]
+    }
 
     label badcmd
     call printTerminated [const :badcmd_str]
@@ -155,6 +105,15 @@ function memdebug_cmd {
     call debugHeap
 }
 
+function runinst_cmd preserving A B {
+    call malloc [const 50] to [reg A]
+    call enterRaw [reg A] to [reg B]
+    AD [reg A] [reg B] [reg B]
+    MV [const RTA_] [reg mem B]
+    FN [reg A]
+    call free [reg A]
+}
+
 # (start: addr) (end: addr) -- io
 function coreDump preserving A B {
     MV [stack S] [reg B]
@@ -176,11 +135,14 @@ function readLetter preserving A {
     MV [const ZZZZ] [stack V]
 }
 
-function enterRaw preserving A B C {
+# (addr) -- (length (letters))
+function enterRaw preserving A B C D {
     MV [stack S] [reg A]
+    MV [const 0] [reg D]
     loop {
         call readLetter to [reg B]
-        JZ [reg neg B] [const :@return]
+        JZ [reg neg B] [const :done]
+        MV [reg inc D] [reg D]
         MV [reg first mem A] [reg C]
         ML [reg C] [const A___] [reg C]
         SB [reg mem A] [reg C] [reg mem A]
@@ -190,6 +152,8 @@ function enterRaw preserving A B C {
 
         MV [reg inc A] [reg A]
     }
+    label done
+    MV [reg D] [stack V]
 }
 term_string welcome_str "Welcome to 4LW OS %n"
 term_string freemem_str " letters of memory free %n"
@@ -207,4 +171,6 @@ term_string write_str "write"
 term_string jump_str "jump"
 term_string echo_str "echo"
 term_string memdebug_str "memdebug"
+term_string runinst_str "runinst"
+
 term_string badcmd_str "Bad command"

@@ -217,6 +217,15 @@ class Reserved(Bakeable):
     def bake(self):
         return bakers.Baked('____' * self.length, self.label)
 
+class Array(Bakeable):
+    def __init__(self, label, datas):
+        self.label = label
+        self.datas = datas
+
+    def bake(self):
+        
+        return bakers.BakerSequence([bakers.LabelBaker(self.label)] + [b.bake() for b in self.datas])
+            
 class ConstWord(Bakeable):
     def __init__(self, word):
         word = expandWord(word)
