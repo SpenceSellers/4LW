@@ -5,8 +5,8 @@ import print.4lwa
 import strings.4lwa
 import base10.4lwa
 
-array command_strs :poke_str :peek_str :base27_str :base10_str :coredump_str :write_str :jump_str :echo_str :memdebug_str :runinst_str ZZZZ
-array command_fns :poke_cmd :peek_cmd :base27_cmd :base10_cmd :coredump_cmd :write_cmd :jump_cmd :echo_cmd :memdebug_cmd :runinst_cmd ZZZZ
+array command_strs :poke_str :peek_str :base27_str :base10_str :coredump_str :write_str :jump_str :echo_str :memdebug_str :memdefrag_str :runinst_str :alloc_str ZZZZ
+array command_fns :poke_cmd :peek_cmd :base27_cmd :base10_cmd :coredump_cmd :write_cmd :jump_cmd :echo_cmd :memdebug_cmd :memdefrag_cmd :runinst_cmd :alloc_cmd ZZZZ
 label start
 
 call dynmemInit [const B___] [const ET__]
@@ -105,6 +105,19 @@ function memdebug_cmd {
     call debugHeap
 }
 
+function memdefrag_cmd {
+    call defragHeap
+}
+
+function alloc_cmd {
+    call printTerminated [const :size_str]
+    call readWord
+    call malloc [stack V]
+    call printNewline
+    call printTerminated [const :address_str]
+    call printWord [stack V]
+}
+
 function runinst_cmd preserving A B {
     call malloc [const 50] to [reg A]
     call enterRaw [reg A] to [reg B]
@@ -160,6 +173,7 @@ term_string freemem_str " letters of memory free %n"
 
 term_string entercmd_str "Command: "
 term_string address_str "Addr: "
+term_string size_str "Size: "
 string cmd_buffer "XXXXXXXXXXXXXXXXXXXX"
 
 term_string poke_str "poke"
@@ -171,6 +185,7 @@ term_string write_str "write"
 term_string jump_str "jump"
 term_string echo_str "echo"
 term_string memdebug_str "memdebug"
+term_string memdefrag_str "memdefrag"
 term_string runinst_str "runinst"
-
+term_string alloc_str "alloc"
 term_string badcmd_str "Bad command"
