@@ -23,16 +23,17 @@ label commandLine
 loop {
     call printNewline
     call printTerminated [const :entercmd_str]
-    call readLineTerm [const :cmd_buffer] [const 10]
+    call lineEnter [const 40] to [reg C]
+    call printTerminated [reg C]
     MV [const 0] [reg A]
     loop {
         AD [const :command_strs] [reg timesfour A] [reg B]
         JZ [reg neg mem B] [const :badcmd]
-        call strEq [const :cmd_buffer] [reg mem B]
+        call strEq [reg C] [reg mem B]
         JZ [stack V] [const :next]
         AD [const :command_fns] [reg timesfour A] [reg B]
         FN [reg mem B]
-        JP [const :commandLine]
+        JP [const :commandDone]
 
         label next
         MV [reg inc A] [reg A]
@@ -41,6 +42,9 @@ loop {
     label badcmd
     call printTerminated [const :badcmd_str]
     call printNewline
+
+    label commandDone
+    call free [reg C]
 }
 
 function poke_cmd preserving A B {
@@ -107,6 +111,7 @@ function memdebug_cmd {
 
 function memdefrag_cmd {
     call defragHeap
+    call printTerminated [const :done_str]
 }
 
 function alloc_cmd {
@@ -168,12 +173,49 @@ function enterRaw preserving A B C D {
     label done
     MV [reg D] [stack V]
 }
+
+# (buffer length (words)) -- (buffer addr)
+function lineEnter preserving A B C D {
+    MV [stack S] [reg B] # Buffer length
+    call malloc [reg B] to [reg A] # Buffer addr
+    MV [reg A] [reg D] # Current location in buffer
+
+    AD [reg A] [reg timesfour B] [reg B]
+    SB [reg B] [const 4] [reg B] # END location of buffer, minus a char for terminator.
+
+    loop {
+        JE [reg D] [reg B] [const :done] # Reached end of buffer.
+
+        call readChar to [reg C]
+        JE [reg C] [const __C_] [const :done] # Enter key pressed, we're done.
+        JE [reg C] [const __CB] [const :backspace]
+
+        MV [reg C] [reg mem D] # Write the char to the buffer.
+
+
+        label next
+        MV [reg plusfour D] [reg D]
+        JP [const :@continue]
+
+        label backspace
+        # MV [const __CB] [io]
+        SB [reg D] [const 4] [reg D]
+
+    }
+
+
+
+    label done
+    MV [const ZZZZ] [reg mem D]
+    MV [reg A] [stack V]
+}
 term_string welcome_str "Welcome to 4LW OS %n"
 term_string freemem_str " letters of memory free %n"
 
 term_string entercmd_str "Command: "
 term_string address_str "Addr: "
 term_string size_str "Size: "
+term_string done_str "Done."
 string cmd_buffer "XXXXXXXXXXXXXXXXXXXX"
 
 term_string poke_str "poke"

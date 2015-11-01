@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-module Io (readToBuffer, charToInternal, internalToChar) where
+module Io (readToBuffer, charToInternal, internalToChar, printChar) where
 
 import Base27
 import System.IO
@@ -9,6 +9,9 @@ import Data.Ix
 import Control.Lens
 import Data.Maybe
 import Debug.Trace
+import System.IO
+
+import System.Console.ANSI
 
 __ = letter '_'
 
@@ -19,6 +22,8 @@ charTable = uppercaseTable ++ lowercaseTable ++ numberTable ++ [
     ('_', wrd "____"),
     (' ', wrd "__A_"),
     ('\n', wrd "__C_"),
+    -- ('\b', wrd "__CB"),
+    ('\DEL', wrd "__CB"),
     (':', wrd "__PC"),
     ('%', wrd "__PP"),
     ('!', wrd "__PX"),
@@ -26,8 +31,10 @@ charTable = uppercaseTable ++ lowercaseTable ++ numberTable ++ [
     ('-', wrd "__PM"),
     ('|', wrd "__PB"),
     ('(', wrd "__BA"),
-    (')', wrd "__BB")]
+    (')', wrd "__BB")
+    ]
 
+tr x = trace (show x) x
 
 readToBuffer :: [Char] -> IO [Char]
 readToBuffer buf = do
@@ -35,6 +42,7 @@ readToBuffer buf = do
     if isReady
         then do
             c <- hGetChar stdin
+            --trace (show c) (return ())
             readToBuffer (buf ++ [c])
         else
             return buf
@@ -45,6 +53,17 @@ charToInternal c = lookup c charTable
 internalToChar :: Base27.Word -> Maybe Char
 internalToChar word = lookup word . map swap $ charTable
     where swap (a,b) = (b,a)
+
+printChar :: Base27.Word -> IO ()
+printChar w
+    -- On backspace, move back a char, write a space back over it, and move backwards again.
+    | w == wrd "__CB" = cursorBackward 1 >> putStr " " >> cursorBackward 1 >> hFlush stdout
+    | otherwise = case internalToChar w of
+        Just c -> do
+            putStr [c]
+            hFlush stdout
+        Nothing -> return ()
+
 
 toDigit :: Letter -> Maybe Char
 toDigit l = range ('0', '9') ^? ix (getValue l)

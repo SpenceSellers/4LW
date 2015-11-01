@@ -4,7 +4,7 @@
 
 module Machine where
 import Prelude hiding (Word)
-import System.IO
+
 import Data.Array
 import Data.Ix
 import Instruction
@@ -22,6 +22,7 @@ import Control.Applicative
 import Control.Monad.Reader
 import Debug.Trace
 import Control.Concurrent
+import System.IO
 
 returnAddressStackId :: Letter
 returnAddressStackId = letter 'R'
@@ -46,7 +47,7 @@ data IOConfig = IOConfig {
 
 data MachineAction = NoAction |
                      HaltAction |
-                     IOWrite String
+                     IOWrite [Word]
                      deriving (Show, Eq)
 
 -- | Stores the entire machine state from one instruction to the next.
@@ -57,7 +58,7 @@ data MachineState = MachineState {
       _action :: MachineAction,
       _tickNum :: Integer,
       _inBuffer :: [Char],
-      _outBuffer :: [Char]
+      _outBuffer :: [Word]
     } deriving (Show)
 
 makeLenses ''MachineState
@@ -153,7 +154,7 @@ setData (MemoryLocation loc) word = flip setMemory word =<< (getData loc)
 setData (Stack letter) word = pushStack letter word
 
 setData (Io selector) word =
-    action .= (IOWrite $ catMaybes [Io.internalToChar word])
+    action .= (IOWrite [word])
 
 setData (Negated loc) word =
     setData loc (negateWord word)
@@ -268,6 +269,7 @@ tick = do
 start :: Int -> StateT MachineState IO ()
 start ticktime = do
     lift $ hSetBuffering stdin NoBuffering
+    lift $ hSetEcho stdin False
     run ticktime
 
 run :: Int -> StateT MachineState IO ()
@@ -286,7 +288,6 @@ run ticktime = do
   case currentAction of
     NoAction -> run ticktime
     HaltAction -> return ()
-    IOWrite str -> do
-        lift $ putStr str
-        lift $ hFlush stdout
+    IOWrite charcodes -> do
+        lift $ sequence (map Io.printChar charcodes)
         run ticktime

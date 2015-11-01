@@ -28,4 +28,5 @@ executable 4LW
                        containers,
                        data-default,
                        pipes,
-                       optparse-applicative
+                       optparse-applicative,
+                       ansi-terminal

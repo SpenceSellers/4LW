@@ -30,6 +30,7 @@ function printNewline {
 function readChar preserving A {
     label _readChar_wait
     MV [io] [reg A]
+    MV [reg A] [io]
     JE [reg A] [const ZZZZ] [const :_readChar_wait]
     MV [reg A] [stack V]
 }
