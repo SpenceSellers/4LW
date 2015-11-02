@@ -21,12 +21,15 @@ sanitizeProg = filter Base27.isLetter
 
 data RunOptions = RunOptions { filename :: String
                              , tickTime:: Int
+                             --, tapeFiles :: [(Letter, String)]
+                             tapeFile :: Maybe String
                              } deriving (Show)
 
 parseOptions :: Parser RunOptions
 parseOptions = RunOptions
                    <$> strArgument (metavar "FILE")
                    <*> option auto (short 't' <> value 1000)
+                   <*> (many $ option auto (short 'q' <> value (letter 'A', "wow")))
 
 optionsAndInfo :: ParserInfo RunOptions
 optionsAndInfo = info (helper <*> parseOptions)
