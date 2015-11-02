@@ -28,10 +28,26 @@ function printNewline {
 
 # -- (Char)
 function readChar preserving A {
-    label _readChar_wait
+    label wait
     MV [io] [reg A]
+    JE [reg A] [const ZZZZ] [const :wait]
     MV [reg A] [io]
-    JE [reg A] [const ZZZZ] [const :_readChar_wait]
+    MV [reg A] [stack V]
+}
+
+function readCharNoEcho preserving A {
+    label wait
+    MV [io] [reg A]
+    JE [reg A] [const ZZZZ] [const :wait]
+    MV [reg A] [stack V]
+}
+
+function readCharNoBackspace preserving A {
+    label wait
+    MV [io] [reg A]
+    JE [reg A] [const ZZZZ] [const :wait]
+    JE [reg A] [const __CB] [const :wait]
+    MV [reg A] [io]
     MV [reg A] [stack V]
 }
 

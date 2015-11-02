@@ -8,6 +8,9 @@ import Base27
 import Memory
 import Instruction
 import Registers
+import qualified WordSequence
+import qualified Tapes
+
 import System.Environment
 import Control.Applicative
 import Options.Applicative
@@ -36,7 +39,8 @@ main = do
 
   prog <- readFile (filename options)
 
-  let state = memory %~ fromJust . importString (sanitizeProg prog) minWord $ blankState
+  let statemem = memory %~ fromJust . importString (sanitizeProg prog) minWord $ blankState
+  let state = tapeDeck . at (letter 'A') .~ Just Tapes.blankTape $ statemem
   (_, state') <- runStateT (start (tickTime options)) state
   putStrLn "\n\n\n\n\n\n"
   putStrLn "Done:"

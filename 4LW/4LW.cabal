@@ -23,6 +23,7 @@ executable 4LW
   build-depends:       base,
                        mtl,
                        array,
+                       split,
                        lens,
                        digits,
                        containers,

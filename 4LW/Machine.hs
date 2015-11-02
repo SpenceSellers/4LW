@@ -12,6 +12,7 @@ import Base27
 import Lengths
 import Registers
 import qualified Memory
+import qualified Tapes
 import qualified Io
 import qualified Stacks
 import Control.Lens
@@ -55,6 +56,7 @@ data MachineState = MachineState {
       _registers :: Registers,
       _memory :: Memory.Memory,
       _stacks :: Stacks.Stacks,
+      _tapeDeck :: Tapes.TapeDeck,
       _action :: MachineAction,
       _tickNum :: Integer,
       _inBuffer :: [Char],
@@ -65,7 +67,7 @@ makeLenses ''MachineState
 
 -- | A blank "starting" state of the machine, with everything zeroed.
 blankState :: MachineState
-blankState = MachineState blankRegisters Memory.blankMemory Stacks.emptyStacks NoAction 0 [] []
+blankState = MachineState blankRegisters Memory.blankMemory Stacks.emptyStacks Tapes.blankTapeDeck NoAction 0 [] []
 
 -- | Pops a char off of the machine's input buffer.
 popInBuffer :: State MachineState (Maybe Char)
@@ -127,6 +129,15 @@ getData (MemoryLocation loc) = Memory.readWord <$> use memory <*> getData loc
 
 getData (Stack l) = popStack l
 
+getData (TapeIO letter) = do
+    maybeTape <- use $ tapeDeck . at letter
+    case maybeTape of
+        Just tape -> do
+            let (val, newtape) = runState (Tapes.tapeRead) tape
+            tapeDeck . at letter .= Just newtape
+            return val
+        Nothing -> return minWord
+
 getData (Io selector) = do
   char <- popInBuffer
   case char >>= Io.charToInternal of
@@ -152,6 +163,10 @@ setData (Register letter) word = setRegister letter word
 setData (MemoryLocation loc) word = flip setMemory word =<< (getData loc)
 
 setData (Stack letter) word = pushStack letter word
+
+setData (TapeIO letter) word = tapeDeck . at letter %= trywrite word
+    where trywrite word (Just tape) = Just $ execState (Tapes.tapeWrite word) tape
+          trywrite word Nothing = Nothing
 
 setData (Io selector) word =
     action .= (IOWrite [word])
@@ -249,6 +264,22 @@ runInstruction (PullAll source args) = pullAll source args
           pullAll source (arg:xs) = do
               setData arg =<< getData source
               pullAll source xs
+
+runInstruction (TapeSeek tape distance) = do
+    tapeLetter <- view fourthLetter <$> getData tape
+    distance <- getData distance
+    tapeDeck . at tapeLetter %= fmap (execState (Tapes.tapeSeekForward distance))
+
+runInstruction (TapeSeekBackwards tape distance) = do
+    tapeLetter <- view fourthLetter <$> getData tape
+    distance <- getData distance
+    tapeDeck . at tapeLetter %= fmap (execState (Tapes.tapeSeekBackwards distance))
+
+runInstruction (TapeRewind tapeIDloc) = do
+    tapeID <- getData tapeIDloc
+    let tapeLetter = tapeID ^. fourthLetter
+    --let tryrewind (Just tape) = Just $ execState Tapes.tapeRewind tape
+    tapeDeck . at tapeLetter %= fmap (execState Tapes.tapeRewind)
 
 tick :: State MachineState ()
 tick = do

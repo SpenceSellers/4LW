@@ -13,7 +13,8 @@ DAT_TYPE_MAP = {
     'const': 'C',
     'reg': 'R',
     'io': 'I',
-    'stack': 'S'
+    'stack': 'S',
+    'tape': 'T'
 }
 
 FLAG_MAP = {'neg': 'N',
@@ -41,7 +42,7 @@ opcode = Word(srange('[A-Z]'), exact = 2)
 flags = ZeroOrMore(oneOf("inc dec mem neg timesfour plusfour first second third fourth"))\
     .setParseAction(lambda s,l,t: [[FLAG_MAP[a] for a in t]])
 
-dattype = oneOf("const reg io stack")\
+dattype = oneOf("const reg io tape stack")\
     .setParseAction(lambda s,l,t: DAT_TYPE_MAP[t[0]])
 
 base10dat = Word(nums)\

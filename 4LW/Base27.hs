@@ -4,7 +4,7 @@ module Base27 (Letter, Word(Word) , letter,
                letterSafe, getValue,
                toLetter, offset, wrd, toWord,
                extendToWord, pattern LetterV, pattern WordChars,
-               minWord, maxWord, letter2, valueOfWord, wordValue,
+               minWord, maxWord, letter2, valueOfWord, wordValue, wordFromList, wordFromList',
                negateWord, addWord, subWord, mulWord, modWord, andWord,
                leftShift, rightShift,
                divWord, isLetter, letters,
@@ -112,6 +112,10 @@ instance Ix Base27.Word where
 
     inRange (w1, w2) w = (wordValue w >= wordValue w1) && (wordValue w <= wordValue w2)
 
+instance Enum Base27.Word where
+    toEnum = toWord
+    fromEnum = wordValue
+
 firstLetter :: Lens' Word Letter
 firstLetter f (Word a b c d) = (\new -> Word new b c d) <$> f a
 
@@ -151,6 +155,13 @@ wordFromList (a:b:c:_) = Word (letter '_') a b c
 wordFromList (a:b:_) = Word (letter '_') (letter '_') a b
 wordFromList (a:_) = Word (letter '_') (letter '_') (letter '_') a
 wordFromList (_) = minWord
+
+wordFromList' :: [Letter] -> Base27.Word
+wordFromList' (a:b:c:d:_) = Word a b c d
+wordFromList' (a:b:c:_) = Word a b c (letter '_')
+wordFromList' (a:b:_) = Word a b (letter '_') (letter '_')
+wordFromList' (a:_) = Word a (letter '_') (letter '_') (letter '_')
+wordFromList' (_) = minWord
 
 wordValue :: Base27.Word -> Int
 --wordValue = unDigits 27 . map getValue . wordToList

@@ -24,7 +24,6 @@ loop {
     call printNewline
     call printTerminated [const :entercmd_str]
     call lineEnter [const 40] to [reg C]
-    call printTerminated [reg C]
     MV [const 0] [reg A]
     loop {
         AD [const :command_strs] [reg timesfour A] [reg B]
@@ -186,10 +185,11 @@ function lineEnter preserving A B C D {
     loop {
         JE [reg D] [reg B] [const :done] # Reached end of buffer.
 
-        call readChar to [reg C]
+        call readCharNoEcho to [reg C]
         JE [reg C] [const __C_] [const :done] # Enter key pressed, we're done.
         JE [reg C] [const __CB] [const :backspace]
 
+        MV [reg C] [io] # Echo the char.
         MV [reg C] [reg mem D] # Write the char to the buffer.
 
 
@@ -198,7 +198,8 @@ function lineEnter preserving A B C D {
         JP [const :@continue]
 
         label backspace
-        # MV [const __CB] [io]
+        JE [reg A] [reg D] [const :@continue] # If we're at the beginning, don't backspace further.
+        MV [const __CB] [io]
         SB [reg D] [const 4] [reg D]
 
     }
@@ -206,7 +207,8 @@ function lineEnter preserving A B C D {
 
 
     label done
-    MV [const ZZZZ] [reg mem D]
+    MV [const ZZZZ] [reg mem D] # Terminate the string.
+    MV [const __C_] [io] # Print the newline
     MV [reg A] [stack V]
 }
 term_string welcome_str "Welcome to 4LW OS %n"

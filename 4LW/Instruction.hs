@@ -17,6 +17,7 @@ data DataLocation =
     Constant Word |            -- A fixed constant word
     Io Letter |                -- Std IO. Letter/Word will be used as a selector later.
     Stack Letter |
+    TapeIO Letter |
     MemoryLocation DataLocation |      -- A location in main memory
     Negated DataLocation |     -- The real result but negated
     Incremented DataLocation | -- The real result but incremented
@@ -50,7 +51,10 @@ data Instruction =
     Return [DataLocation] |
     Swap DataLocation DataLocation |
     PushAll DataLocation [DataLocation] |
-    PullAll DataLocation [DataLocation]
+    PullAll DataLocation [DataLocation] |
+    TapeSeek DataLocation DataLocation  |
+    TapeSeekBackwards DataLocation DataLocation |
+    TapeRewind DataLocation
 
     deriving (Show, Eq)
 
@@ -126,6 +130,11 @@ threeArgInstruction inst operands = toBadOpLen $ inst <$>
     (operands ^? ix 1) <*>
     (operands ^? ix 2)
 
+twoArgInstruction :: (DataLocation -> DataLocation -> Instruction) -> Operands -> Either BadInstruction Instruction
+twoArgInstruction inst operands = toBadOpLen $ inst <$>
+    (operands ^? ix 0) <*>
+    (operands ^? ix 1)
+
 -- | Takes a RawInstruction and figures out what it really is.
 -- the resulting Instruction will be actually usable by 4LW.
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
@@ -139,16 +148,12 @@ constructInstruction (RawInstruction opcode operands)
     | opcode == letter2 "MD" = threeArgInstruction Modulo operands
     | opcode == letter2 "AN" = threeArgInstruction And operands
 
-    | opcode == letter2 "MV" = toBadOpLen $ Move <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1)
+    | opcode == letter2 "MV" = twoArgInstruction Move operands
 
     | opcode == letter2 "JP" = toBadOpLen $ Jump <$>
                                  (operands ^? ix 0)
 
-    | opcode == letter2 "JZ" = toBadOpLen $ JumpZero <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1)
+    | opcode == letter2 "JZ" = twoArgInstruction JumpZero operands
 
     | opcode == letter2 "JE" = threeArgInstruction JumpEqual operands
     | opcode == letter2 "JN" = threeArgInstruction JumpNotEqual operands
@@ -173,6 +178,10 @@ constructInstruction (RawInstruction opcode operands)
                                  (operands ^? ix 0) <*>
                                  (pure . tail $ operands)
 
+    | opcode == letter2 "TS" = twoArgInstruction TapeSeek operands
+    | opcode == letter2 "TB" = twoArgInstruction TapeSeekBackwards operands
+    | opcode == letter2 "TR" = toBadOpLen $ TapeRewind <$> (operands ^? ix 0)
+
     | otherwise = Left $ BadOpcode opcode
 
 
@@ -188,6 +197,7 @@ parseOperands_ ((Word _ flag1 flag2 control):opdata:xs) ops
     | control == letter 'C' = build (Constant opdata)
     | control == letter 'I' = build (Io (opdata ^. fourthLetter))
     | control == letter 'S' = build (Stack (opdata ^. fourthLetter))
+    | control == letter 'T' = build (TapeIO (opdata ^. fourthLetter))
     where build instruction = parseOperands_ xs (applyFlags [flag1, flag2] instruction:ops)
 
 parseOperands_ (x:xs) ops = Nothing -- Odd number of words.
