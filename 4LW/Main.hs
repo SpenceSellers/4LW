@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 import Machine
 import Control.Monad.State.Lazy
@@ -8,28 +9,30 @@ import Base27
 import Memory
 import Instruction
 import Registers
-import qualified WordSequence
+import qualified WordSequence as WS
 import qualified Tapes
 
 import System.Environment
 import Control.Applicative
 import Options.Applicative
+import Text.Read
+import Control.Exception
 
 
 sanitizeProg :: [Char] -> [Char]
 sanitizeProg = filter Base27.isLetter
 
 data RunOptions = RunOptions { filename :: String
-                             , tickTime:: Int
+                             , tickTime :: Int
                              --, tapeFiles :: [(Letter, String)]
-                             tapeFile :: Maybe String
+                             , tapeFile :: Maybe String
                              } deriving (Show)
 
 parseOptions :: Parser RunOptions
 parseOptions = RunOptions
                    <$> strArgument (metavar "FILE")
                    <*> option auto (short 't' <> value 1000)
-                   <*> (many $ option auto (short 'q' <> value (letter 'A', "wow")))
+                   <*> optional (strOption (short 'T'))
 
 optionsAndInfo :: ParserInfo RunOptions
 optionsAndInfo = info (helper <*> parseOptions)
@@ -39,11 +42,14 @@ main :: IO ()
 main = do
   --let (_, state) = runState tick blankState
   options <- execParser optionsAndInfo
-
   prog <- readFile (filename options)
 
+  tapeStr <- case tapeFile options of
+            Just fname -> catch (readFile fname) (\(e :: SomeException) -> putStrLn "Error reading tape" >> return "")
+            Nothing -> return ""
+
   let statemem = memory %~ fromJust . importString (sanitizeProg prog) minWord $ blankState
-  let state = tapeDeck . at (letter 'A') .~ Just Tapes.blankTape $ statemem
+  let state = tapeDeck . at (letter 'A') .~ Just (Tapes.newTape (WS.readWordsFiltered tapeStr)) $ statemem
   (_, state') <- runStateT (start (tickTime options)) state
   putStrLn "\n\n\n\n\n\n"
   putStrLn "Done:"

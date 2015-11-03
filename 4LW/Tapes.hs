@@ -26,6 +26,9 @@ tapeContents f (Tape pos contents) = (\new -> Tape pos new) <$> f contents
 
 blankTape = Tape minWord Map.empty
 
+newTape :: [Word] -> Tape
+newTape words = execState (tapeWriteWords words >> tapeRewind) blankTape
+                
 readWord :: Map.Map Word Word -> Word -> Word
 readWord tapemap addr = Map.findWithDefault minWord addr tapemap
 
@@ -63,7 +66,7 @@ readTapeFromFile :: String -> IO (Maybe Tape)
 readTapeFromFile filename = do
     maybeWs <- readFileWords filename
     case maybeWs of
-        Just ws -> return $ Just (execState (tapeWriteWords ws >> tapeRewind) blankTape)
+        Just ws -> return $ Just (newTape ws)
         Nothing -> return Nothing
 
 tapeToList :: Tape -> [Word]

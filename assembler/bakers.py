@@ -43,6 +43,9 @@ class PositionShiftedBaker(Baker):
             actual[label] = sub_pos + self.shift
 
         return actual
+
+    def __repr__(self):
+        return "Position by {} of ({})".format(self.shift, self.internal)
             
 class InjectAbsolute(Baker):
     def __init__(self, injected, internal):
@@ -57,6 +60,9 @@ class InjectAbsolute(Baker):
         for label, pos in self.injected.items():
             reported[label] = pos
         return reported
+
+    def __repr__(self):
+        return "Injected labels {} into ({})".format(self.injected, self.internal)
         
 class BakerSequence(Baker):
     def __init__(self, seq):
@@ -125,6 +131,9 @@ class CaptureScopeBaker(Baker):
     def enscope(self, label):
         return str(self.scopeid) + ':' + str(label)
 
+    def __repr__(self):
+        return "CaptureScopeBaker {} ({})".format(self.scopeid, self.inner)
+
 
 class Baked(Baker):
     def __init__(self, s, label = None):
@@ -183,5 +192,11 @@ class Pointing(Baker):
             raise Exception("Pointing baker returns pointer that is too large: {}".format(result))
         return result
 
+    def report(self):
+        return {'pointing' + str(uuid.uuid4()): 0}
+
     def length(self):
         return 4
+
+    def __repr__(self):
+        return "[Pointing to {}]".format(self.label)

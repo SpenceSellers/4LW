@@ -5,8 +5,8 @@ import print.4lwa
 import strings.4lwa
 import base10.4lwa
 
-array command_strs :poke_str :peek_str :base27_str :base10_str :coredump_str :write_str :jump_str :echo_str :memdebug_str :memdefrag_str :runinst_str :alloc_str ZZZZ
-array command_fns :poke_cmd :peek_cmd :base27_cmd :base10_cmd :coredump_cmd :write_cmd :jump_cmd :echo_cmd :memdebug_cmd :memdefrag_cmd :runinst_cmd :alloc_cmd ZZZZ
+array command_strs :poke_str :peek_str :base27_str :base10_str :coredump_str :write_str :jump_str :echo_str :memdebug_str :memdefrag_str :runinst_str :alloc_str :tapedump_str :loadtape_str ZZZZ
+array command_fns :poke_cmd :peek_cmd :base27_cmd :base10_cmd :coredump_cmd :write_cmd :jump_cmd :echo_cmd :memdebug_cmd :memdefrag_cmd :runinst_cmd :alloc_cmd :tapedump_cmd :loadtape_cmd ZZZZ
 label start
 
 call dynmemInit [const B___] [const ET__]
@@ -131,6 +131,34 @@ function runinst_cmd preserving A B {
     call free [reg A]
 }
 
+function tapedump_cmd preserving A {
+    call printTerminated [const :size_str]
+    call readWord to [reg A]
+    TR [const A]
+    loop {
+         JZ [reg A] [const :@break]
+         call printWord [tape A]
+         MV [reg dec A] [reg A]
+    }
+}
+
+function loadtape_cmd preserving A B C {
+    call printTerminated [const :size_str]
+    call readWord to [reg A]
+    call malloc [reg A] to [reg B]
+    MV [reg B] [reg C]
+    TR [const A]
+    loop {
+         JZ [reg A] [const :@break]
+         MV [tape A] [reg mem C]
+         MV [reg plusfour C] [reg C]
+         MV [reg dec A] [reg A]
+    }
+    call printWord [reg B]
+    
+}
+
+
 # (start: addr) (end: addr) -- io
 function coreDump preserving A B {
     MV [stack S] [reg B]
@@ -218,6 +246,7 @@ term_string entercmd_str "Command: "
 term_string address_str "Addr: "
 term_string size_str "Size: "
 term_string done_str "Done."
+term_string badcmd_str "Bad command"
 string cmd_buffer "XXXXXXXXXXXXXXXXXXXX"
 
 term_string poke_str "poke"
@@ -232,4 +261,7 @@ term_string memdebug_str "memdebug"
 term_string memdefrag_str "memdefrag"
 term_string runinst_str "runinst"
 term_string alloc_str "alloc"
-term_string badcmd_str "Bad command"
+term_string tapedump_str "tapedump"
+term_string loadtape_str "loadtape"
+
+

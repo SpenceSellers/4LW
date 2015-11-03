@@ -54,6 +54,9 @@ class Bakeable:
                 toplevels[label] = pos
 
         return toplevels
+
+    def qq(self):
+        print(repr(self.bake()))
     
 class Positioned(Bakeable):
     def __init__(self, pos, inner):

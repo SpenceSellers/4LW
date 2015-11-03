@@ -28,3 +28,9 @@ readFileWords filename = readWords . removeNewlines <$> readFile filename
 
 removeNewlines :: String -> String
 removeNewlines = filter (/= '\n')
+
+readLettersFiltered :: String -> [Letter]
+readLettersFiltered = map letter . filter isLetter
+                      
+readWordsFiltered :: String -> [Word]
+readWordsFiltered = toWords . readLettersFiltered
