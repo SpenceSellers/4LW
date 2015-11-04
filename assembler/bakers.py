@@ -7,6 +7,9 @@ import uuid
 def log(s):
     print(s, file=sys.stderr)
 
+def uniqueID():
+    return str(uuid.uuid4())[:8]
+
 class Baker:
     def render(self, table):
         return ''
@@ -97,18 +100,20 @@ class BakerSequence(Baker):
 
 class CaptureScopeBaker(Baker):
     def __init__(self, baker):
-        self.scopeid = str(uuid.uuid4())
+        self.scopeid = uniqueID()
         self.inner = baker
 
     def render(self, table):
          # We have to restore the original names of our scoped items.
-
          # We just need the original names
         innertable = copy.copy(self.inner.report())
         union = copy.copy(table)
 
         for label, value in innertable.items():
-             # Find the new name, get the value, and apply it to the old name.
+            # Skip unscoped items.
+            if label.startswith('#'): continue
+
+            # Find the new name, get the value, and apply it to the old name.
             scopedname = self.enscope(label)
             union[label] = table[scopedname]
 
@@ -120,9 +125,13 @@ class CaptureScopeBaker(Baker):
         innertable = self.inner.report()
         scopedtable = {}
         for label, sub_pos in innertable.items():
-             # Hide these labels behind the scope id.
-            newlabel = self.enscope(label)
-            scopedtable[newlabel] = sub_pos
+            if label.startswith('#'):
+                scopedtable[label] = sub_pos
+            else:
+                # Hide these labels behind the scope id.
+                newlabel = self.enscope(label)
+                scopedtable[newlabel] = sub_pos
+                
         return scopedtable
 
     def length(self):
@@ -181,6 +190,7 @@ class LabelBaker(Baker):
 class Pointing(Baker):
     def __init__(self, label):
         self.label = label
+        self.pointingID = uniqueID()
 
     def render(self, table):
         try:
@@ -193,7 +203,7 @@ class Pointing(Baker):
         return result
 
     def report(self):
-        return {'pointing' + str(uuid.uuid4()): 0}
+        return {'#pointing' + self.pointingID: 0}
 
     def length(self):
         return 4

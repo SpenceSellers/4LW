@@ -50,13 +50,19 @@ class Bakeable:
         labels = self.symbols()
         toplevels = {}
         for label, pos in labels.items():
-            if ':' not in label:
+            if ':' not in label and not label.startswith('#'):
                 toplevels[label] = pos
 
         return toplevels
 
-    def qq(self):
-        print(repr(self.bake()))
+    def pointers(self):
+        labels = self.symbols()
+        pointers = []
+        for label, pos in labels.items():
+            if '#pointing' in label:
+                pointers.append(pos)
+        return sorted(pointers)
+
     
 class Positioned(Bakeable):
     def __init__(self, pos, inner):
@@ -112,7 +118,7 @@ class Loop(Bakeable):
         self.pieces = bakeables
 
     def bake(self):
-        name = uuid.uuid4()
+        name = bakers.uniqueID()
         elems = []
         elems.append(Label(name).bake())
         elems.append(Label('@continue').bake())
@@ -352,7 +358,8 @@ def main():
     argsp.add_argument('filename')
     argsp.add_argument('--debugLabels', '-D', dest="debug_labels", action='store_true')
     argsp.add_argument('--position', '-P', type=str, default=0, dest='position')
-    argsp.add_argument('--symboltable', '-S', dest='symbol_table', action = 'store_true', help="Generates a symbol table")
+    argsp.add_argument('--symboltable', '-S', dest='symbol_table', action = 'store_true', help="Generate a symbol table")
+    argsp.add_argument('--pointers', dest='pointer_list', action = 'store_true', help="Generate a list of all pointers in the program.")
     argsp.add_argument('-l', '--link', dest='link', type=str, help="Links with an external symbol table, generated with -S")
     argsp.add_argument('--whereis', '-W', dest='whereis', type=str, help="Use with a number/word to search for a label at a position, or with a :-prefixed string to search for a label.")
     
@@ -390,10 +397,13 @@ def main():
             for label, pos in table.items():
                 if pos == search_pos:
                     print("{} at {}".format(label, pos))
+
+    elif args.pointer_list:
+        pointers = prog.pointers()
+        print(json.dumps(pointers))
                 
     else:
         print(prog.render_all())
-    #print(prog.top_level_labels())
 
 if __name__ == '__main__':
     main()
