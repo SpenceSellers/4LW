@@ -4,6 +4,7 @@ import dynmem.4lwa
 import print.4lwa
 import strings.4lwa
 import base10.4lwa
+import loadprog.4lwa
 
 array command_strs :poke_str :peek_str :base27_str :base10_str :coredump_str :write_str :jump_str :echo_str :memdebug_str :memdefrag_str :runinst_str :alloc_str :tapedump_str :loadtape_str ZZZZ
 array command_fns :poke_cmd :peek_cmd :base27_cmd :base10_cmd :coredump_cmd :write_cmd :jump_cmd :echo_cmd :memdebug_cmd :memdefrag_cmd :runinst_cmd :alloc_cmd :tapedump_cmd :loadtape_cmd ZZZZ
@@ -142,7 +143,7 @@ function tapedump_cmd preserving A {
     }
 }
 
-function loadtape_cmd preserving A B C {
+function loadtape_cmd preserving A B C E {
     call printTerminated [const :size_str]
     call readWord to [reg A]
     call malloc [reg A] to [reg B]
@@ -155,6 +156,10 @@ function loadtape_cmd preserving A B C {
          MV [reg dec A] [reg A]
     }
     call printWord [reg B]
+
+
+    call prepareProg [reg B] to [reg E]
+    JP [reg E]
     
 }
 

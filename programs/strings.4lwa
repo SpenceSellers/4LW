@@ -50,6 +50,15 @@ function strEq preserving A B {
     JP [const :@return]
 }
 
-function tokens preserving A B C {
-    
+# Returns length of a terminated sequence in words.
+# Does not include the terminator.
+function lengthTerminated preserving A B {
+    MV [stack S] [reg A] # Mem addr
+    MV [const 0] [reg B]
+    loop {
+         JZ [reg neg mem A] [const :@break]
+         MV [reg plusfour A] [reg A]
+         MV [reg inc B] [reg B]
+    }
+    MV [reg B] [stack V]
 }

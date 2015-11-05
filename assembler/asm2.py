@@ -65,8 +65,6 @@ class Bakeable:
             if isinstance(label, positions.PointingPos):
                 name = label.to_name
                 for l_, pos_ in table.items():
-                    #print(str(l_))
-                    #print(name)
                     if l_.is_label(name) and not l_.is_absolute():
                         pointers.append(pos)
         return sorted(pointers)

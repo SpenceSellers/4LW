@@ -1,0 +1,25 @@
+
+
+function prepareProg preserving A B C D E {
+    MV [stack S] [reg A] # Addr of executable
+    MV [reg A] [reg B] # Addr of pointer header start.
+    
+    call lengthTerminated [reg A] to [reg inc D] # Length of header in words.
+    MV [reg timesfour D] [reg D] # Length in letters.
+    AD [reg D] [reg A] [reg D] # Start of real program data.
+
+    call printWord [reg D]
+    loop {
+         JZ [reg neg mem B] [const :@break]
+
+         AD [reg mem B] [reg D] [reg E] # Pos of pointer = pointer offset + prog start
+
+         # call printWord [reg mem E]
+         AD [reg mem E] [reg D] [reg mem E] # Offset real pointer.
+         # call printWord [reg mem E]
+         
+         MV [reg plusfour B] [reg B]
+    }
+    
+    MV [reg D] [stack V]
+}
