@@ -10,6 +10,8 @@ import copy
 import argparse
 import json
 
+import positions
+
 def log(s):
     print(s, file=sys.stderr)
 
@@ -50,19 +52,26 @@ class Bakeable:
         labels = self.symbols()
         toplevels = {}
         for label, pos in labels.items():
-            if ':' not in label and not label.startswith('#'):
-                toplevels[label] = pos
+            if isinstance(label, positions.LabelPos):
+                
+                toplevels[label.name] = pos
 
         return toplevels
 
     def pointers(self):
-        labels = self.symbols()
+        table = self.symbols()
         pointers = []
-        for label, pos in labels.items():
-            if '#pointing' in label:
-                pointers.append(pos)
+        for label, pos in table.items():
+            if isinstance(label, positions.PointingPos):
+                name = label.to_name
+                for l_, pos_ in table.items():
+                    #print(str(l_))
+                    #print(name)
+                    if l_.is_label(name) and not l_.is_absolute():
+                        pointers.append(pos)
         return sorted(pointers)
 
+        
     
 class Positioned(Bakeable):
     def __init__(self, pos, inner):
@@ -304,6 +313,9 @@ def toBase27(n):
     for converted in digits:
         s += alpha[converted]
     return s
+
+def toWord(n):
+    return expandWord(toBase27(n))
 
 def toInternalChar(c):
     if len(c) != 1:

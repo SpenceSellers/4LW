@@ -4,6 +4,8 @@ import copy
 import sys
 import uuid
 
+from positions import *
+
 def log(s):
     print(s, file=sys.stderr)
 
@@ -61,7 +63,7 @@ class InjectAbsolute(Baker):
     def report(self):
         reported = copy.copy(self.internal.report())
         for label, pos in self.injected.items():
-            reported[label] = pos
+            reported[AbsoluteLabelPos(label)] = pos
         return reported
 
     def __repr__(self):
@@ -106,16 +108,15 @@ class CaptureScopeBaker(Baker):
     def render(self, table):
          # We have to restore the original names of our scoped items.
          # We just need the original names
-        innertable = copy.copy(self.inner.report())
         union = copy.copy(table)
 
-        for label, value in innertable.items():
+        for label, value in table.items():
             # Skip unscoped items.
-            if label.startswith('#'): continue
+            if not label.is_scoped(): continue
 
             # Find the new name, get the value, and apply it to the old name.
-            scopedname = self.enscope(label)
-            union[label] = table[scopedname]
+            if isinstance(label, EnscopedPos) and label.in_scope(self.scopeid):
+                union[label.descope()] = table[label]
 
         return self.inner.render(union)
 
@@ -125,11 +126,11 @@ class CaptureScopeBaker(Baker):
         innertable = self.inner.report()
         scopedtable = {}
         for label, sub_pos in innertable.items():
-            if label.startswith('#'):
+            if not label.is_scoped():
                 scopedtable[label] = sub_pos
             else:
                 # Hide these labels behind the scope id.
-                newlabel = self.enscope(label)
+                newlabel = EnscopedPos(self.scopeid, label)
                 scopedtable[newlabel] = sub_pos
                 
         return scopedtable
@@ -158,7 +159,7 @@ class Baked(Baker):
 
     def report(self):
         if self.label:
-            return {self.label: 0}
+            return {LabelPos(self.label): 0}
         else:
             return {}
 
@@ -179,7 +180,7 @@ class LabelBaker(Baker):
         return ''
 
     def report(self):
-        return {self.label: 0}
+        return {LabelPos(self.label): 0}
 
     def length(self):
         return 0
@@ -193,17 +194,31 @@ class Pointing(Baker):
         self.pointingID = uniqueID()
 
     def render(self, table):
-        try:
-            pointer = table[self.label]
-        except:
-            raise Exception("Unknown label in pointer: {}".format(self.label))
+        pointing = self.get_pointing_to(table)
+        pointer = table[pointing]
+
+            
         result = asm.expandWord(asm.toBase27(pointer))
         if len(result) != 4:
             raise Exception("Pointing baker returns pointer that is too large: {}".format(result))
         return result
 
+    def get_pointing_to(self, table):
+        pointing = None
+        for k, pos in table.items():
+            if k.is_label(self.label):
+                pointing = k
+                
+        if pointing == None:
+            raise Exception("Unknown label in pointer: {}".format(self.label))
+
+        return pointing
+
+    def is_pointing_to_absolute(self, table):
+        return self.get_pointing_to(table).is_absolute()
+        
     def report(self):
-        return {'#pointing' + self.pointingID: 0}
+        return {PointingPos(self.label): 0}
 
     def length(self):
         return 4
