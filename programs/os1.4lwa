@@ -6,8 +6,8 @@ import strings.4lwa
 import base10.4lwa
 import loadprog.4lwa
 
-array command_strs :poke_str :peek_str :base27_str :base10_str :coredump_str :write_str :jump_str :echo_str :memdebug_str :memdefrag_str :runinst_str :alloc_str :tapedump_str :loadtape_str ZZZZ
-array command_fns :poke_cmd :peek_cmd :base27_cmd :base10_cmd :coredump_cmd :write_cmd :jump_cmd :echo_cmd :memdebug_cmd :memdefrag_cmd :runinst_cmd :alloc_cmd :tapedump_cmd :loadtape_cmd ZZZZ
+array command_strs :poke_str :peek_str :base27_str :base10_str :coredump_str :write_str :jump_str :echo_str :memdebug_str :memdefrag_str :runinst_str :alloc_str :tapedump_str :loadtape_str :shutdown_str ZZZZ
+array command_fns :poke_cmd :peek_cmd :base27_cmd :base10_cmd :coredump_cmd :write_cmd :jump_cmd :echo_cmd :memdebug_cmd :memdefrag_cmd :runinst_cmd :alloc_cmd :tapedump_cmd :loadtape_cmd :shutdown_cmd ZZZZ
 label start
 
 call dynmemInit [const B___] [const ET__]
@@ -163,6 +163,10 @@ function loadtape_cmd preserving A B C E {
     
 }
 
+function shutdown_cmd {
+    HL
+}
+
 
 # (start: addr) (end: addr) -- io
 function coreDump preserving A B {
@@ -268,5 +272,6 @@ term_string runinst_str "runinst"
 term_string alloc_str "alloc"
 term_string tapedump_str "tapedump"
 term_string loadtape_str "loadtape"
+term_string shutdown_str "shutdown"
 
 

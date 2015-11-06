@@ -197,7 +197,6 @@ class Pointing(Baker):
         pointing = self.get_pointing_to(table)
         pointer = table[pointing]
 
-            
         result = asm.expandWord(asm.toBase27(pointer))
         if len(result) != 4:
             raise Exception("Pointing baker returns pointer that is too large: {}".format(result))

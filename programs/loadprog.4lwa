@@ -1,5 +1,5 @@
 
-
+# (executable addr) -- (prepared code addr)
 function prepareProg preserving A B C D E {
     MV [stack S] [reg A] # Addr of executable
     MV [reg A] [reg B] # Addr of pointer header start.
@@ -8,7 +8,6 @@ function prepareProg preserving A B C D E {
     MV [reg timesfour D] [reg D] # Length in letters.
     AD [reg D] [reg A] [reg D] # Start of real program data.
 
-    call printWord [reg D]
     loop {
          JZ [reg neg mem B] [const :@break]
 
