@@ -1,0 +1,49 @@
+MV [const 0] [reg C]
+
+label loop
+
+call printTerminated [const :valis]
+call printWord [reg C]
+call printTerminated [const :b10]
+call printBase10 [reg C]
+call printNewline
+call printTerminated [const :inputstr]
+call readLineTerm [const :buffer] [const 20]
+#MV [stack V] [const 0] # Delete
+
+call strEq [const :buffer] [const :inc]
+JE [stack V] [const ZZZZ] [const :increment]
+
+call strEq [const :buffer] [const :dec]
+JE [stack V] [const ZZZZ] [const :decrement]
+
+call strEq [const :buffer] [const :rst]
+JE [stack V] [const ZZZZ] [const :reset]
+
+call printTerminated [const :invalid]
+call printNewline
+JP [const :loop]
+
+label increment
+MV [reg inc C] [reg C]
+JP [const :loop]
+
+label decrement
+MV [reg dec C] [reg C]
+JP [const :loop]
+
+label reset
+MV [const 0] [reg C]
+JP [const :loop]
+
+HL
+string buffer "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+term_string valis "Value is "
+
+term_string inc "inc"
+term_string dec "dec"
+term_string rst "rst"
+
+term_string b10 " or in base 10 "
+term_string inputstr "Command "
+term_string invalid "That is not a valid command"
