@@ -139,11 +139,13 @@ function malloc preserving A B C {
     MV [const ZZZZ] [stack V]
 }
 
+# (mem addr) -- 
 function free {
     call tagOfMem [stack S]
     call setUnallocated [stack V]
 }
 
+# -- 
 function defragHeap preserving A B C {
     MV [const mem :dynamic_start] [reg B] # Following tag
     call nextTag [reg B] to [reg A] # Leading tag.
@@ -184,6 +186,7 @@ function defragHeap preserving A B C {
 
 }
 
+# -- 
 function debugHeap preserving A B {
     MV [const mem :dynamic_start] [reg A]
     loop {

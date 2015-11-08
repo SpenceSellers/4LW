@@ -1,0 +1,83 @@
+
+# (node addr) -- 
+function ll_next {
+    MV [stack mem plusfour S] [stack V]
+}
+# (node addr) -- 
+function ll_data {
+    MV [stack mem S] [stack V]
+}
+
+# (node addr) (nextaddr) -- 
+function ll_set_next {
+    MV [stack S] [stack mem plusfour S]
+}
+
+# (node addr) (data) --
+function ll_set_data {
+    MV [stack S] [stack mem S]
+}
+# (word data)
+function ll_new preserving A {
+    call malloc [const 2] to [reg A]
+    call ll_set_data [reg A] [stack S]
+    call ll_set_next [reg A] [const ZZZZ]
+    MV [reg A] [stack V]
+    
+}
+
+# (node addr) (data) -- 
+function ll_insert_after preserving A B C {
+    call ll_new [stack S] to [reg B] # New node
+    MV [stack S] [reg A] # Current node
+    call ll_next [reg A] to [reg C] # Old next.
+    call ll_set_next [reg B] [reg C]
+    call ll_set_next [reg A] [reg B]
+}
+
+# (node addr) (data) -- (new node addr)
+function ll_insert_before preserving A {
+    call ll_new [stack S] to [reg A] # New node
+    call ll_set_next [stack S] # Set to old node.
+    MV [reg A] [stack V]
+}
+
+# (node addr) -- (bool)
+function ll_is_last {
+    call ll_next [stack S]
+    JZ [stack neg V] [const :is_last]
+    MV [const 0] [stack V]
+    JP [const :@return]
+    
+    label is_last
+    MV [const ZZZZ] [stack V]
+}
+
+# (node addr) --
+function ll_free_node {
+    call free [stack S]
+}
+
+# (node addr) --
+function ll_free_list preserving A B {
+    MV [stack S] [reg A]
+    loop {
+         JZ [reg neg A] [const :@break]
+         call ll_next [reg A] to [reg B]
+         call ll_free_node [reg A]
+         MV [reg B] [reg A]
+    }
+}
+
+function ll_debug preserving A B {
+    MV [stack S] [reg A]
+    loop {
+         JZ [reg neg A] [const :@break]
+         call ll_data [reg A]
+         call printWord [stack V]
+         call ll_next [reg A] to [reg A]
+    }
+}
+
+
+

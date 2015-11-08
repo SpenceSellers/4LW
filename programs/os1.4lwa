@@ -5,6 +5,7 @@ import print.4lwa
 import strings.4lwa
 import base10.4lwa
 import loadprog.4lwa
+import linkedlist.4lwa
 
 array command_strs :poke_str :peek_str :base27_str :base10_str :coredump_str :write_str :jump_str :echo_str :memdebug_str :memdefrag_str :runinst_str :alloc_str :tapedump_str :loadtape_str :shutdown_str ZZZZ
 array command_fns :poke_cmd :peek_cmd :base27_cmd :base10_cmd :coredump_cmd :write_cmd :jump_cmd :echo_cmd :memdebug_cmd :memdefrag_cmd :runinst_cmd :alloc_cmd :tapedump_cmd :loadtape_cmd :shutdown_cmd ZZZZ
