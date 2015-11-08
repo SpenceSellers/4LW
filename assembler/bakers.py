@@ -51,7 +51,7 @@ class PositionShiftedBaker(Baker):
 
     def __repr__(self):
         return "Position by {} of ({})".format(self.shift, self.internal)
-            
+
 class InjectAbsolute(Baker):
     def __init__(self, injected, internal):
         self.internal = internal
@@ -68,7 +68,7 @@ class InjectAbsolute(Baker):
 
     def __repr__(self):
         return "Injected labels {} into ({})".format(self.injected, self.internal)
-        
+
 class BakerSequence(Baker):
     def __init__(self, seq):
         self.seq = seq
@@ -132,7 +132,7 @@ class CaptureScopeBaker(Baker):
                 # Hide these labels behind the scope id.
                 newlabel = EnscopedPos(self.scopeid, label)
                 scopedtable[newlabel] = sub_pos
-                
+
         return scopedtable
 
     def length(self):
@@ -191,7 +191,6 @@ class LabelBaker(Baker):
 class Pointing(Baker):
     def __init__(self, label):
         self.label = label
-        self.pointingID = uniqueID()
 
     def render(self, table):
         pointing = self.get_pointing_to(table)
@@ -207,7 +206,7 @@ class Pointing(Baker):
         for k, pos in table.items():
             if k.is_label(self.label):
                 pointing = k
-                
+
         if pointing == None:
             raise Exception("Unknown label in pointer: {}".format(self.label))
 
@@ -215,11 +214,13 @@ class Pointing(Baker):
 
     def is_pointing_to_absolute(self, table):
         return self.get_pointing_to(table).is_absolute()
-        
+
     def report(self):
+        # We want to report that we exist, so that the assembler can report all pointer locations.
         return {PointingPos(self.label): 0}
 
     def length(self):
+        # A pointer is one word long.
         return 4
 
     def __repr__(self):

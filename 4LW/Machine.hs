@@ -279,7 +279,9 @@ runInstruction (TapeRewind tapeIDloc) = do
     tapeID <- getData tapeIDloc
     let tapeLetter = tapeID ^. fourthLetter
     --let tryrewind (Just tape) = Just $ execState Tapes.tapeRewind tape
-    tapeDeck . at tapeLetter %= fmap (execState Tapes.tapeRewind)
+    -- "zoom" would probably work here, but the Maybe causes trouble.
+    --zoom (tapeDeck . at tapeLetter) (Tapes.tapeRewind)
+    --tapeDeck . at tapeLetter %= fmap (execState Tapes.tapeRewind)
 
 tick :: State MachineState ()
 tick = do

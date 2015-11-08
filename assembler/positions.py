@@ -1,3 +1,4 @@
+
 def uniqueID():
     return str(uuid.uuid4())[:8]
 
@@ -27,17 +28,17 @@ class AbsoluteLabelPos(LabelPos):
 
     def is_absolute(self):
         return True
-    
+
 class GlobalLabelPos(LabelPos):
     def __init__(self, name):
         super().__init__(name)
 
     def __repr__(self):
         return "#{}".format(self.name)
-    
+
     def is_scoped(self):
         return False
-    
+
 
 class EnscopedPos(Position):
     def __init__(self, scopeid, inner):
@@ -46,6 +47,10 @@ class EnscopedPos(Position):
 
     def descope(self):
         return self.inner
+
+    def is_label(self, s):
+        # TODO: This is likely wrong. What if it's the same name in different scopes??
+        return self.inner.is_label(s)
 
     def in_scope(self, scopeid):
         return scopeid == self.scopeid
@@ -62,4 +67,3 @@ class PointingPos(Position):
 
     def is_scoped(self):
         return False
-        

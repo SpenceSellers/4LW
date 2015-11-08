@@ -53,7 +53,7 @@ class Bakeable:
         toplevels = {}
         for label, pos in labels.items():
             if isinstance(label, positions.LabelPos):
-                
+
                 toplevels[label.name] = pos
 
         return toplevels
@@ -64,13 +64,13 @@ class Bakeable:
         for label, pos in table.items():
             if isinstance(label, positions.PointingPos):
                 name = label.to_name
-                for l_, pos_ in table.items():
-                    if l_.is_label(name) and not l_.is_absolute():
+                for otherlabel in table.keys():
+                    if otherlabel.is_label(name) and not otherlabel.is_absolute():
                         pointers.append(pos)
         return sorted(pointers)
 
-        
-    
+
+
 class Positioned(Bakeable):
     def __init__(self, pos, inner):
         self.pos = pos
@@ -78,7 +78,7 @@ class Positioned(Bakeable):
 
     def bake(self):
         return bakers.PositionShiftedBaker(self.pos, self.inner.bake())
- 
+
 class Injected(Bakeable):
     def __init__(self, table, inner):
         self.table = table
@@ -86,7 +86,7 @@ class Injected(Bakeable):
 
     def bake(self):
         return bakers.InjectAbsolute(self.table, self.inner.bake())
-    
+
 class Program(Bakeable):
     def __init__(self, bakeables):
         self.pieces = bakeables
@@ -239,9 +239,9 @@ class Array(Bakeable):
         self.datas = datas
 
     def bake(self):
-        
+
         return bakers.BakerSequence([bakers.LabelBaker(self.label)] + [b.bake() for b in self.datas])
-            
+
 class ConstWord(Bakeable):
     def __init__(self, word):
         word = expandWord(word)
@@ -354,7 +354,7 @@ def base27to10(s):
         accum += letter_to_int(letter) * (27**place)
         place += 1
     return accum
-    
+
 def parse_num(s):
     try:
         return int(s)
@@ -372,8 +372,8 @@ def main():
     argsp.add_argument('--pointers', dest='pointer_list', action = 'store_true', help="Generate a list of all pointers in the program.")
     argsp.add_argument('-l', '--link', dest='link', type=str, help="Links with an external symbol table, generated with -S")
     argsp.add_argument('--whereis', '-W', dest='whereis', type=str, help="Use with a number/word to search for a label at a position, or with a :-prefixed string to search for a label.")
-    
-    
+
+
 
     args = argsp.parse_args()
     filename = args.filename
@@ -386,12 +386,12 @@ def main():
         symbols_file = open(args.link, 'r')
         injected_symbols = json.load(symbols_file)
         symbols_file.close()
-        
+
     prog = Injected(injected_symbols, Positioned(parse_num(args.position), raw_prog_parsed))
-    
+
     if args.debug_labels:
         print(prog.debug_labels())
-        
+
     elif args.symbol_table:
         table = prog.top_level_symbols()
         print(json.dumps(table, indent=4))
@@ -411,7 +411,7 @@ def main():
     elif args.pointer_list:
         pointers = prog.pointers()
         print(json.dumps(pointers))
-                
+
     else:
         print(prog.render_all())
 
