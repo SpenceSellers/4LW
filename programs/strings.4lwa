@@ -26,6 +26,20 @@ function memcmp preserving A B C {
     label _mem_done
 }
 
+# (addr 1: addr) (addr2: addr) (length: words) --
+function memcpy preserving A B L {
+    MV [stack S] [reg L] # Remaining length
+    MV [stack S] [reg B] # Dest
+    MV [stack S] [reg A] # Source
+    loop {
+         JZ [reg L] [const :@break]
+         MV [reg mem B] [reg mem A]
+         MV [reg dec L] [reg L]
+         MV [reg plusfour A] [reg A]
+         MV [reg plusfour B] [reg B]
+    }   
+}
+
 # (a: Term string) (b: term string) -- (bool)
 function strEq preserving A B {
     MV [stack S] [reg A]
@@ -62,3 +76,27 @@ function lengthTerminated preserving A B {
     }
     MV [reg B] [stack V]
 }
+
+# (string addr) -- (alloc linkedlist[alloc strings])
+function strSplit preserving A B C {
+    
+}
+
+# (addr lastAddr) -- (nullable next addr)
+function strTok preserving A B {
+    MV [stack S] [reg A]
+    loop {
+         JE [reg mem A] [const ' '] [const :at_space]
+         JZ [reg neg mem A] [const :at_end]
+         MV [reg plusfour A] [reg A]
+    }
+
+    label at_space
+    MV [const ZZZZ] [reg mem A] # Write terminator at space.
+    MV [reg plusfour A] [stack V] # Return start of next.
+    JP [const :@return]
+
+    label at_end
+    MV [const ZZZZ] [stack V]
+}
+

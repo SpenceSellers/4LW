@@ -12,6 +12,9 @@ class Position:
     def is_label(self, s):
         return False
 
+    def contains_label(self, s):
+        return self.is_label(s)
+
 class LabelPos(Position):
     def __init__(self, name):
         self.name = name
@@ -50,7 +53,14 @@ class EnscopedPos(Position):
 
     def is_label(self, s):
         # TODO: This is likely wrong. What if it's the same name in different scopes??
-        return self.inner.is_label(s)
+        #return self.inner.is_label(s)
+        return False
+
+    def contains_label(self, s):
+        if isinstance(self.inner, EnscopedPos):
+            return self.inner.contains_label(s)
+        else:
+            return self.inner.in_scope(s)
 
     def in_scope(self, scopeid):
         return scopeid == self.scopeid
