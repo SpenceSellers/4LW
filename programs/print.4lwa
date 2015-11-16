@@ -21,6 +21,11 @@ function printTerminated preserving A B {
         AD [reg A] [const 4] [reg A]
     }
 }
+
+function println {
+    call printTerminated
+    call printNewline
+}
 # --
 function printNewline {
     MV [const __C_] [io]

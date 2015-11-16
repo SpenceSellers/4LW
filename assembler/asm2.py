@@ -404,9 +404,13 @@ def main():
                     print("{} at {} ({})".format(label, expandWord(toBase27(pos)), pos))
         else:
             search_pos = parse_num(args.whereis)
+            print("Searching at {}".format(search_pos))
             for label, pos in table.items():
                 if pos == search_pos:
                     print("{} at {}".format(label, pos))
+                if abs(pos-search_pos) < 100:
+                    print("Close: {} at {} (dist {})".format(label,pos, search_pos - pos))
+                        
 
     elif args.pointer_list:
         pointers = prog.pointers()

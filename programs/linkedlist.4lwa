@@ -3,6 +3,7 @@
 function ll_next {
     MV [stack mem plusfour S] [stack V]
 }
+
 # (node addr) -- 
 function ll_data {
     MV [stack mem S] [stack V]
@@ -17,13 +18,17 @@ function ll_set_next {
 function ll_set_data {
     MV [stack S] [stack mem S]
 }
+
+
 # (word data)
-function ll_new preserving A {
-    call malloc [const 2] to [reg A]
-    call ll_set_data [reg A] [stack S]
+function ll_new preserving A B {
+    call malloc [const 2] to [reg A] # New node
+    MV [stack S] [reg B] # Data word.
+    
+    call ll_set_data [reg A] [reg B]
+
     call ll_set_next [reg A] [const ZZZZ]
     MV [reg A] [stack V]
-    
 }
 
 # (node addr) (data) -- 
@@ -36,9 +41,10 @@ function ll_insert_after preserving A B C {
 }
 
 # (node addr) (data) -- (new node addr)
-function ll_insert_before preserving A {
+function ll_insert_before preserving A B {
     call ll_new [stack S] to [reg A] # New node
-    call ll_set_next [stack S] # Set to old node.
+    MV [stack S] [reg B]
+    call ll_set_next [reg A] [reg B] # Set to old node.
     MV [reg A] [stack V]
 }
 
@@ -73,10 +79,18 @@ function ll_debug preserving A B {
     MV [stack S] [reg A]
     loop {
          JZ [reg neg A] [const :@break]
-         call ll_data [reg A]
-         call printWord [stack V]
+         call ll_debug_node [reg A]
          call ll_next [reg A] to [reg A]
     }
+}
+
+function ll_debug_node preserving A B {
+    MV [stack S] [reg A]
+    call ll_data [reg A] to [reg B]
+    call ll_next [reg A]
+    call printf [stack V] [reg B] [reg A] [const :node_str]
+    JP [const :@return]
+    term_string node_str "Node at %w: %w next %w%n"
 }
 
 

@@ -41,8 +41,7 @@ loop {
     }
 
     label badcmd
-    call printTerminated [const :badcmd_str]
-    call printNewline
+    call println [const :badcmd_str]
 
     label commandDone
     call free [reg C]
@@ -149,6 +148,8 @@ function loadtape_cmd preserving A B C E {
     call readWord to [reg A]
     call malloc [reg A] to [reg B]
     MV [reg B] [reg C]
+    call printNewline
+    call println [const :loading_str]
     TR [const A]
     loop {
          JZ [reg A] [const :@break]
@@ -156,8 +157,6 @@ function loadtape_cmd preserving A B C E {
          MV [reg plusfour C] [reg C]
          MV [reg dec A] [reg A]
     }
-    call printWord [reg B]
-
 
     call prepareProg [reg B] to [reg E]
     JP [reg E]
@@ -257,6 +256,7 @@ term_string address_str "Addr: "
 term_string size_str "Size: "
 term_string done_str "Done."
 term_string badcmd_str "Bad command"
+term_string loading_str "Loading..."
 string cmd_buffer "XXXXXXXXXXXXXXXXXXXX"
 
 term_string poke_str "poke"
