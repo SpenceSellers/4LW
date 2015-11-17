@@ -64,9 +64,15 @@ class Bakeable:
         for label, pos in table.items():
             if isinstance(label, positions.PointingPos):
                 name = label.to_name
+                # if name.startswith("@"):
+                #     pointers.append(pos)
+                #     continue
+                    
                 for otherlabel in table.keys():
-                    if otherlabel.is_label(name) and not otherlabel.is_absolute():
+                    if otherlabel.contains_label(name) and not otherlabel.is_absolute():
                         pointers.append(pos)
+
+                    
         return sorted(pointers)
 
 
@@ -114,7 +120,7 @@ class Function(Bakeable):
         restores = Instruction('PL', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in reversed(self.preserves)]).bake()
         elems.append(restores)
         elems.append(Instruction('RT',[]).bake())
-        return bakers.BakerSequence([label, bakers.CaptureScopeBaker(bakers.BakerSequence(elems))])
+        return bakers.BakerSequence([label, bakers.CaptureScopeBaker(bakers.BakerSequence(elems), pretty_name = 'func_' + self.name)])
         #return bakers.BakerSequence([label] + elems)
 
     def __repr__(self):
@@ -125,7 +131,7 @@ class Loop(Bakeable):
         self.pieces = bakeables
 
     def bake(self):
-        name = bakers.uniqueID()
+        name = 'top_' + bakers.uniqueID()
         elems = []
         elems.append(Label(name).bake())
         elems.append(Label('@continue').bake())
@@ -133,7 +139,7 @@ class Loop(Bakeable):
         jumpback = Instruction('JP', [Operand('C', [], RefWord(name))])
         elems.append(jumpback.bake())
         elems.append(Label('@break').bake())
-        return bakers.CaptureScopeBaker(bakers.BakerSequence(elems))
+        return bakers.CaptureScopeBaker(bakers.BakerSequence(elems), pretty_name='loop')
 
 class If(Bakeable):
     def __init__(self, condition, then, otherwise = None):
@@ -395,6 +401,7 @@ def main():
     elif args.symbol_table:
         table = prog.top_level_symbols()
         print(json.dumps(table, indent=4))
+        
     elif args.whereis:
         table = prog.symbols()
         if args.whereis.startswith(':'):

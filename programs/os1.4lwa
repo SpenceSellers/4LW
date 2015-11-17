@@ -159,6 +159,7 @@ function loadtape_cmd preserving A B C E {
     }
 
     call prepareProg [reg B] to [reg E]
+    call println [const :done_str]
     JP [reg E]
     
 }

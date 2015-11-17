@@ -43,7 +43,7 @@ function ll_insert_after preserving A B C {
 # (node addr) (data) -- (new node addr)
 function ll_insert_before preserving A B {
     call ll_new [stack S] to [reg A] # New node
-    MV [stack S] [reg B]
+    MV [stack S] [reg B] # Old node addr
     call ll_set_next [reg A] [reg B] # Set to old node.
     MV [reg A] [stack V]
 }

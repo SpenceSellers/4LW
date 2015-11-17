@@ -60,7 +60,7 @@ class EnscopedPos(Position):
         if isinstance(self.inner, EnscopedPos):
             return self.inner.contains_label(s)
         else:
-            return self.inner.in_scope(s)
+            return self.inner.is_label(s)
 
     def in_scope(self, scopeid):
         return scopeid == self.scopeid

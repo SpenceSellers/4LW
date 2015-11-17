@@ -101,8 +101,10 @@ class BakerSequence(Baker):
         return "BakerSequence: {}".format(self.seq)
 
 class CaptureScopeBaker(Baker):
-    def __init__(self, baker):
+    def __init__(self, baker, pretty_name = None):
         self.scopeid = uniqueID()
+        if pretty_name:
+            self.scopeid = pretty_name + '_' + self.scopeid
         self.inner = baker
 
     def render(self, table):
