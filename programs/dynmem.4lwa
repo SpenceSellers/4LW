@@ -1,4 +1,7 @@
 reserve dynamic_start 1
+reserve free_count 1
+reserve defrag_cycle_size 1
+reserve easy_free 1
 
 # (Start addr) (End addr) --
 function dynmemInit preserving A B C {
@@ -8,6 +11,10 @@ function dynmemInit preserving A B C {
     DV [reg C] [const 4] [reg C] # Length in words.
 
     JG [reg C] [const _ZZZ] [const :memerr] # Max alloc length is ZZZ words.
+
+    MV [const 0] [const mem :free_count]
+    # Set how often memory will defrag.
+    MV [const 3] [const mem :defrag_cycle_size] 
 
     MV [reg A] [const mem :dynamic_start]
     call setUnallocated [const mem :dynamic_start]
@@ -143,6 +150,11 @@ function malloc preserving A B C {
 function free {
     call tagOfMem [stack S]
     call setUnallocated [stack V]
+    MV [const inc mem :free_count] [const mem :free_count]
+    
+    JN [const mem :free_count] [const mem :defrag_cycle_size] [const :@return]
+    MV [const 0] [const mem :free_count]
+    call defragHeap
 }
 
 # -- 
