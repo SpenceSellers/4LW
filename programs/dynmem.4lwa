@@ -187,6 +187,10 @@ function defragHeap preserving A B C {
 
          # We could zero the old tag if we wanted, but it doesn't hurt being left there.
 
+         # We could (and likely do) have more unallocated space after this tag.
+         # We want to merge all of them.
+         call nextTag [reg A] to [reg A]
+         JP [const :@continue]
 
          label next
          MV [reg A] [reg B]
