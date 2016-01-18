@@ -1,0 +1,485 @@
+import asmwrite as asm
+import abc
+import os
+
+TEMPSTACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord('_'))
+ARGSTACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord(asm.Stacks.ARGS.value))
+RESULT_STACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord(asm.Stacks.RESULT.value))
+MAX_WORD = asm.DataLoc(asm.LocType.CONST, asm.ConstWord("ZZZZ"))
+ZERO_WORD = asm.DataLoc(asm.LocType.CONST, asm.ConstWord(0))
+RETURN_LOC = asm.DataLoc(asm.LocType.CONST, asm.RefWord('@return'))
+
+
+class Context:
+    def __init__(self):
+        self.available_registers = ['A', 'B', 'C', 'D', 'D', 'E', 'F', 'G']
+        self.available_registers.reverse()
+        self.vars = {}
+        self.strings = []
+
+    def reserve_register(self):
+        return self.available_registers.pop()
+
+    def make_var(self, name):
+        reg = self.reserve_register()
+        self.vars[name] = reg
+
+    def get_reg_for_var(self, name):
+        return self.vars[name]
+
+    def var_exists(self, name):
+        return name in self.vars
+
+    def get_loc_for_name(self, name):
+        if self.var_exists(name):
+            return asm.DataLoc(asm.LocType.REG, asm.ConstWord(self.get_reg_for_var(name)))
+        else:
+            return asm.DataLoc(asm.LocType.CONST, asm.RefWord(name))
+
+    def get_used_regs(self):
+        regs = set()
+        for var, reg in self.vars.items():
+            regs.add(reg)
+
+        return regs
+
+    def register_string(self, string):
+        name = asm.ident('str')
+        self.strings.append((string, name))
+        return asm.DataLoc(asm.LocType.CONST, asm.RefWord(name))
+
+    def inherit(self, other):
+        for entry in other.strings:
+            self.strings.append(entry)
+
+    def emit_strings(self):
+        out = ''
+        for string, name in self.strings:
+            out += asm.TermString(name, string).emit()
+
+        return out
+
+class Statement:
+    pass
+
+class LValue:
+    @abc.abstractmethod
+    def emit_assign_to(self, src, context):
+        pass
+
+class Variable(LValue):
+    def __init__(self, name):
+        self.name = name
+
+    def emit_assign_to(self, src, context):
+        assert type(src) is asm.DataLoc
+        var_reg = context.get_reg_for_var(self.name)
+        return asm.Instruction(asm.Opcode.MOVE, [src,context.get_loc_for_name(self.name)]).emit()
+
+    def __repr__(self):
+        return "LValue {}".format(self.name)
+
+class RefLoc(LValue):
+    def __init__(self, loc):
+        assert isinstance(loc, Expr)
+        self.loc = loc
+    def emit_assign_to(self, src, context):
+        assert type(src) is asm.DataLoc
+        loccalc, locto = self.loc.emit_with_dest(context)
+        refloc = locto.with_flag(asm.DataFlag.MEM)
+        return loccalc + asm.Instruction(asm.Opcode.MOVE, [src,refloc]).emit()
+
+
+class Expr:
+    @abc.abstractmethod
+    def emit_with_dest(self, context):
+        pass
+
+    def emit_jump_true(self, jump_dest, context):
+        out = ''
+        calc, calc_dest = self.emit_with_dest(context)
+
+        out += calc
+        out += asm.Instruction(asm.Opcode.JUMPGREATER, [calc_dest, ZERO_WORD, jump_dest]).emit()
+
+        return out
+
+    def emit_jump_false(self, jump_dest, context):
+        out = ''
+        calc, calc_dest = self.emit_with_dest(context)
+
+        out += calc
+        out += asm.Instruction(asm.Opcode.JUMPZERO, [calc_dest, jump_dest]).emit()
+
+        return out
+
+class ConstExpr(Expr):
+    def __init__(self, val):
+        self.val = val
+
+    def emit_with_dest(self, context):
+        return ('', asm.DataLoc(asm.LocType.CONST, asm.ConstWord(self.val)))
+
+class VarExpr(Expr):
+    def __init__(self, varname):
+        self.varname = varname
+
+    def emit_with_dest(self, context):
+        reg = context.get_reg_for_var(self.varname)
+        return ('', asm.DataLoc(asm.LocType.REG, asm.ConstWord(reg)))
+
+class StringExpr(Expr):
+    def __init__(self, string):
+        self.string = string
+
+    def emit_with_dest(self, context):
+        loc = context.register_string(self.string)
+        return ('', loc)
+
+class DerefExpr(Expr):
+    def __init__(self, expr):
+        self.expr = expr
+
+    def emit_with_dest(self, context):
+        calc, dest = self.expr.emit_with_dest(context)
+        derefed_dest = dest.with_flag(asm.DataFlag.MEM)
+        return (calc, derefed_dest)
+
+class BiExpr(Expr):
+    def __init__(self, a, b):
+        assert isinstance(a, Expr)
+        assert isinstance(b, Expr)
+        self.a = a
+        self.b = b
+
+    @abc.abstractmethod
+    def opcode(self):
+        pass
+
+    def emit_with_dest(self, context):
+        acalc, adest = self.a.emit_with_dest(context)
+        bcalc, bdest = self.b.emit_with_dest(context)
+        ins = asm.Instruction(self.opcode(), [adest, bdest, TEMPSTACK])
+        return ("{}{}{}".format(acalc, bcalc, ins.emit()), TEMPSTACK)
+
+class AddExpr(BiExpr):
+    def opcode(self):
+        return asm.Opcode.ADD
+
+class MulExpr(BiExpr):
+    def opcode(self):
+        return asm.Opcode.MUL
+
+class SubExpr(BiExpr):
+    def opcode(self):
+        return asm.Opcode.SUB
+
+class DivExpr(BiExpr):
+    def opcode(self):
+        return asm.Opcode.DIV
+
+class ModExpr(BiExpr):
+    def opcode(self):
+        return asm.Opcode.MOD
+
+class Negate(Expr):
+    def __init__(self, inner):
+        self.inner = inner
+
+    def emit_with_dest(self, context):
+        innercalc, dest = self.inner.emit_with_dest(context)
+        return (innercalc, dest.with_flag(asm.DataFlag.NEG))
+
+class Biconditional(Expr):
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    @abc.abstractmethod
+    def emit_conditional(self, aloc, bloc, successloc):
+        pass
+
+    def emit_with_dest(self, context):
+        out = ''
+        equal_label = asm.AnonLabel('equal')
+        equaldone_label = asm.AnonLabel('equal_done')
+
+        acalc, adest = self.a.emit_with_dest(context)
+        bcalc, bdest = self.b.emit_with_dest(context)
+        out += asm.comment("Begin equality check")
+
+        out += bcalc # Eval B
+        out += acalc # Eval A
+
+        out += self.emit_conditional(adest, bdest, equal_label.as_dataloc())
+
+        out += asm.Instruction(asm.Opcode.MOVE, [ZERO_WORD, TEMPSTACK]).emit()
+        out += asm.Jump(equaldone_label.as_dataloc()).emit()
+
+        out += equal_label.emit()
+        out += asm.Instruction(asm.Opcode.MOVE, [MAX_WORD, TEMPSTACK]).emit()
+        out += equaldone_label.emit()
+        out += asm.comment("End equality check")
+
+        return (out, TEMPSTACK)
+
+    def emit_jump_true(self, dest, context):
+
+        out = ''
+        acalc, adest = self.a.emit_with_dest(context)
+        bcalc, bdest = self.b.emit_with_dest(context)
+        out += bcalc
+        out += acalc
+        out += self.emit_conditional(adest, bdest, dest)
+
+        return out
+
+    def emit_jump_false(self, dest, context):
+        label = asm.AnonLabel('ontrue_jumpfalse')
+        out = ''
+        out += self.emit_jump_true(label.as_dataloc(), context)
+        out += asm.Jump(dest).emit()
+        out += label.emit()
+        return out
+
+
+class Equality(Biconditional):
+    def emit_conditional(self, aloc, bloc, successloc):
+        return asm.Instruction(asm.Opcode.JUMPEQUAL, [aloc, bloc, successloc]).emit()
+
+class Inequality(Biconditional):
+    def emit_conditional(self, aloc, bloc, successloc):
+        return asm.Instruction(asm.Opcode.JUMPNOTEQUAL, [aloc, bloc, successloc]).emit()
+
+class Greater(Biconditional):
+    def emit_conditional(self, aloc, bloc, successloc):
+        return asm.Instruction(asm.Opcode.JUMPGREATER, [aloc, bloc, successloc]).emit()
+
+class Lesser(Biconditional):
+    def emit_conditional(self, aloc, bloc, successloc):
+        return asm.Instruction(asm.Opcode.JUMPLESSER, [aloc, bloc, successloc]).emit()
+
+class FCall(Expr):
+    def __init__(self, fname, args=[]):
+        self.fname = fname
+        self.args = args
+        for arg in args:
+            assert isinstance(arg, Expr)
+
+    def emit_with_dest(self, context):
+        argcalcs = []
+        for arg in reversed(self.args):
+            calc, dest = arg.emit_with_dest(context)
+            argcalcs.append(calc)
+            move_to_arg_stack = asm.Instruction(asm.Opcode.MOVE, [dest, ARGSTACK])
+            argcalcs.append(move_to_arg_stack.emit())
+
+        call = asm.Instruction(asm.Opcode.FUNCCALL, [asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.fname))])
+        return (''.join(argcalcs) + call.emit(), RESULT_STACK)
+
+class Io(LValue, Expr):
+    def __init__(self):
+        pass
+
+    def emit_assign_to(self, src, context):
+        return asm.Instruction(asm.Opcode.MOVE, [src,asm.DataLoc(asm.LocType.IO)]).emit()
+
+    def emit_with_dest(self, context):
+        return ('', asm.DataLoc(asm.LocType.IO))
+
+class Stack(LValue, Expr):
+    def __init__(self, letter):
+        assert(len(letter) == 1)
+        self.letter = letter
+
+    def emit_assign_to(self, src, context):
+        return asm.Instruction(asm.Opcode.MOVE, [src,asm.DataLoc(asm.LocType.STACK, asm.ConstWord(self.letter))]).emit()
+
+    def emit_with_dest(self, context):
+        return ('', asm.DataLoc(asm.LocType.STACK, asm.ConstWord(self.letter)))
+
+class Assignment(Statement):
+    def __init__(self, lvalue, rvalue):
+        assert isinstance(lvalue, LValue)
+        assert isinstance(rvalue, Expr)
+        self.lvalue = lvalue
+        self.rvalue = rvalue
+
+    def emit(self, context):
+        calc, dest = self.rvalue.emit_with_dest(context)
+        return calc + self.lvalue.emit_assign_to(dest, context)
+
+    def __repr__(self):
+        return "<assign {} := {}>".format(self.lvalue, self.rvalue)
+
+
+class DeclareVar(Statement):
+    def __init__(self, varname):
+        assert type(varname) is str
+        self.varname = varname
+
+    def emit(self, context):
+        context.make_var(self.varname)
+        return ''
+
+class Sequence(Statement):
+    def __init__(self, statements):
+        self.statements = statements
+
+    def emit(self, context, indent = 0):
+        asm = ''
+        for statement in self.statements:
+            assert isinstance(statement, Statement)
+            asm += indent_text(statement.emit(context), indent)
+
+        return asm
+
+    def emit_top_level(self, context):
+        out = ''
+        out += self.emit(context)
+        out += context.emit_strings()
+        return out
+
+    def __repr__(self):
+        return "Sequence: {}".format(self.statements)
+
+class Function(Statement):
+    def __init__(self, name, args, sequence):
+        self.name = name
+        self.args = args
+        self.sequence = sequence
+
+    def emit(self, context):
+        c = Context()
+        move_args = ''
+        for arg in self.args:
+            c.make_var(arg)
+            reg = c.get_loc_for_name(arg)
+            move_args += asm.Instruction(asm.Opcode.MOVE, [ARGSTACK, reg]).emit()
+
+        inner = move_args + self.sequence.emit(c)
+        to_preserve = c.get_used_regs()
+        context.inherit(c)
+        return asm.Function(self.name, inner, preserving = to_preserve).emit()
+
+class ExprStatement(Statement):
+    def __init__(self, expr):
+        assert isinstance(expr, Expr)
+        self.expr = expr
+
+    def emit(self, context):
+        calc, dest = self.expr.emit_with_dest(context)
+        remove = asm.Instruction(asm.Opcode.MOVE, [dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(0))])
+        return calc + remove.emit()
+
+class Return(Statement):
+    def __init__(self, expr = None):
+        self.expr = expr
+
+    def emit(self, context):
+        if self.expr:
+            calc, dest = self.expr.emit_with_dest(context)
+            saveval = asm.Instruction(asm.Opcode.MOVE, [dest, RESULT_STACK])
+            retjump = asm.Jump(RETURN_LOC)
+            return calc + saveval.emit() + retjump.emit()
+        else:
+            return asm.Jump(RETURN_LOC).emit()
+
+class Halt(Statement):
+    def emit(self, context):
+        return asm.Instruction(asm.Opcode.HALT).emit()
+
+class Nop(Statement):
+    def emit(self, context):
+        return asm.Instruction(asm.Opcode.NOP).emit()
+class If(Statement):
+    def __init__(self, condition, then, otherwise = None):
+        self.condition = condition
+        self.then = then
+        self.otherwise = otherwise
+
+    def emit(self, context):
+        then_label = asm.AnonLabel("then")
+        # else_label = asm.AnonLabel("else")
+        endif_label = asm.AnonLabel("endif")
+
+        out = ''
+        out += asm.comment("Begin If")
+        #condcalc, conddest = self.condition.emit_with_dest(context)
+        out += self.condition.emit_jump_true(then_label.as_dataloc(), context)
+        out += asm.comment("else")
+        if self.otherwise:
+            out += self.otherwise.emit(context)
+        out += asm.Jump(endif_label.as_dataloc()).emit()
+        out += asm.comment("then")
+        out += then_label.emit()
+        out += self.then.emit(context)
+        out += endif_label.emit()
+        out += asm.comment("End if")
+        return out
+
+class While(Statement):
+    def __init__(self, condition, inner):
+        self.cond = condition
+        self.inner = inner
+
+    def emit(self, context):
+        startlabel = asm.AnonLabel('while')
+        endwhile = asm.AnonLabel('endwhile')
+
+        #condcode, conddest = self.cond.emit_with_dest(context)
+        #test = asm.Instruction(asm.Opcode.JUMPZERO, [conddest, endwhile.as_dataloc()]).emit()
+
+        test = self.cond.emit_jump_false(endwhile.as_dataloc(), context)
+
+        innercode = self.inner.emit(context)
+
+        jumptop = asm.Jump(startlabel.as_dataloc())
+
+        return startlabel.emit() + test + innercode + jumptop.emit() + endwhile.emit()
+
+class Include(Statement):
+    def __init__(self, path):
+        self.path = path
+
+    def compile(self):
+        import compiler
+        extension = os.path.splitext(self.path)[1]
+        if extension in ('4lwa', 'asm'):
+            f = open(self.path, 'r')
+            text = f.read()
+            f.close()
+            return text
+        else:
+            # We'll hope that this is the right language.
+            return compiler.compile_file(self.path)
+
+
+    def emit(self, context):
+        return self.compile()
+
+class Asm(Statement):
+    def __init__(self, text):
+        self.text = text
+
+    def emit(self, context):
+        return self.text + '\n'
+
+def indent_text(text, amount=4, ch=' '):
+    padding = amount * ch
+    lines = text.split('\n')
+    padded = [line if len(line) == 0 else padding + line for line in lines]
+    return "\n".join(padded)
+    #return padding + ('\n'+padding).join(lines)
+
+
+# c = Context()
+# v = Variable('myvar')
+# c.make_var('myvar')
+# # #
+# declare = DeclareVar('myvar')
+# assign = Assignment(v, AddExpr(ConstExpr(1), VarExpr('myvar')))
+# if_ = If(ConstExpr(0), assign, declare)
+# #
+# # f = Function('myfunc', [], Sequence([declare, assign]))
+# print(if_.emit(c))
