@@ -281,7 +281,7 @@ runInstruction (TapeRewind tapeIDloc) = do
     --let tryrewind (Just tape) = Just $ execState Tapes.tapeRewind tape
     -- "zoom" would probably work here, but the Maybe causes trouble.
     --zoom (tapeDeck . at tapeLetter) (Tapes.tapeRewind)
-    --tapeDeck . at tapeLetter %= fmap (execState Tapes.tapeRewind)
+    tapeDeck . at tapeLetter %= fmap (execState Tapes.tapeRewind)
 
 tick :: State MachineState ()
 tick = do

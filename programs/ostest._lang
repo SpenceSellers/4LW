@@ -1,0 +1,20 @@
+main();
+halt;
+
+include <dynmem.4lwa>;
+include <print.4lwa>;
+include <strings.4lwa>;
+
+declare dynmemInit;
+declare printTerminated;
+declare malloc returns;
+declare println;
+
+function main(){
+    dynmemInit(B___, ET__);
+    println("Hello world");
+    var alloc;
+    alloc := malloc(20);
+    printWord(alloc);
+    return 0;
+};
