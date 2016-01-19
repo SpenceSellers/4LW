@@ -15,7 +15,7 @@ def log(s):
 
 class Context:
     def __init__(self, parent = None):
-        self.available_registers = ['A', 'B', 'C', 'D', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
+        self.available_registers = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
         self.available_registers.reverse()
         self.vars = {}
         self.strings = []
@@ -33,6 +33,7 @@ class Context:
 
     def make_var(self, name):
         reg = self.reserve_register()
+        log("var {} is {}".format(name, reg));
         self.vars[name] = reg
 
     def get_reg_for_var(self, name):
@@ -145,12 +146,20 @@ class Expr:
     def must_read_result(self, context):
         return False
 
+    # It doesn't matter if this is true and claims to be false,
+    # But the opposite WILL cause incorrect code to be generated.
+    def is_always_true(self):
+        return False;
+
 class ConstExpr(Expr):
     def __init__(self, val):
         self.val = val
 
     def emit_with_dest(self, context):
         return ('', asm.DataLoc(asm.LocType.CONST, asm.ConstWord(self.val)))
+
+    def is_always_true(self):
+        return not asm.ConstWord(self.val).is_zero()
 
 
 class VarExpr(Expr):
@@ -231,6 +240,7 @@ class Negate(Expr):
 
     def must_read_result(self, context):
         return inner.must_read_result(context)
+
 
 class Biconditional(Expr):
     def __init__(self, a, b):
@@ -485,8 +495,10 @@ class If(Statement):
 
         out = ''
         out += asm.comment("Begin If")
-        #condcalc, conddest = self.condition.emit_with_dest(context)
-        out += self.condition.emit_jump_true(then_label.as_dataloc(), context)
+        if self.condition.is_always_true():
+            out += asm.Jump(then_label.as_dataloc()).emit()
+        else:
+            out += self.condition.emit_jump_true(then_label.as_dataloc(), context)
         out += asm.comment("else")
         if self.otherwise:
             out += self.otherwise.emit(context)
@@ -507,10 +519,11 @@ class While(Statement):
         startlabel = asm.AnonLabel('while')
         endwhile = asm.AnonLabel('endwhile')
 
-        #condcode, conddest = self.cond.emit_with_dest(context)
-        #test = asm.Instruction(asm.Opcode.JUMPZERO, [conddest, endwhile.as_dataloc()]).emit()
-
-        test = self.cond.emit_jump_false(endwhile.as_dataloc(), context)
+        if self.cond.is_always_true():
+            # This while is an infinite loop
+            test = ''
+        else:
+            test = self.cond.emit_jump_false(endwhile.as_dataloc(), context)
 
         innercode = self.inner.emit(context)
 
@@ -545,6 +558,20 @@ class Asm(Statement):
     def emit(self, context):
         return self.text + '\n'
 
+class Goto(Statement):
+    def __init__(self, labelname):
+        self.labelname = labelname
+
+    def emit(self, context):
+        return asm.Jump(asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.labelname))).emit()
+
+class Label(Statement):
+    def __init__(self, name):
+        self.name = name
+
+    def emit(self, context):
+        return asm.Label(self.name).emit()
+    
 def indent_text(text, amount=4, ch=' '):
     padding = amount * ch
     lines = text.split('\n')

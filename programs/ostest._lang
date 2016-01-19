@@ -9,6 +9,7 @@ declare dynmemInit;
 declare printTerminated;
 declare malloc returns;
 declare println;
+declare free;
 
 function main(){
     dynmemInit(B___, ET__);
@@ -16,5 +17,35 @@ function main(){
     var alloc;
     alloc := malloc(20);
     printWord(alloc);
-    return 0;
+    printNewline();
+    strcpy("Test string", alloc, 20);
+    println(alloc);
+    free(alloc);
+};
+
+function logWord(str, word){
+    printTerminated(str);
+    printWord(word);
+    printNewline();
+};
+
+function strcpy(src, dest, maxlen){
+    var i;
+    var char;    
+    
+    i := 0;
+    while (1){
+        char := *(src + (i*4));
+        *(dest + (i*4)) := char;
+        if (char == ZZZZ){
+            goto endstr;
+        };
+
+        if (i > maxlen){
+           goto endstr;
+        };
+        
+        i := i + 1;
+    };
+    label endstr;
 };

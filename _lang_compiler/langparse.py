@@ -99,9 +99,13 @@ include = (Keyword('include') + QuotedString(quoteChar = '<', endQuoteChar = '>'
 
 asm = (Keyword('asm') + QuotedString(quoteChar = '\"')).setParseAction(lambda t: ast.Asm(t[1]))
 
+goto = (Keyword('goto') + identifier).setParseAction(lambda t: ast.Goto(t[1]))
+
+label = (Keyword('label') + identifier).setParseAction(lambda t: ast.Label(t[1]))
+
 comment = ('#' + SkipTo(lineEnd))
 
-line = comment.suppress() | MatchFirst([declarevar, declarefn, assignment, function, return_, halt, if_, while_, include, asm, expr_statement, nop]) + Literal(';').suppress() + Optional(comment).suppress()
+line = comment.suppress() | MatchFirst([declarevar, declarefn, assignment, function, return_, halt, if_, while_, include, asm, goto, label, expr_statement, nop]) + Literal(';').suppress() + Optional(comment).suppress()
 
 sequence = ZeroOrMore(line).setParseAction(lambda t: ast.Sequence(t.asList()))
 

@@ -80,6 +80,9 @@ class ConstWord:
     def emit(self):
         return self.word
 
+    def is_zero(self):
+        return self.word == '____'
+
 class RefWord:
     def __init__(self, ident):
         self.ident = ident
