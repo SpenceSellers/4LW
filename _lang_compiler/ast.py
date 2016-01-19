@@ -11,14 +11,22 @@ RETURN_LOC = asm.DataLoc(asm.LocType.CONST, asm.RefWord('@return'))
 
 
 class Context:
-    def __init__(self):
-        self.available_registers = ['A', 'B', 'C', 'D', 'D', 'E', 'F', 'G']
+    def __init__(self, parent = None):
+        self.available_registers = ['A', 'B', 'C', 'D', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
         self.available_registers.reverse()
         self.vars = {}
         self.strings = []
+        self.parent = parent
+        self.functions = {}
+
+        # TODO self.types
+        # TODO function return values.
 
     def reserve_register(self):
-        return self.available_registers.pop()
+        try:
+            return self.available_registers.pop()
+        except IndexError:
+            return None
 
     def make_var(self, name):
         reg = self.reserve_register()
@@ -83,6 +91,7 @@ class RefLoc(LValue):
     def __init__(self, loc):
         assert isinstance(loc, Expr)
         self.loc = loc
+
     def emit_assign_to(self, src, context):
         assert type(src) is asm.DataLoc
         loccalc, locto = self.loc.emit_with_dest(context)
@@ -113,12 +122,16 @@ class Expr:
 
         return out
 
+    def must_read_result(self, context):
+        return False
+
 class ConstExpr(Expr):
     def __init__(self, val):
         self.val = val
 
     def emit_with_dest(self, context):
         return ('', asm.DataLoc(asm.LocType.CONST, asm.ConstWord(self.val)))
+
 
 class VarExpr(Expr):
     def __init__(self, varname):
@@ -145,6 +158,9 @@ class DerefExpr(Expr):
         derefed_dest = dest.with_flag(asm.DataFlag.MEM)
         return (calc, derefed_dest)
 
+    def must_read_result(self, context):
+        return self.expr.must_read_result(context)
+
 class BiExpr(Expr):
     def __init__(self, a, b):
         assert isinstance(a, Expr)
@@ -161,6 +177,9 @@ class BiExpr(Expr):
         bcalc, bdest = self.b.emit_with_dest(context)
         ins = asm.Instruction(self.opcode(), [adest, bdest, TEMPSTACK])
         return ("{}{}{}".format(acalc, bcalc, ins.emit()), TEMPSTACK)
+
+    def must_read_result(self, context):
+        return True;
 
 class AddExpr(BiExpr):
     def opcode(self):
@@ -189,6 +208,9 @@ class Negate(Expr):
     def emit_with_dest(self, context):
         innercalc, dest = self.inner.emit_with_dest(context)
         return (innercalc, dest.with_flag(asm.DataFlag.NEG))
+
+    def must_read_result(self, context):
+        return inner.must_read_result(context)
 
 class Biconditional(Expr):
     def __init__(self, a, b):
@@ -242,6 +264,8 @@ class Biconditional(Expr):
         out += label.emit()
         return out
 
+    def must_read_result(self, context):
+        return True
 
 class Equality(Biconditional):
     def emit_conditional(self, aloc, bloc, successloc):
@@ -268,14 +292,18 @@ class FCall(Expr):
 
     def emit_with_dest(self, context):
         argcalcs = []
-        for arg in reversed(self.args):
+        for arg in self.args:
             calc, dest = arg.emit_with_dest(context)
             argcalcs.append(calc)
             move_to_arg_stack = asm.Instruction(asm.Opcode.MOVE, [dest, ARGSTACK])
             argcalcs.append(move_to_arg_stack.emit())
 
+
         call = asm.Instruction(asm.Opcode.FUNCCALL, [asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.fname))])
         return (''.join(argcalcs) + call.emit(), RESULT_STACK)
+
+    def must_read_result(self, context):
+        return True
 
 class Io(LValue, Expr):
     def __init__(self):
@@ -350,9 +378,10 @@ class Function(Statement):
         self.sequence = sequence
 
     def emit(self, context):
-        c = Context()
+        c = Context(parent=context)
         move_args = ''
-        for arg in self.args:
+        # Args are pushed backwards
+        for arg in reversed(self.args):
             c.make_var(arg)
             reg = c.get_loc_for_name(arg)
             move_args += asm.Instruction(asm.Opcode.MOVE, [ARGSTACK, reg]).emit()
@@ -368,9 +397,12 @@ class ExprStatement(Statement):
         self.expr = expr
 
     def emit(self, context):
+        out = ''
         calc, dest = self.expr.emit_with_dest(context)
-        remove = asm.Instruction(asm.Opcode.MOVE, [dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(0))])
-        return calc + remove.emit()
+        out += calc
+        if self.expr.must_read_result(context):
+            out += asm.Instruction(asm.Opcode.MOVE, [dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(0))]).emit()
+        return out
 
 class Return(Statement):
     def __init__(self, expr = None):
@@ -392,6 +424,7 @@ class Halt(Statement):
 class Nop(Statement):
     def emit(self, context):
         return asm.Instruction(asm.Opcode.NOP).emit()
+
 class If(Statement):
     def __init__(self, condition, then, otherwise = None):
         self.condition = condition
@@ -445,7 +478,7 @@ class Include(Statement):
     def compile(self):
         import compiler
         extension = os.path.splitext(self.path)[1]
-        if extension in ('4lwa', 'asm'):
+        if extension.lower() in ('.4lwa', '.asm'):
             f = open(self.path, 'r')
             text = f.read()
             f.close()
