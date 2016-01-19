@@ -75,6 +75,9 @@ lvalue = MatchFirst([lvariable, mem_lvalue, special_loc])
 
 declarevar = (Keyword('var') + identifier).setParseAction(lambda t: ast.DeclareVar(t[1]))
 
+declarefn = (Keyword('declare') + identifier + Optional(Keyword('returns').setParseAction(lambda t: True), default = False))\
+    .setParseAction(lambda t: ast.DeclareFunction(t[1], t[2]))
+
 assignment = (lvalue + Literal(':=') + expr).setParseAction(lambda t: ast.Assignment(t[0], t[2]))
 
 return_ = (Keyword('return') + expr).setParseAction(lambda t: ast.Return(t[1]))
@@ -98,7 +101,7 @@ asm = (Keyword('asm') + QuotedString(quoteChar = '\"')).setParseAction(lambda t:
 
 comment = ('#' + SkipTo(lineEnd))
 
-line = comment.suppress() | MatchFirst([declarevar, assignment, function, return_, halt, if_, while_, include, asm, expr_statement, nop]) + Literal(';').suppress() + Optional(comment).suppress()
+line = comment.suppress() | MatchFirst([declarevar, declarefn, assignment, function, return_, halt, if_, while_, include, asm, expr_statement, nop]) + Literal(';').suppress() + Optional(comment).suppress()
 
 sequence = ZeroOrMore(line).setParseAction(lambda t: ast.Sequence(t.asList()))
 
@@ -111,54 +114,3 @@ function << (Keyword('function') + identifier + '(' + function_args + ')' + bloc
 
 # lambda q: ast.Function(t[1], t[3], + t[5] )
 program = sequence + StringEnd()
-
-test = '''
-var foo;
-var bar;
-foo = test(5);
-5 + 10;
-bar = (foo + 10);
-*foo = *10;
-function myfunc (){
-    var what;
-    var how;
-    var who;
-    how := what + who;
-};
-'''
-
-test2 = '''
-countDown(1);
-halt;
-function incr (a) {
-    return a + 1;
-};
-
-function odd(b) {
-    if (b) {
-        [IO] := 1;
-    } else {
-        [IO] := 2;
-    };
-};
-
-function countDown(n) {
-    while (n < 27){
-        [IO] := n;
-        n := n + 1;
-    };
-};
-
-function two(a,b){
-    [IO] := a;
-    [IO] := b;
-    return a + b;
-};
-'''
-
-#q = program.parseString(test2)
-#print(q.dump())
-
-#c = ast.Context();
-
-#print(q[0].emit(c));

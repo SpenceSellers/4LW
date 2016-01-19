@@ -1,6 +1,7 @@
 import asmwrite as asm
 import abc
 import os
+import sys
 
 TEMPSTACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord('_'))
 ARGSTACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord(asm.Stacks.ARGS.value))
@@ -9,6 +10,8 @@ MAX_WORD = asm.DataLoc(asm.LocType.CONST, asm.ConstWord("ZZZZ"))
 ZERO_WORD = asm.DataLoc(asm.LocType.CONST, asm.ConstWord(0))
 RETURN_LOC = asm.DataLoc(asm.LocType.CONST, asm.RefWord('@return'))
 
+def log(s):
+    print(s, file=sys.stderr)
 
 class Context:
     def __init__(self, parent = None):
@@ -51,6 +54,20 @@ class Context:
 
         return regs
 
+    def register_fn(self, name, returns):
+        self.functions[name] = returns
+
+
+    def does_fn_return_value(self, name):
+        try:
+            return self.functions[name]
+        except:
+            # Recurse up parent tree until we maybe find someone who knows about this fn.
+            if self.parent:
+                return self.parent.does_fn_return_value(name)
+            else:
+                raise SymbolNotRegisteredException("Unknown function: {}".format(name))
+
     def register_string(self, string):
         name = asm.ident('str')
         self.strings.append((string, name))
@@ -66,6 +83,9 @@ class Context:
             out += asm.TermString(name, string).emit()
 
         return out
+
+class SymbolNotRegisteredException(Exception):
+    pass
 
 class Statement:
     pass
@@ -298,12 +318,29 @@ class FCall(Expr):
             move_to_arg_stack = asm.Instruction(asm.Opcode.MOVE, [dest, ARGSTACK])
             argcalcs.append(move_to_arg_stack.emit())
 
+        # If the function returns a value, it's going to have to be cleared off of the
+        # function result stack one way or another.
+        try:
+            has_result = context.does_fn_return_value(self.fname)
+        except SymbolNotRegisteredException:
+            # We don't know about this function, we'll just have to assume the user knows best.
+            # The safe default is to not cause a stack underflow.
+            has_result = False
+
+        if has_result:
+            result_dest = RESULT_STACK
+        else:
+            result_dest = ZERO_WORD
 
         call = asm.Instruction(asm.Opcode.FUNCCALL, [asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.fname))])
-        return (''.join(argcalcs) + call.emit(), RESULT_STACK)
+        return (''.join(argcalcs) + call.emit(), result_dest)
 
     def must_read_result(self, context):
-        return True
+        try:
+            return context.does_fn_return_value(self.fname)
+        except SymbolNotRegisteredException:
+            log("Unknown fn {}. Return values may not be cleared.".format(self.fname))
+            return False
 
 class Io(LValue, Expr):
     def __init__(self):
@@ -348,6 +385,16 @@ class DeclareVar(Statement):
 
     def emit(self, context):
         context.make_var(self.varname)
+        return ''
+
+class DeclareFunction(Statement):
+    def __init__(self, name, returns):
+        self.name = name
+        self.returns = returns
+        log("Declared {} returns {}".format(name, returns))
+
+    def emit(self, context):
+        context.register_fn(self.name, self.returns)
         return ''
 
 class Sequence(Statement):
@@ -504,15 +551,3 @@ def indent_text(text, amount=4, ch=' '):
     padded = [line if len(line) == 0 else padding + line for line in lines]
     return "\n".join(padded)
     #return padding + ('\n'+padding).join(lines)
-
-
-# c = Context()
-# v = Variable('myvar')
-# c.make_var('myvar')
-# # #
-# declare = DeclareVar('myvar')
-# assign = Assignment(v, AddExpr(ConstExpr(1), VarExpr('myvar')))
-# if_ = If(ConstExpr(0), assign, declare)
-# #
-# # f = Function('myfunc', [], Sequence([declare, assign]))
-# print(if_.emit(c))
