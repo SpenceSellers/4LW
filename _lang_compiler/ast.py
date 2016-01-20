@@ -151,15 +151,20 @@ class Expr:
     def is_always_true(self):
         return False;
 
+    def optimized(self):
+        return self
+
 class ConstExpr(Expr):
     def __init__(self, val):
-        self.val = val
+        self.val = asm.ConstWord(val)
 
     def emit_with_dest(self, context):
-        return ('', asm.DataLoc(asm.LocType.CONST, asm.ConstWord(self.val)))
+        return ('', asm.DataLoc(asm.LocType.CONST, self.val))
 
     def is_always_true(self):
-        return not asm.ConstWord(self.val).is_zero()
+        return not self.val.is_zero()
+
+    
 
 
 class VarExpr(Expr):
@@ -190,6 +195,15 @@ class DerefExpr(Expr):
     def must_read_result(self, context):
         return self.expr.must_read_result(context)
 
+class IncExpr(Expr):
+    def __init__(self, inner):
+        self.expr = inner
+
+    def emit_with_dest(self, context):
+        calc, dest = self.expr.emit_with_dest(context)
+        inced_dest = dest.with_flag(asm.DataFlag.INC)
+        return (calc, inced_dest)
+    
 class BiExpr(Expr):
     def __init__(self, a, b):
         assert isinstance(a, Expr)
@@ -213,6 +227,12 @@ class BiExpr(Expr):
 class AddExpr(BiExpr):
     def opcode(self):
         return asm.Opcode.ADD
+
+    def optimized(self):
+        if isinstance(self.b, ConstExpr) and self.b.val == '___A':
+            return IncExpr(self.a)
+        else:
+            return self
 
 class MulExpr(BiExpr):
     def opcode(self):
@@ -313,6 +333,11 @@ class Lesser(Biconditional):
     def emit_conditional(self, aloc, bloc, successloc):
         return asm.Instruction(asm.Opcode.JUMPLESSER, [aloc, bloc, successloc]).emit()
 
+class And(Biconditional):
+    def emit_conditional(self, aloc, bloc, successloc):
+        return asm.Instruction(asm.Opcode.AND, [aloc, bloc, successloc]).emit()
+
+    
 class FCall(Expr):
     def __init__(self, fname, args=[]):
         self.fname = fname
@@ -381,7 +406,7 @@ class Assignment(Statement):
         self.rvalue = rvalue
 
     def emit(self, context):
-        calc, dest = self.rvalue.emit_with_dest(context)
+        calc, dest = self.rvalue.optimized().emit_with_dest(context)
         return calc + self.lvalue.emit_assign_to(dest, context)
 
     def __repr__(self):

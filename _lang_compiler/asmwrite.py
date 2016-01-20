@@ -62,6 +62,7 @@ class Opcode(Enum):
     FUNCCALL = "FN"
     RETURN = "RT"
     HALT = "HL"
+    AND = "AN"
     NOP = "__"
 
 class Stacks(Enum):

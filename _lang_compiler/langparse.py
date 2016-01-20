@@ -10,6 +10,7 @@ def divify(t): return ast.DivExpr(t[0][0], t[0][2])
 def modify(t): return ast.ModExpr(t[0][0], t[0][2])
 def equalify(t): return ast.Equality(t[0][0], t[0][2])
 def notequalify(t): return ast.Inequality(t[0][0], t[0][2])
+def andify(t): return ast.And(t[0][0], t[0][2])
 
 def greaterify(t): return ast.Greater(t[0][0], t[0][2])
 def lesserify(t): return ast.Lesser(t[0][0], t[0][2])
@@ -58,6 +59,7 @@ expr << infixNotation(bottom_expr,
         ('!=', 2, opAssoc.LEFT, notequalify),
         ('>', 2, opAssoc.LEFT, greaterify),
         ('<', 2, opAssoc.LEFT, lesserify),
+        ('&&', 2, opAssoc.LEFT, andify),
 
         ('!', 1, opAssoc.RIGHT, lambda t: ast.Negate(t[0][1]))
     ])
@@ -80,7 +82,7 @@ declarefn = (Keyword('declare') + identifier + Optional(Keyword('returns').setPa
 
 assignment = (lvalue + Literal(':=') + expr).setParseAction(lambda t: ast.Assignment(t[0], t[2]))
 
-return_ = (Keyword('return') + expr).setParseAction(lambda t: ast.Return(t[1]))
+return_ = (Keyword('return') + Optional(expr, default=None)).setParseAction(lambda t: ast.Return(t[1]))
 
 halt = Keyword('halt').setParseAction(lambda t: ast.Halt())
 

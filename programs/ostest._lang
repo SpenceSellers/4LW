@@ -10,18 +10,48 @@ declare printTerminated;
 declare malloc returns;
 declare println;
 declare free;
+declare strEq returns;
+declare readCharNoEcho returns;
 
-function main(){
-    dynmemInit(B___, ET__);
-    println("Hello world");
-    var alloc;
-    alloc := malloc(20);
-    printWord(alloc);
-    printNewline();
-    strcpy("Test string", alloc, 20);
-    println(alloc);
-    free(alloc);
-};
+
+declare lineEnter returns;
+function lineEnter(bufflen){
+    var buff;
+    buff := malloc(bufflen);
+    var pos;
+    pos := buff;
+    
+    var char;
+    while (pos != (buff + (bufflen*4) - 4)){
+        label continue;
+        char := readCharNoEcho();
+        if (char == __C_){
+            # Enter char
+            goto done;
+        };
+        if (char == __CB){
+            # Backspace char
+            if (pos == buff){
+                # Shouldn't backspace past beginning
+                goto continue;
+            };
+            [IO] := __CB;
+            pos := pos - 4;
+            goto continue;
+            
+        };
+        [IO] := char;        
+        *pos := char;
+        pos := pos + 4;
+
+        
+    };
+    label done;
+    *pos := ZZZZ;
+    [IO] := __C_;
+    return buff;
+    
+ };
 
 function logWord(str, word){
     printTerminated(str);
@@ -48,4 +78,29 @@ function strcpy(src, dest, maxlen){
         i := i + 1;
     };
     label endstr;
+};
+
+function evalcmd(cmdstr){
+    if (strEq(cmdstr, "ping")){
+        println("Pong!");
+        return;
+    };
+    
+};
+
+function main(){
+    dynmemInit(B___, ET__);
+    println("Welcome to OSv2");
+
+    var alloc;
+    var cmd;
+    while (1){
+        println("Enter line");
+        cmd := lineEnter(40);
+        printTerminated("Entered: ");
+        #println(cmd);
+        evalcmd(cmd);
+        free(cmd);
+        
+    };
 };
