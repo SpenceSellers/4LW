@@ -308,14 +308,20 @@ tick = do
 
 start :: RunOptions -> StateT MachineState IO ()
 start options = do
-    lift $ hSetBuffering stdin NoBuffering
-    lift $ hSetEcho stdin False
+    lift $ Io.prepareTerminal
     run options
 
 run :: RunOptions -> StateT MachineState IO ()
 run options = do
   input <- lift $ Io.readToBuffer []
   inBuffer <>= input
+  state <- get
+  buf <- use inBuffer
+  case buf of
+      ('`':xs) -> do 
+          inBuffer .= filter (/= '`') buf
+          (options ^. commandFn)
+      _ -> return ()
 
   hoistState tick -- Run the tick
   case options ^. ticktime of

@@ -11,6 +11,7 @@ import Instruction
 import Registers
 import qualified WordSequence as WS
 import qualified Tapes
+import qualified VMInterface
 
 import System.Environment
 import Control.Applicative
@@ -52,7 +53,7 @@ main = do
   let state = tapeDeck . at (letter 'A') .~ Just (Tapes.newTape (WS.readWordsFiltered tapeStr)) $ statemem
   let runOptions = RunOptions {
     _ticktime = tickTime options,
-    _commandFn = liftIO $ putStrLn "Command fn!"
+    _commandFn = VMInterface.interface
   }
 
   (_, state') <- runStateT (start runOptions) state

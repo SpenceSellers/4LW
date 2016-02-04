@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-module Io (readToBuffer, charToInternal, internalToChar, printChar) where
+module Io (readToBuffer, charToInternal, internalToChar, printChar, prepareTerminal, unprepareTerminal) where
 
 import Base27
 import System.IO
@@ -67,3 +67,13 @@ printChar w
 
 toDigit :: Letter -> Maybe Char
 toDigit l = range ('0', '9') ^? ix (getValue l)
+
+prepareTerminal :: IO ()
+prepareTerminal = do
+    hSetBuffering stdin NoBuffering
+    hSetEcho stdin False
+
+unprepareTerminal :: IO ()
+unprepareTerminal = do
+    hSetBuffering stdin LineBuffering
+    hSetEcho stdin True
