@@ -180,36 +180,7 @@ function coreDump preserving A B {
         MV [reg inc A] [reg A]
     }
 }
-function readLetter preserving A {
-    call readChar to [reg A]
-    JN [reg third A] [const _] [const :notletter]
-    MV [reg fourth A] [stack V]
-    JP [const :@return]
 
-    label notletter
-    MV [const ZZZZ] [stack V]
-}
-
-# (addr) -- (length (letters))
-function enterRaw preserving A B C D {
-    MV [stack S] [reg A]
-    MV [const 0] [reg D]
-    loop {
-        call readLetter to [reg B]
-        JZ [reg neg B] [const :done]
-        MV [reg inc D] [reg D]
-        MV [reg first mem A] [reg C]
-        ML [reg C] [const A___] [reg C]
-        SB [reg mem A] [reg C] [reg mem A]
-        ML [reg B] [const A___] [reg B]
-        AD [reg mem A] [reg B] [reg mem A]
-
-
-        MV [reg inc A] [reg A]
-    }
-    label done
-    MV [reg D] [stack V]
-}
 
 # (buffer length (words)) -- (buffer addr)
 function lineEnter preserving A B C D {

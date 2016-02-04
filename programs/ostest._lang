@@ -4,6 +4,8 @@ halt;
 include <dynmem.4lwa>;
 include <print.4lwa>;
 include <strings.4lwa>;
+include <base10.4lwa>;
+include <fs._lang>;
 
 declare dynmemInit;
 declare printTerminated;
@@ -12,8 +14,12 @@ declare println;
 declare free;
 declare strEq returns;
 declare readCharNoEcho returns;
-
-
+declare readWord returns;
+declare printWord;
+declare printNewline;
+declare debugHeap;
+declare enterRaw;
+declare lengthTerminated returns;
 declare lineEnter returns;
 function lineEnter(bufflen){
     var buff;
@@ -80,25 +86,149 @@ function strcpy(src, dest, maxlen){
     label endstr;
 };
 
+declare readNum returns;
+function readNum(){
+    return readWord();
+};
+
+declare promptNum returns;
+function promptNum(str){
+    var res;
+    printTerminated(str);
+    res := readNum();
+    printNewline();
+    return res;
+};
+
+function promptYesNo(str){
+    
+};
+
+
+function coredumpCmd(){
+    var pos;
+    var stop;
+    pos := promptNum("Start: ");
+    stop := promptNum("Stop: ");
+    
+    while (pos != stop){
+        [stack _] := pos;
+        asm "MV [stack first mem _] [io]";
+        pos := pos + 1;
+    };
+    printNewline();
+};
+
+function writefile_cmd(){
+    var fname;
+    var buffer;
+    fname := promptNum("File ID: ");
+    fs_new_file(fname);
+    buffer := lineEnter(ZZ);
+    fs_write_file(fname, buffer, lengthTerminated(buffer) + 1);
+    free(buffer);
+};
+
+function readfile_cmd(){
+    var fname;
+    var buffer;
+    var len;
+    fname := promptNum("File ID: ");
+    len := promptNum("Length: ");
+    buffer := malloc(len);
+    fs_read_file(fname, buffer, len);
+    println(buffer);
+    free(buffer);
+    
+};
+
 function evalcmd(cmdstr){
+    var arg;
     if (strEq(cmdstr, "ping")){
         println("Pong!");
         return;
     };
+
+    if (strEq(cmdstr, "peek")){
+        arg := promptNum("Addr: ");
+        printWord(*arg);
+        printNewline();
+        return;
+    };
+
+    if (strEq(cmdstr, "jump")){
+        arg := promptNum("Addr: ");
+        [stack _] := arg;
+        asm "JP [stack _]";
+        return;
+    };
+
+    if (strEq(cmdstr, "memdebug")){
+        debugHeap();
+        return;
+    };
+
+    if (strEq(cmdstr, "malloc")){
+        arg := promptNum("Size: ");
+        printf(malloc(arg), "Alloced addr: %w%n");
+        return;
+    };
+
+    if (strEq(cmdstr, "free")){
+        arg := promptNum("Addr: ");
+        free(arg);
+        return;
+    };
+
+    if (strEq(cmdstr, "shutdown")){
+        asm "HL";
+        return;
+    };
+
+    if (strEq(cmdstr, "coredump")){
+        coredumpCmd();
+        return;
+    };
+
+    if (strEq(cmdstr, "write")){
+        arg := promptNum("Addr: ");
+        enterRaw(arg);
+        return;
+    };
+
+    if (strEq(cmdstr, "initfs")){
+        fs_init();
+        println("Done.");
+        return;
+    };
+
+    if (strEq(cmdstr, "writefile")){
+        writefile_cmd();
+        return;
+    };
+
+    if (strEq(cmdstr, "readfile")){
+        readfile_cmd();
+        return;
+    };
     
+    println("Unknown command!");
 };
 
 function main(){
     dynmemInit(B___, ET__);
+    #fs_new_file(ABCD);
+    #fs_write_file(ABCD, "Test file", 10);
+    #var res;
+    #fs_read_file(ABCD, res, 10);
+    #println(res);
+    
     println("Welcome to OSv2");
-
     var alloc;
     var cmd;
     while (1){
-        println("Enter line");
+        printTerminated("Command: ");
         cmd := lineEnter(40);
-        printTerminated("Entered: ");
-        #println(cmd);
         evalcmd(cmd);
         free(cmd);
         

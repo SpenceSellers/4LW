@@ -283,6 +283,13 @@ runInstruction (TapeRewind tapeIDloc) = do
     --zoom (tapeDeck . at tapeLetter) (Tapes.tapeRewind)
     tapeDeck . at tapeLetter %= fmap (execState Tapes.tapeRewind)
 
+
+data RunOptions = RunOptions {
+    _ticktime :: Int,
+    _commandFn :: StateT MachineState IO ()
+}
+makeLenses ''RunOptions
+
 tick :: State MachineState ()
 tick = do
   pc <- getPC
@@ -299,19 +306,19 @@ tick = do
           setPC $ offsetBy pc length
           runInstruction instruction
 
-start :: Int -> StateT MachineState IO ()
-start ticktime = do
+start :: RunOptions -> StateT MachineState IO ()
+start options = do
     lift $ hSetBuffering stdin NoBuffering
     lift $ hSetEcho stdin False
-    run ticktime
+    run options
 
-run :: Int -> StateT MachineState IO ()
-run ticktime = do
+run :: RunOptions -> StateT MachineState IO ()
+run options = do
   input <- lift $ Io.readToBuffer []
   inBuffer <>= input
 
   hoistState tick -- Run the tick
-  case ticktime of
+  case options ^. ticktime of
     0 -> return ()
     n -> lift $ threadDelay n
   state <- hoistState $ get
@@ -319,8 +326,8 @@ run ticktime = do
   --let ticknum = view tickNum state
   action .= NoAction -- Clear action
   case currentAction of
-    NoAction -> run ticktime
+    NoAction -> run options
     HaltAction -> return ()
     IOWrite charcodes -> do
         lift $ sequence (map Io.printChar charcodes)
-        run ticktime
+        run options

@@ -1,0 +1,147 @@
+function tape_rewind(){
+    asm "TR [const A]";
+};
+
+function tape_seek(dist){
+    [stack _] := dist;
+    asm "TS [const A] [stack _]";
+};
+
+function tape_seek_backwards(dist){
+    [stack _] := dist;
+    asm "TB [const A] [stack _]";
+};
+
+function fs_init(){
+    tape_rewind();
+    asm "TR [const A]";
+    tape_seek(100);
+    [tape A] := ZZZZ;
+    tape_rewind();
+};
+
+declare fs_get_block_addr_from_id returns;
+function fs_get_block_addr_from_id(id){
+    return id * A__;
+};
+
+declare fs_get_file_block returns;
+function fs_get_file_block(id){
+    var seen_id;
+    tape_rewind();
+    while(1){
+        seen_id := [tape A];
+        if (seen_id == ZZZZ){
+            # File not found
+            return ZZZZ;
+        };
+
+        if (seen_id == id){
+            return [tape A];
+        };
+        
+        tape_seek(1); # Skip addr word.
+    };
+
+};
+
+function fs_add_new_file_block(block_id){
+    var seen_id;
+    tape_rewind();
+    while (1){
+        seen_id := [tape A];
+        if (seen_id == 0){
+            [tape A] := block_id;
+            return;
+        };
+
+        if (seen_id == ZZZZ){
+           println("FS: No file slots remaining");
+           return;
+        };
+
+        tape_seek(1); # Skip addr word
+    };
+};
+
+declare fs_is_block_free returns;
+function fs_is_block_free(id){
+    var seen_id;
+    var seen_block;
+    tape_rewind();
+    while (1){
+        seen_id := [tape A];
+        seen_block := [tape A];
+        
+        if (seen_id == ZZZZ){
+            return ZZZZ;
+        };
+        
+        if (seen_block == id){
+           return 0;
+        };       
+
+    };
+};
+
+declare fs_get_free_block returns;
+function fs_get_free_block(){
+    var test_block;
+    test_block := 1;
+    while (1) {
+        if (fs_is_block_free(test_block)){
+            println("Block free");
+            return test_block;
+        };
+        println("Block used");
+        test_block := test_block + 1;
+    };
+};
+
+function fs_go_to_block(block_id){
+    tape_rewind();
+    tape_seek(A__ * block_id);
+};
+
+function fs_go_to_file(file_id){
+    fs_go_to_block(fs_get_file_block(file_id));
+};
+
+function fs_new_file(file_id){
+    var new_block;
+    var seen_id;
+    new_block := fs_get_free_block();
+    tape_rewind();
+    while (1){
+        seen_id := [tape A];
+        if (seen_id == 0){
+            tape_seek_backwards(1);
+            [tape A] := file_id;
+            [tape A] := new_block;
+            return;
+        };
+        # TODO check ZZZZ
+        tape_seek(1); # Skip addr word.
+    };
+};
+
+function fs_write_file(file_id, mem, len){
+    var end;
+    end := mem + (len * 4);
+    fs_go_to_file(file_id);
+    while (mem < end){
+        [tape A] := *mem;
+        mem := mem + 4;
+    };
+};
+
+function fs_read_file(file_id, buffer, len){
+    var end;
+    end := buffer + (len * 4);
+    fs_go_to_file(file_id);
+    while (buffer < end){
+        *buffer := [tape A];
+        buffer := buffer + 4;
+    };
+    println("Done copying");
+};

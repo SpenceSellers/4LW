@@ -21,6 +21,7 @@ class Context:
         self.strings = []
         self.parent = parent
         self.functions = {}
+        self.reserved_mem = {}
 
         # TODO self.types
         # TODO function return values.
@@ -33,7 +34,6 @@ class Context:
 
     def make_var(self, name):
         reg = self.reserve_register()
-        log("var {} is {}".format(name, reg));
         self.vars[name] = reg
 
     def get_reg_for_var(self, name):
@@ -70,9 +70,29 @@ class Context:
                 raise SymbolNotRegisteredException("Unknown function: {}".format(name))
 
     def register_string(self, string):
+        maybename = self.maybe_get_string_name(string)
+        if maybename:
+            return asm.DataLoc(asm.LocType.CONST, asm.RefWord(maybename))
+        
         name = asm.ident('str')
         self.strings.append((string, name))
         return asm.DataLoc(asm.LocType.CONST, asm.RefWord(name))
+
+    def maybe_get_string_name(self, string):
+        for s, name in self.strings:
+            if s == string:
+                return name
+        return None
+
+    def reserve_mem(self, name, len=1):
+        self.reserved_mem[name] = len
+
+    def emit_reserved_mem(self):
+        out = ''
+        for name, len in self.reserved_mem:
+            out += asm.Reserve(name, len).emit()
+
+        return out
 
     def inherit(self, other):
         for entry in other.strings:
@@ -398,6 +418,17 @@ class Stack(LValue, Expr):
     def emit_with_dest(self, context):
         return ('', asm.DataLoc(asm.LocType.STACK, asm.ConstWord(self.letter)))
 
+class Tape(LValue, Expr):
+    def __init__(self, letter):
+        assert(len(letter) == 1)
+        self.letter = letter
+
+    def emit_assign_to(self, src, context):
+        return asm.Instruction(asm.Opcode.MOVE, [src,asm.DataLoc(asm.LocType.TAPE, asm.ConstWord(self.letter))]).emit()
+
+    def emit_with_dest(self, context):
+        return ('', asm.DataLoc(asm.LocType.TAPE, asm.ConstWord(self.letter)))
+
 class Assignment(Statement):
     def __init__(self, lvalue, rvalue):
         assert isinstance(lvalue, LValue)
@@ -412,6 +443,14 @@ class Assignment(Statement):
     def __repr__(self):
         return "<assign {} := {}>".format(self.lvalue, self.rvalue)
 
+class ReserveMem(Statement):
+    def __init__(self, name, len=1):
+        self.name = name
+        self.len = len
+
+    def emit(self, context):
+        context.reserve_mem(self.name, self.len)
+        return ''
 
 class DeclareVar(Statement):
     def __init__(self, varname):
@@ -426,7 +465,6 @@ class DeclareFunction(Statement):
     def __init__(self, name, returns):
         self.name = name
         self.returns = returns
-        log("Declared {} returns {}".format(name, returns))
 
     def emit(self, context):
         context.register_fn(self.name, self.returns)
@@ -448,6 +486,7 @@ class Sequence(Statement):
         out = ''
         out += self.emit(context)
         out += context.emit_strings()
+        out += context.emit_reserved_mem()
         return out
 
     def __repr__(self):
@@ -567,7 +606,7 @@ class Include(Statement):
             f = open(self.path, 'r')
             text = f.read()
             f.close()
-            return text
+            return text + '\n'
         else:
             # We'll hope that this is the right language.
             return compiler.compile_file(self.path)

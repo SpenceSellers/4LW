@@ -22,19 +22,19 @@ import Control.Exception
 sanitizeProg :: [Char] -> [Char]
 sanitizeProg = filter Base27.isLetter
 
-data RunOptions = RunOptions { filename :: String
+data ProgOptions = ProgOptions { filename :: String
                              , tickTime :: Int
                              --, tapeFiles :: [(Letter, String)]
                              , tapeFile :: Maybe String
                              } deriving (Show)
 
-parseOptions :: Parser RunOptions
-parseOptions = RunOptions
+parseOptions :: Parser ProgOptions
+parseOptions = ProgOptions
                    <$> strArgument (metavar "FILE")
                    <*> option auto (short 't' <> value 1000)
                    <*> optional (strOption (short 'T'))
 
-optionsAndInfo :: ParserInfo RunOptions
+optionsAndInfo :: ParserInfo ProgOptions
 optionsAndInfo = info (helper <*> parseOptions)
     (fullDesc <> progDesc "4LW is a virtual machine implementing a base-27 architecture.")
 
@@ -50,7 +50,18 @@ main = do
 
   let statemem = memory %~ fromJust . importString (sanitizeProg prog) minWord $ blankState
   let state = tapeDeck . at (letter 'A') .~ Just (Tapes.newTape (WS.readWordsFiltered tapeStr)) $ statemem
-  (_, state') <- runStateT (start (tickTime options)) state
+  let runOptions = RunOptions {
+    _ticktime = tickTime options,
+    _commandFn = liftIO $ putStrLn "Command fn!"
+  }
+
+  (_, state') <- runStateT (start runOptions) state
+
+  case tapeFile options of
+    Just fname -> do
+         putStrLn $ "Saving " ++ fname
+         Tapes.writeTapeToFile fname (fromJust (view (tapeDeck . at (letter 'A')) $ state'))
+    Nothing -> return ()
   putStrLn "\n\n\n\n\n\n"
   putStrLn "Done:"
   putStrLn $ exportString (_memory state') (minWord, wrd "_AAA")

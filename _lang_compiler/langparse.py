@@ -23,7 +23,7 @@ special_loc = Forward()
 num = Word(nums)
 
 
-identifier = Word(srange('[a-z]_'), alphas + nums)
+identifier = Word(srange('[a-z]_'), alphas + nums + '_')
 #identifier = Word(alphas)
 
 single_letter = Word(srange('[A-Z_]'), exact = 1)
@@ -70,7 +70,9 @@ io_lvalue = Keyword("IO").setParseAction(lambda t: ast.Io())
 
 stack = (Keyword("stack") + single_letter).setParseAction(lambda t: ast.Stack(t[1]))
 
-special_loc << ('[' + MatchFirst([io_lvalue, stack]) + ']').setParseAction(lambda t: t[1])
+tape = (Keyword("tape") + single_letter).setParseAction(lambda t: ast.Tape(t[1]))
+
+special_loc << ('[' + MatchFirst([io_lvalue, stack, tape]) + ']').setParseAction(lambda t: t[1])
 
 lvariable = identifier.copy().setParseAction(lambda t: ast.Variable(t[0]))
 lvalue = MatchFirst([lvariable, mem_lvalue, special_loc])

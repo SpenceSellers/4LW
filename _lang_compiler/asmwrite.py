@@ -169,6 +169,14 @@ class TermString:
     def emit(self):
         return "term_string {} \"{}\"\n".format(self.name, self.str)
 
+class Reserved:
+    def __init__(self, name, len=1):
+        self.name = name
+        self.len = len
+
+    def emit(self):
+        return "reserve {} {}".format(self.name, self.len)
+
 def ident(hint=''):
     return str(hint) + '_' +  str(uuid.uuid4())[:8]
 
