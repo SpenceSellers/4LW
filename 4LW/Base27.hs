@@ -17,6 +17,8 @@ import Data.Digits (digits, unDigits)
 import Data.Default
 import Control.Lens
 
+-- | Letters are the very basis of 4LW. A letter can be any uppercase letter,
+-- or an underscore, for a maximum of 27 possible values.
 newtype Letter = Letter Char deriving (Eq)
 
 -- | A view for letter. You can pattern match on it, but you can't construct it!
@@ -50,11 +52,13 @@ instance Default Letter where
 letter :: Char -> Letter
 letter c = if Base27.isLetter c then Letter c else error "Bad letter value!"
 
+-- | Checked version of the above constructor.
 letterSafe :: Char -> Maybe Letter
 letterSafe c
     | Base27.isLetter c = Just (letter c)
     | otherwise = Nothing
 
+-- | Returns true if the char is a valid 4LW letter.
 isLetter :: Char -> Bool
 isLetter '_' = True
 isLetter c = inRange ('A', 'Z') c
@@ -72,6 +76,8 @@ toLetter num
     | num > 26 = error "toLetter must be 26 or below."
     | otherwise = letter $ chr (ord 'A' + num - 1)
 
+-- | Converts an integer (0,26) to a letter, returning Nothing
+-- if num is outside that range.
 toLetterSafe :: Int -> Maybe Letter
 toLetterSafe num
     | num < 0 = Nothing
@@ -81,6 +87,8 @@ toLetterSafe num
 convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
 
+-- | ANDs two letters using a magic formula that tries to preserve some of
+-- binary and's features.
 andLetter :: Letter -> Letter -> Letter
 andLetter a b = toLetter (((getValue a) * (getValue b)) `mod` 27)
 
@@ -134,9 +142,11 @@ valueOfWord = iso wordValue toWord
 valueOfLetter :: Prism' Int Letter
 valueOfLetter = prism' getValue toLetterSafe
 
+-- | Minimum value a Word can take, equaling 0.
 minWord :: Base27.Word
 minWord = Word (letter '_') (letter '_') (letter '_') (letter '_')
 
+-- | Maximum value a word can take.
 maxWord :: Base27.Word
 maxWord = Word (letter 'Z') (letter 'Z') (letter 'Z') (letter 'Z')
 
@@ -156,6 +166,8 @@ wordFromList (a:b:_) = Word (letter '_') (letter '_') a b
 wordFromList (a:_) = Word (letter '_') (letter '_') (letter '_') a
 wordFromList (_) = minWord
 
+-- | Turns a list of letters into a word, starting from HIGHER values.
+-- This is a partial function.
 wordFromList' :: [Letter] -> Base27.Word
 wordFromList' (a:b:c:d:_) = Word a b c d
 wordFromList' (a:b:c:_) = Word a b c (letter '_')
@@ -163,11 +175,13 @@ wordFromList' (a:b:_) = Word a b (letter '_') (letter '_')
 wordFromList' (a:_) = Word a (letter '_') (letter '_') (letter '_')
 wordFromList' (_) = minWord
 
+-- Given a word, make an int.
 wordValue :: Base27.Word -> Int
 --wordValue = unDigits 27 . map getValue . wordToList
 -- Optimized expanded version:
 wordValue (Word a b c d) = (19683 * (getValue a)) + (729 * (getValue b)) + (27 * (getValue c)) + (getValue d)
 
+-- | Given an integer, make a word.
 toWord :: Int -> Base27.Word
 --toWord = wordFromList . map toLetter . digits 27 . (`mod` wordValues)
 toWord num = Word (toLetter a) (toLetter b) (toLetter c) (toLetter d)
@@ -182,6 +196,7 @@ toWordDigits val = (a, b, c, d)
           (br, b) = quotRem cr 27
           (_, a) = quotRem br 27
 
+-- | The traversal of the letters of a word.
 letters :: Traversal' Word Letter
 letters f (Word a b c d) = Word <$> (f a) <*> (f b) <*> (f c) <*> (f d)
 
@@ -193,18 +208,23 @@ extendToWord l = Word (letter '_') (letter '_') (letter '_') l
 addWord :: Base27.Word -> Base27.Word -> Base27.Word
 addWord w1 w2 = toWord $ (wordValue w1) + (wordValue w2)
 
+-- | Subtracts two words
 subWord :: Base27.Word -> Base27.Word -> Base27.Word
 subWord w1 w2 = toWord $ (wordValue w1) - (wordValue w2)
 
+-- | Multiplies two words
 mulWord :: Base27.Word -> Base27.Word -> Base27.Word
 mulWord w1 w2 = toWord $ (wordValue w1) * (wordValue w2)
 
+-- | Divides two words
 divWord :: Base27.Word -> Base27.Word -> Base27.Word
 divWord w1 w2 = toWord $ (wordValue w1) `div` (wordValue w2)
 
+-- | Modulos two words
 modWord :: Base27.Word -> Base27.Word -> Base27.Word
 modWord w1 w2 = toWord $ (wordValue w1) `mod` (wordValue w2)
 
+-- Negates a word, "flipping" each letter's value.
 negateWord :: Base27.Word -> Base27.Word
 negateWord = subWord (wrd "ZZZZ")
 
@@ -214,9 +234,11 @@ rightShift (Word a b c d) = Word (letter ' ') a b c
 leftShift :: Word -> Word
 leftShift (Word a b c d) = Word b c d (letter ' ')
 
+-- | Ands a word using the magic AND formula.
 andWord :: Word -> Word -> Word
 andWord a b = zipWord andLetter a b
 
+-- | Utility function that adds an int to a word.
 offset :: Word -> Int -> Word
 offset w diff = valueOfWord +~ diff $ w
 

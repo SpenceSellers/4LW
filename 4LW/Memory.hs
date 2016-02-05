@@ -17,7 +17,7 @@ blankMemory :: Memory
 blankMemory = Map.empty
 
 readLetter :: Memory -> Word -> Letter
-readLetter mem addr =  Map.findWithDefault (letter '_') addr mem
+readLetter mem addr = Map.findWithDefault (letter '_') addr mem
 
 readLetters :: Memory -> Word -> LetterLength -> [Letter]
 readLetters mem addr (LetterLength len) = map (readLetter mem) addrs

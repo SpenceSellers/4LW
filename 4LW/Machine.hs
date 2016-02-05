@@ -221,15 +221,15 @@ runInstruction Instruction.Halt = action .= HaltAction
 runInstruction (Move src dest) =
     setData dest =<< getData src
 
-runInstruction (Add src1 src2 dest) = bifunction addWord src1 src2 dest
-runInstruction (Sub src1 src2 dest) = bifunction subWord src1 src2 dest
-runInstruction (Mul src1 src2 dest) = bifunction mulWord src1 src2 dest
-runInstruction (Div src1 src2 dest) = bifunction divWord src1 src2 dest
-runInstruction (Modulo src1 src2 dest) = bifunction modWord src1 src2 dest
-runInstruction (And src1 src2 dest) = bifunction andWord src1 src2 dest
+runInstruction (Add src1 src2 dest)    =  bifunction addWord src1 src2 dest
+runInstruction (Sub src1 src2 dest)    =  bifunction subWord src1 src2 dest
+runInstruction (Mul src1 src2 dest)    =  bifunction mulWord src1 src2 dest
+runInstruction (Div src1 src2 dest)    =  bifunction divWord src1 src2 dest
+runInstruction (Modulo src1 src2 dest) =  bifunction modWord src1 src2 dest
+runInstruction (And src1 src2 dest)    =  bifunction andWord src1 src2 dest
 
 runInstruction (Jump dest) =
-    setRegister pcRegister =<< getData dest
+    setPC =<< getData dest
 
 runInstruction (JumpZero datloc dest) = do
     dat <- getData datloc
