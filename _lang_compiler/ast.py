@@ -73,7 +73,7 @@ class Context:
         maybename = self.maybe_get_string_name(string)
         if maybename:
             return asm.DataLoc(asm.LocType.CONST, asm.RefWord(maybename))
-        
+
         name = asm.ident('str')
         self.strings.append((string, name))
         return asm.DataLoc(asm.LocType.CONST, asm.RefWord(name))
@@ -184,7 +184,7 @@ class ConstExpr(Expr):
     def is_always_true(self):
         return not self.val.is_zero()
 
-    
+
 
 
 class VarExpr(Expr):
@@ -223,7 +223,7 @@ class IncExpr(Expr):
         calc, dest = self.expr.emit_with_dest(context)
         inced_dest = dest.with_flag(asm.DataFlag.INC)
         return (calc, inced_dest)
-    
+
 class BiExpr(Expr):
     def __init__(self, a, b):
         assert isinstance(a, Expr)
@@ -357,7 +357,7 @@ class And(Biconditional):
     def emit_conditional(self, aloc, bloc, successloc):
         return asm.Instruction(asm.Opcode.AND, [aloc, bloc, successloc]).emit()
 
-    
+
 class FCall(Expr):
     def __init__(self, fname, args=[]):
         self.fname = fname
@@ -522,7 +522,8 @@ class ExprStatement(Statement):
         calc, dest = self.expr.emit_with_dest(context)
         out += calc
         if self.expr.must_read_result(context):
-            out += asm.Instruction(asm.Opcode.MOVE, [dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(0))]).emit()
+            # out += asm.Instruction(asm.Opcode.MOVE, [dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(0))]).emit()
+            out += asm.Instruction(asm.Opcode.READ, [dest]).emit()
         return out
 
 class Return(Statement):
@@ -635,7 +636,7 @@ class Label(Statement):
 
     def emit(self, context):
         return asm.Label(self.name).emit()
-    
+
 def indent_text(text, amount=4, ch=' '):
     padding = amount * ch
     lines = text.split('\n')

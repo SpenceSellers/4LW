@@ -261,6 +261,8 @@ runInstruction (Swap a b) = do
     setData a bData
     setData b aData
 
+runInstruction (Read src) = getData src >> return ()
+
 runInstruction (PushAll dest args) = do
     argDatas <- sequence . map getData $ args
     sequence_ . map (setData dest) $ argDatas

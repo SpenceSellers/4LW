@@ -60,6 +60,7 @@ class Opcode(Enum):
     JUMPGREATER = "JG"
     JUMPLESSER = "JL"
     FUNCCALL = "FN"
+    READ = 'RD'
     RETURN = "RT"
     HALT = "HL"
     AND = "AN"

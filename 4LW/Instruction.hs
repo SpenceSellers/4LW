@@ -50,6 +50,7 @@ data Instruction =
     FCall DataLocation [DataLocation] |
     Return [DataLocation] |
     Swap DataLocation DataLocation |
+    Read DataLocation |
     PushAll DataLocation [DataLocation] |
     PullAll DataLocation [DataLocation] |
     TapeSeek DataLocation DataLocation  |
@@ -166,6 +167,7 @@ constructInstruction (RawInstruction opcode operands)
     | opcode == letter2 "RT" = Right $ Return operands
 
     | opcode == letter2 "SW" = twoArgInstruction Swap operands
+    | opcode == letter2 "RD" = oneArgInstruction Read operands
 
     | opcode == letter2 "PU" = toBadOpLen $ PushAll <$>
                                  (operands ^? ix 0) <*>
