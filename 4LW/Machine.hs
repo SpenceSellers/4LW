@@ -83,6 +83,13 @@ setRegister :: Letter -> Word -> State MachineState ()
 -- At the moment this will do nothing if the letter is not a valid register.
 setRegister r w = registers %= (\regs -> fromMaybe regs $ updateRegister regs r w)
 
+-- | Returns the value of the register. This does not check that the register actually exists.
+getRegister :: Letter -> State MachineState Word
+getRegister reg = do
+  state <- get
+  return $ fromJust $ state ^? registers . ix reg
+
+
 setMemory :: Word -> Word -> State MachineState ()
 setMemory addr word = memory %= \mem -> Memory.writeWord mem addr word
 
@@ -107,9 +114,7 @@ popStack l = do
 
 -- | Gets the Program Counter
 getPC :: State MachineState Word
-getPC = do
-  state <- get
-  return $ fromJust $ state ^? registers . ix pcRegister
+getPC = getRegister pcRegister
 
 -- | Sets the program counter
 setPC :: Word -> State MachineState ()
@@ -318,7 +323,7 @@ run options = do
   state <- get
   buf <- use inBuffer
   case buf of
-      ('`':xs) -> do 
+      ('`':xs) -> do
           inBuffer .= filter (/= '`') buf
           (options ^. commandFn)
       _ -> return ()
