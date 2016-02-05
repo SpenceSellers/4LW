@@ -46,6 +46,7 @@ data IOConfig = IOConfig {
     ioGetChar :: IO (Maybe Char)
 }
 
+-- | Actions that the machine should take next instruction.
 data MachineAction = NoAction |
                      HaltAction |
                      IOWrite [Word]

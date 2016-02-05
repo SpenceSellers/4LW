@@ -21,12 +21,13 @@ declare debugHeap;
 declare enterRaw;
 declare lengthTerminated returns;
 declare lineEnter returns;
+
 function lineEnter(bufflen){
     var buff;
     buff := malloc(bufflen);
     var pos;
     pos := buff;
-    
+
     var char;
     while (pos != (buff + (bufflen*4) - 4)){
         label continue;
@@ -44,19 +45,19 @@ function lineEnter(bufflen){
             [IO] := __CB;
             pos := pos - 4;
             goto continue;
-            
+
         };
-        [IO] := char;        
+        [IO] := char;
         *pos := char;
         pos := pos + 4;
 
-        
+
     };
     label done;
     *pos := ZZZZ;
     [IO] := __C_;
     return buff;
-    
+
  };
 
 function logWord(str, word){
@@ -67,8 +68,8 @@ function logWord(str, word){
 
 function strcpy(src, dest, maxlen){
     var i;
-    var char;    
-    
+    var char;
+
     i := 0;
     while (1){
         char := *(src + (i*4));
@@ -80,7 +81,7 @@ function strcpy(src, dest, maxlen){
         if (i > maxlen){
            goto endstr;
         };
-        
+
         i := i + 1;
     };
     label endstr;
@@ -101,7 +102,7 @@ function promptNum(str){
 };
 
 function promptYesNo(str){
-    
+
 };
 
 
@@ -110,7 +111,7 @@ function coredumpCmd(){
     var stop;
     pos := promptNum("Start: ");
     stop := promptNum("Stop: ");
-    
+
     while (pos != stop){
         [stack _] := pos;
         asm "MV [stack first mem _] [io]";
@@ -139,7 +140,7 @@ function readfile_cmd(){
     fs_read_file(fname, buffer, len);
     println(buffer);
     free(buffer);
-    
+
 };
 
 function evalcmd(cmdstr){
@@ -211,7 +212,7 @@ function evalcmd(cmdstr){
         readfile_cmd();
         return;
     };
-    
+
     println("Unknown command!");
 };
 
@@ -222,7 +223,7 @@ function main(){
     #var res;
     #fs_read_file(ABCD, res, 10);
     #println(res);
-    
+
     println("Welcome to OSv2");
     var alloc;
     var cmd;
@@ -231,6 +232,6 @@ function main(){
         cmd := lineEnter(40);
         evalcmd(cmd);
         free(cmd);
-        
+
     };
 };

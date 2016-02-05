@@ -58,7 +58,7 @@ data Instruction =
 
     deriving (Show, Eq)
 
-
+-- | An error report of a 'failed' instruction parse.
 data BadInstruction =
      BadInstruction | BadOpcode (Letter, Letter)| BadOperands | BadOperandsLength | ZeroLengthInstruction deriving Show
 
@@ -135,6 +135,9 @@ twoArgInstruction inst operands = toBadOpLen $ inst <$>
     (operands ^? ix 0) <*>
     (operands ^? ix 1)
 
+oneArgInstruction :: (DataLocation -> Instruction) -> Operands -> Either BadInstruction Instruction
+oneArgInstruction inst operands = toBadOpLen $ inst <$> (operands ^? ix 0)
+
 -- | Takes a RawInstruction and figures out what it really is.
 -- the resulting Instruction will be actually usable by 4LW.
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
@@ -147,14 +150,10 @@ constructInstruction (RawInstruction opcode operands)
     | opcode == letter2 "DV" = threeArgInstruction Div operands
     | opcode == letter2 "MD" = threeArgInstruction Modulo operands
     | opcode == letter2 "AN" = threeArgInstruction And operands
-
     | opcode == letter2 "MV" = twoArgInstruction Move operands
 
-    | opcode == letter2 "JP" = toBadOpLen $ Jump <$>
-                                 (operands ^? ix 0)
-
+    | opcode == letter2 "JP" = oneArgInstruction Jump operands
     | opcode == letter2 "JZ" = twoArgInstruction JumpZero operands
-
     | opcode == letter2 "JE" = threeArgInstruction JumpEqual operands
     | opcode == letter2 "JN" = threeArgInstruction JumpNotEqual operands
     | opcode == letter2 "JG" = threeArgInstruction JumpGreater operands
@@ -166,9 +165,7 @@ constructInstruction (RawInstruction opcode operands)
 
     | opcode == letter2 "RT" = Right $ Return operands
 
-    | opcode == letter2 "SW" = toBadOpLen $ Swap <$>
-                                 (operands ^? ix 0) <*>
-                                 (operands ^? ix 1)
+    | opcode == letter2 "SW" = twoArgInstruction Swap operands
 
     | opcode == letter2 "PU" = toBadOpLen $ PushAll <$>
                                  (operands ^? ix 0) <*>
@@ -180,7 +177,7 @@ constructInstruction (RawInstruction opcode operands)
 
     | opcode == letter2 "TS" = twoArgInstruction TapeSeek operands
     | opcode == letter2 "TB" = twoArgInstruction TapeSeekBackwards operands
-    | opcode == letter2 "TR" = toBadOpLen $ TapeRewind <$> (operands ^? ix 0)
+    | opcode == letter2 "TR" = oneArgInstruction TapeRewind operands
 
     | otherwise = Left $ BadOpcode opcode
 
@@ -223,6 +220,8 @@ applyFlag flag loc
 applyFlags :: [Letter] -> DataLocation -> DataLocation
 applyFlags letters loc = foldr applyFlag loc letters
 
+-- | Reads a sequence of instructions, starting at an address.
+-- This is intended mostly for debugging purposes.
 readSequence :: Memory.Memory -> Word -> [(Instruction, Word)]
 readSequence mem addr = case result of
         Right (InstructionParseResult ins len) -> ((ins, addr) : readSequence mem (offsetBy addr len))

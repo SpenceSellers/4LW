@@ -1,4 +1,4 @@
-module Stacks (Stack, Stacks, emptyStacks, emptyStack, push, pop) where
+module Stacks (Stack, Stacks, emptyStacks, emptyStack, push, pop, peekAll) where
 
 import Prelude hiding (Word)
 import Base27
@@ -38,3 +38,5 @@ pop (SizeLimitedStack size (x:xs)) = Just (x, SizeLimitedStack (size - 1) xs)
 size :: Stack -> Int
 size (SizeLimitedStack size _) = size
 
+peekAll :: Stack -> [Word]
+peekAll (SizeLimitedStack _ s) = s
