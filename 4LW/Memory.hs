@@ -13,6 +13,7 @@ type Memory = Map.Map Word Letter
 
 data MemoryError = AddressOverrun deriving (Show, Eq)
 
+-- |A blank memory
 blankMemory :: Memory
 blankMemory = Map.empty
 

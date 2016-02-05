@@ -124,21 +124,27 @@ instance Enum Base27.Word where
     toEnum = toWord
     fromEnum = wordValue
 
+-- | Lens onto the first (most greatest-valued) letter in a word.
 firstLetter :: Lens' Word Letter
 firstLetter f (Word a b c d) = (\new -> Word new b c d) <$> f a
 
+-- | Lens onto the 2nd (2nd-greatest-valued) letter in a word.
 secondLetter :: Lens' Word Letter
 secondLetter f (Word a b c d) = (\new -> Word a new c d) <$> f b
 
+-- | Lens onto the 3rd (2nd-least-valued) letter in a word.
 thirdLetter :: Lens' Word Letter
 thirdLetter f (Word a b c d) = (\new -> Word a b new d) <$> f c
 
+-- | Lens onto the 4th (most least-valued) letter in a word.
 fourthLetter :: Lens' Word Letter
 fourthLetter f (Word a b c d) = (\new -> Word a b c new) <$> f d
 
+-- | Lens beteen a word and its value
 valueOfWord :: Iso' Word Int
 valueOfWord = iso wordValue toWord
 
+-- | Prism between a letter and its value.
 valueOfLetter :: Prism' Int Letter
 valueOfLetter = prism' getValue toLetterSafe
 
@@ -246,6 +252,7 @@ offset w diff = valueOfWord +~ diff $ w
 wrd :: String -> Base27.Word
 wrd (a:b:c:d:[]) = Word (letter a) (letter b) (letter c) (letter d)
 
+-- | A safe version of wrd that returns Nothing if the string isn't a well-formed complete word.
 wrdSafe :: String -> Maybe Base27.Word
 wrdSafe (a:b:c:d:[]) = Word <$> (letterSafe a) <*> (letterSafe b) <*> (letterSafe c) <*> (letterSafe d)
 wrdSafe _ = Nothing
@@ -254,13 +261,16 @@ wordToString :: Base27.Word -> String
 wordToString word = map getLetter (wordToList word)
     where getLetter (LetterV c) = c
 
-lettersFromString :: String -> Maybe [Letter]
-lettersFromString = sequence . fmap letterSafe
 
+--lettersFromString :: String -> Maybe [Letter]
+--lettersFromString = sequence . fmap letterSafe
 
+-- | Convenience function to turn a string of two letters into a tuple.
 letter2 :: String -> (Letter, Letter)
 letter2 (a:b:[]) = (letter a, letter b)
 
+-- | Takes a function that takes two letters and returns one letter,
+-- and applies it to each matching pair of letters between two words.
 zipWord :: (Letter -> Letter -> Letter ) -> Word -> Word -> Word
 zipWord f (Word a b c d) (Word w x y z) =
     Word (f a w) (f b x) (f c y) (f d z)
