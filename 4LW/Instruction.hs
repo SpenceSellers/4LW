@@ -222,3 +222,9 @@ applyFlag flag loc
 -- | Applies multiple DataLocation flags, specified by letter.
 applyFlags :: [Letter] -> DataLocation -> DataLocation
 applyFlags letters loc = foldr applyFlag loc letters
+
+readSequence :: Memory.Memory -> Word -> [Instruction]
+readSequence mem addr = case result of
+        Right (InstructionParseResult ins len) -> (ins : readSequence mem (offsetBy addr len))
+        Left err -> []
+    where result = readInstruction addr mem

@@ -2,7 +2,7 @@
 
 module Base27 (Letter, Word(Word) , letter,
                letterSafe, getValue,
-               toLetter, offset, wrd, toWord,
+               toLetter, offset, wrd, toWord, wrdSafe,
                extendToWord, pattern LetterV, pattern WordChars,
                minWord, maxWord, letter2, valueOfWord, wordValue, wordFromList, wordFromList',
                negateWord, addWord, subWord, mulWord, modWord, andWord,
