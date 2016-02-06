@@ -1,266 +1,300 @@
-#!/usr/bin/python3
-# Warning: This code is pretty bad
-# I just wanted to get something working until I could work on an assembler for real.
+#!/usr/bin/env python
 
+import string
+import bakers
+import asmparse
 import sys
 import os
-import re
-import string
-import shlex
 import uuid
+import copy
+import argparse
+import json
 
-FLAG_MAP = {'neg': 'N',
-            'inc': 'I',
-            'dec': 'J',
-            'mem': 'M',
-            'timesfour': 'F',
-            'first': 'A',
-            'second': 'B',
-            'third': 'C',
-            'fourth': 'D'
-            }
+import positions
 
-LOCTYPE_MAP = {
-    'const': 'C',
-    'reg': 'R',
-    'stack': 'S',
-    'io': 'I'}
+def log(s):
+    print(s, file=sys.stderr)
 
-def log(str):
-    print("Assembler: {}".format(str), file=sys.stderr)
+def trace(obj, desc = 'Traced'):
+    log("{}: {}".format(desc, obj))
+    return obj
 
-class UndefinedLabelException(Exception):
-    pass
+charTable = {
+    '_': '____',
+    '\n': '__C_',
+    ':': '__PC',
+    '!': '__PX',
+    '%': '__PP',
+    '.': '__PD',
+    '-': '__PM',
+    '|': '__PB',
+    '(': '__BA',
+    ')': '__BB',
+}
 
-class Labels:
-    def __init__(self):
-        self.defs = {}
-        self.uses = []
+class Bakeable:
+    def bake(self):
+        raise NotImplementedError()
 
-    def define(self,label, pos):
-        log("defining {} as {}".format(label, pos))
-        self.defs[label] = pos
+    def __repr__(self):
+        return "<{}>".format(self.__class__.__name__)
 
-    def is_defined(self, label):
-        return label in self.defs
+    def render_all(self):
+        return self.bake().render_total()
 
-    def add_use(self,label, pos):
-        self.uses.append((label, pos))
+    def debug_labels(self):
+        return self.bake().debug_labels()
 
-    def get_loc(self,label):
-        return expandWord(toBase27(self.defs[label]))
+    def symbols(self):
+        return self.bake().report()
 
-    def replaceWord(self, s, word, pos):
-        assert len(word) == 4
-        newstring = s[0:pos] + word + s[pos+4:]
-        assert len(s) == len(newstring)
-        return newstring
+    def top_level_symbols(self):
+        labels = self.symbols()
+        toplevels = {}
+        for label, pos in labels.items():
+            if isinstance(label, positions.LabelPos):
 
-    def replaceAll(self, s):
-        news = s
-        for label, pos in self.uses:
-            if not self.is_defined(label):
-                raise UndefinedLabelException("Label {} not defined (required at binary pos {})".format(label, pos))
+                toplevels[label.name] = pos
 
-            word = self.get_loc(label)
-            #print("Replacing {} with {} ({})".format(pos, label, word))
-            news = self.replaceWord(news, word, pos)
-        assert len(news) == len(s)
-        return news
+        return toplevels
 
-class Assembler:
-    def __init__(self, filename):
-        self.filename = os.path.abspath(filename)
-        self.labels = Labels()
-        self.literals = []
+    def pointers(self):
+        table = self.symbols()
+        pointers = []
+        for label, pos in table.items():
+            if isinstance(label, positions.PointingPos):
+                name = label.to_name
+                # if name.startswith("@"):
+                #     pointers.append(pos)
+                #     continue
+                    
+                for otherlabel in table.keys():
+                    if otherlabel.contains_label(name) and not otherlabel.is_absolute():
+                        pointers.append(pos)
 
-    def add_literal(self, data, index):
-        self.literals.append((data, index))
-
-    def insert_literals(self, index):
-        idx = index
-        s = ""
-        for data, mention_index in self.literals:
-            literal_id = uuid.uuid4()
-            self.labels.define(literal_id, idx)
-            self.labels.add_use(literal_id, mention_index)
-            idx += len(data)
-            s += data
-        self.literals = []
-        return s
-
-    def assemble(self):
-        log("Assembling {}".format(self.filename))
-        f = open(self.filename, 'r')
-        whole = f.read()
-        f.close()
+                    
+        return sorted(pointers)
 
 
-        log(os.path.dirname(__file__))
 
-        assembled = self.assembleSection(whole, 0, self.labels)
+class Positioned(Bakeable):
+    def __init__(self, pos, inner):
+        self.pos = pos
+        self.inner = inner
 
-        self.labels.define('PROG_END', len(assembled))
-        assembled = self.labels.replaceAll(assembled)
+    def bake(self):
+        return bakers.PositionShiftedBaker(self.pos, self.inner.bake())
 
-        if len(self.literals) > 0:
-            log("== WARNING == Literals not inserted")
-        return assembled
+class Injected(Bakeable):
+    def __init__(self, table, inner):
+        self.table = table
+        self.inner = inner
 
-    def assembleSection(self, content, index, labels):
-        assembled = ""
-        for l in content.split('\n'):
-            assembled += self.assembleLine(l, len(assembled) + index, labels)
-        return assembled
+    def bake(self):
+        return bakers.InjectAbsolute(self.table, self.inner.bake())
 
-    def assembleLine(self, line, index, labels):
+class Program(Bakeable):
+    def __init__(self, bakeables):
+        self.pieces = bakeables
 
-        m = re.match('^\s*(.*?)(#.*)?$', line)
-        real_line = m.group(1)
-        splitted = shlex.split(real_line)
-        try:
-            first, rest = real_line.split(' ', 1)
-        except:
-            first, rest = None, None
+    def bake(self):
+        end_label = Label("@end").bake()
+        return bakers.BakerSequence([b.bake() for b in self.pieces] + [end_label])
 
-        if len(splitted) == 0:
-            return ""
+    def __repr__(self):
+        return "Program {}".format(self.pieces)
 
-        if splitted[0] == 'label':
-            labels.define(splitted[1],index)
-            return ""
+class Function(Bakeable):
+    def __init__(self, name, bakeables, preserve = []):
+        self.name = name
+        self.preserves = preserve
+        self.pieces = bakeables
 
-        if splitted[0] == 'constant':
-            labels.define(splitted[1],splitted[2])
-            return ""
+    def bake(self):
+        elems = []
+        label = Label(self.name).bake() # Function label
+        preserves = Instruction('PU', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in self.preserves]).bake()
+        elems.append(preserves)
+        elems.extend([b.bake() for b in self.pieces]) # Actual body
+        elems.append(Label("@return").bake())
+        restores = Instruction('PL', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in reversed(self.preserves)]).bake()
+        elems.append(restores)
+        elems.append(Instruction('RT',[]).bake())
+        return bakers.BakerSequence([label, bakers.CaptureScopeBaker(bakers.BakerSequence(elems), pretty_name = 'func_' + self.name)])
+        #return bakers.BakerSequence([label] + elems)
 
-        if splitted[0] == 'data':
-            labels.define(splitted[1], index)
-            data = ''.join(splitted[2:])
-            labels.define('$' + splitted[1], len(data))
-            return data
+    def __repr__(self):
+        return "Function {}: {}".format(self.name, self.pieces)
 
-        if splitted[0] == 'string':
-            labels.define(splitted[1], index)
-            s = toInternalString(' '.join(splitted[2:]))
-            labels.define('$' + splitted[1], len(s))
-            return s
+class Loop(Bakeable):
+    def __init__(self, bakeables):
+        self.pieces = bakeables
 
-        if splitted[0] == 'term_string':
-            labels.define(splitted[1], index)
-            s = toInternalString(' '.join(splitted[2:])) + 'ZZZZ'
-            labels.define('$' + splitted[1], len(s)-4)
-            return s
+    def bake(self):
+        name = 'top_' + bakers.uniqueID()
+        elems = []
+        elems.append(Label(name).bake())
+        elems.append(Label('@continue').bake())
+        elems.extend([b.bake() for b in self.pieces])
+        jumpback = Instruction('JP', [Operand('C', [], RefWord(name))])
+        elems.append(jumpback.bake())
+        elems.append(Label('@break').bake())
+        return bakers.CaptureScopeBaker(bakers.BakerSequence(elems), pretty_name='loop')
 
-        if splitted[0] == 'import':
-            return self.import_file(splitted[1], index, labels)
+class If(Bakeable):
+    def __init__(self, condition, then, otherwise = None):
+        self.cond = condition
+        self.then = then
+        self.otherwise = otherwise
+        print("Otherwise is " + otherwise)
 
-        if splitted[0] == 'preserve':
-            # lines = '\n'.join(["MV [reg {}] [stack P]".format(reg) for reg in splitted[1:]])
-            lines = 'PU [stack P]' + ''.join(['[reg {}]'.format(reg) for reg in splitted[1:]])
-            return self.assembleSection(lines, index, labels)
+    def bake(self):
+        elems = []
+        cond = copy.copy(self.cond)
+        cond.append(Instruction('JP', [Operand('C', [], RefWord('@endif'))]))
+        then = copy.copy(self.then)
+        then.insert(0, Label('@true'))
+        then.append(Label('@endif'))
+        then.append(Label('@false'))
+        elems += cond
+        elems += then
 
-        if splitted[0] == 'restore':
-            lines = 'PL [stack P]' + ''.join(['[reg {}]'.format(reg) for reg in splitted[1:]])
-            return self.assembleSection(lines, index, labels)
+        if self.otherwise:
+            log(type(self.otherwise))
+            elems += self.otherwise
 
-        if splitted[0] == 'call':
-            args = rest.split(' ', 1)
-            lines = "FN [const :{}]".format(args[0]) + ' '.join(args[1:])
-            return self.assembleSection(lines, index, labels)
+        log("Elems is {} ".format(elems))
+        return bakers.CaptureScopeBaker(bakers.BakerSequence([b.bake() for b in elems]))
 
-        if splitted[0] == 'literals':
-            return self.insert_literals(index)
+class FunctionCall(Bakeable):
+    def __init__(self, fname, args = [], to = None):
+        self.fname = fname
+        assert type(args) == list, "Type of fcall args is {}".format(type(args))
+        self.args = args
+        self.to = to
 
-        return self.assembleInstruction(real_line, index, labels)
+    def bake(self):
+        elems = []
+        ins = Instruction('FN', [Operand('C', [], RefWord(self.fname))] + self.args)
+        elems.append(ins)
+        if self.to:
+            elems.append(Instruction('MV', [Operand('S', [], ConstWord('V')), self.to]))
+        return bakers.BakerSequence([e.bake() for e in elems])
 
-    def import_file(self, filename, index, labels):
-        if not os.path.isabs(filename):
-            filename = os.path.join(os.path.dirname(self.filename), filename)
-        f = open(filename, 'r')
-        contents = f.read()
-        f.close()
-        return self.assembleSection(contents, index, labels)
+    def __repr__(self):
+        return "<FunctionCall {} args {}>".format(self.fname, self.args)
 
-    def assembleInstruction(self, line, index, labels):
-        splitted = re.findall("\s*(\[.*?\]|\S+)", line)
-        if len(splitted) == 0:
-            return ""
-        opcode = splitted[0].upper()
-        args = splitted[1:]
-        assembled_args = ""
-        argdex = index + 4 # index of this particular operand
-        for arg in args:
-            assembled_args += self.assembleOperand(arg, argdex, labels)
-            argdex += 8 # A full operand is 8 letters long.
+class Instruction(Bakeable):
+    def __init__(self, opcode, operands):
+        assert len(opcode) == 2
+        self.opcode = opcode
+        assert type(operands) == list, "Operands are {}".format(operands)
+        self.operands = operands
 
-        assert len(assembled_args) % 8 == 0
+    def bake(self):
+        oplen = toBase27(len(self.operands) * 2 + 1)
+        assert len(oplen) == 1
+        head = bakers.Baked("{opcode}{len}_".format(opcode=self.opcode, len = oplen))
 
-        # The length recorded in the instruction head, in words
-        length = toBase27(len(assembled_args)/4 + 1)
+        return bakers.BakerSequence([head] + [opr.bake() for opr in self.operands])
 
-        if len(length) > 1:
-            raise Exception("Length of operands is too long!")
+    def __repr__(self):
+        return "<{} {}>".format(self.opcode, self.operands)
 
-        return opcode + length + '_' + assembled_args
+class Operand(Bakeable):
+    def __init__(self, type, flags, payload):
+        self.type = type
+        assert len(self.type) == 1
 
-    def assembleOperand(self, arg_str, index, labels):
-        insides_regex = re.compile(r'\S*".*?"|\S+')
-        reg1 = re.compile(r'\[(.*)\]', re.VERBOSE)
-        match = re.match(reg1, arg_str)
-        try:
-            insides_raw = match.group(1)
-        except AttributeError:
-            log("Bad operand parse at " + arg_str + " (index {}). Missing brackets?".format(index))
-            raise
-        insides = re.findall(insides_regex, insides_raw)
-        loctype = insides[0]
+        self.flags = flags
 
-        flags = insides[1:-1]
-        if len(insides) > 1:
-            dat = insides[-1]
-        else:
-            dat = None
-        opflags = []
-        for flag in flags:
-            try:
-                opflags.append(FLAG_MAP[flag.lower()])
-            except:
-                raise Exception("Unrecognized dataloc flag: {}".format(flag))
-
-        if len(opflags) > 2:
+        if len(self.flags) > 2:
             raise Exception("There cannot be more than two flags on an operand")
 
-        flagstr = "{s:_>2}".format(s = ''.join(opflags))
+        self.payload = payload
 
-        try:
-            loctypestr = LOCTYPE_MAP[loctype.lower()]
-        except:
-            raise Exception("Unrecognized data type: " + loctype)
+    def bake(self):
+        flagstr = "{s:_>2}".format(s = ''.join(self.flags))
+        head = "_{flags}{type}".format(type = self.type, flags = flagstr)
+        return bakers.BakerSequence([bakers.Baked(head), self.payload.bake()])
 
-        return '_' + flagstr + loctypestr + self.getDat(dat, index + 4, labels)
+    def __repr__(self):
+        return "[Opr {} {} {}]".format(self.type, self.flags if self.flags else '', self.payload)
 
-    def getDat(self, datstr, index, labels):
-        if datstr in [None, '']:
-            return '____'
-        if re.match("[A-Z_]+", datstr):
-            return expandWord(datstr)
-        if re.match("[0-9]+", datstr):
-            return expandWord(toBase27(int(datstr)))
-        m = re.match(":(\S+)", datstr)
-        if m:
-            labels.add_use(m.group(1), index)
-            return "@@@@"
+class Label(Bakeable):
+    def __init__(self, label):
+        self.label = label
 
-        m = re.match("""s(.?)\"(.*)\"""", datstr)
-        if m:
-            s = toInternalString(m.group(2))
-            if m.group(1) == 't': # Z terminated
-                s += 'ZZZZ'
-            self.add_literal(s, index)
-            return "++++"
+    def __repr__(self):
+        return "<@label {}>".format(self.label)
 
-        raise Exception("Invalid dat type: {}".format(datstr))
+    def bake(self):
+        return bakers.LabelBaker(self.label)
+
+class Reserved(Bakeable):
+    def __init__(self, label, length):
+        self.label = label
+        self.length = length
+
+    def bake(self):
+        return bakers.Baked('____' * self.length, self.label)
+
+class Array(Bakeable):
+    def __init__(self, label, datas):
+        self.label = label
+        self.datas = datas
+
+    def bake(self):
+
+        return bakers.BakerSequence([bakers.LabelBaker(self.label)] + [b.bake() for b in self.datas])
+
+class ConstWord(Bakeable):
+    def __init__(self, word):
+        word = expandWord(word)
+        assert len(word) == 4
+        self.word = word
+
+    def bake(self):
+        return bakers.Baked(self.word)
+
+    def __repr__(self):
+        return "(Word {})".format(self.word)
+
+class RefWord(Bakeable):
+    def __init__(self, label):
+        self.label = label
+
+    def bake(self):
+        return bakers.Pointing(self.label)
+
+    def __repr__(self):
+        return "(RefWord {})".format(self.label)
+
+class String(Bakeable):
+    def __init__(self, label, s):
+        self.s = s
+        self.label = label
+
+    def bake(self):
+        internal_s = toInternalString(self.s)
+        return bakers.Baked(internal_s, label = self.label)
+
+class TerminatedString(Bakeable):
+    def __init__(self, label, s):
+        self.s = s
+        self.label = label
+
+    def bake(self):
+        internal_s = toInternalString(self.s) + 'ZZZZ'
+        return bakers.Baked(internal_s, label = self.label)
+
+class Import(Bakeable):
+    def __init__(self, filename):
+        self.filename = filename
+
+    def bake(self):
+        text = open(self.filename, 'r').read()
+        return asmparse.parse_program(text).bake()
 
 def expandWord(s):
     word =  "{:>4s}".format(s).replace(" ", "_")
@@ -284,6 +318,9 @@ def toBase27(n):
         s += alpha[converted]
     return s
 
+def toWord(n):
+    return expandWord(toBase27(n))
+
 def toInternalChar(c):
     if len(c) != 1:
         raise Exception("Invalid character length")
@@ -300,16 +337,94 @@ def toInternalChar(c):
     if c in string.digits:
         return "__N" + chr(ord('A') + int(c) - 1)
 
-    if c == '\n': return "__C_"
+    if c in charTable:
+        return charTable[c]
+
 
     raise Exception("Unknown character for internal char: {}".format(c))
 
 def toInternalString(s):
     return ''.join([toInternalChar(c) for c in s])
 
+def letter_to_int(c):
+    if c == '_': return 0
+    c = c.upper()
+    if c not in string.ascii_uppercase:
+        raise ValueError("{} is not a valid letter".format(c))
+    return ord(c) - ord('A') + 1
+
+def base27to10(s):
+    place = 0
+    accum = 0
+    for letter in reversed(s):
+        accum += letter_to_int(letter) * (27**place)
+        place += 1
+    return accum
+
+def parse_num(s):
+    try:
+        return int(s)
+    except:
+        pass
+
+    return base27to10(s)
+
 def main():
-    asm = Assembler(sys.argv[1])
-    print(asm.assemble())
+    argsp = argparse.ArgumentParser()
+    argsp.add_argument('filename')
+    argsp.add_argument('--debugLabels', '-D', dest="debug_labels", action='store_true')
+    argsp.add_argument('--position', '-P', type=str, default=0, dest='position')
+    argsp.add_argument('--symboltable', '-S', dest='symbol_table', action = 'store_true', help="Generate a symbol table")
+    argsp.add_argument('--pointers', dest='pointer_list', action = 'store_true', help="Generate a list of all pointers in the program.")
+    argsp.add_argument('-l', '--link', dest='link', type=str, help="Links with an external symbol table, generated with -S")
+    argsp.add_argument('--whereis', '-W', dest='whereis', type=str, help="Use with a number/word to search for a label at a position, or with a :-prefixed string to search for a label.")
+
+
+
+    args = argsp.parse_args()
+    filename = args.filename
+    f = open(filename, 'r')
+    raw_prog = f.read()
+    raw_prog_parsed = asmparse.parse_program(raw_prog)
+
+    injected_symbols = {}
+    if args.link:
+        symbols_file = open(args.link, 'r')
+        injected_symbols = json.load(symbols_file)
+        symbols_file.close()
+
+    prog = Injected(injected_symbols, Positioned(parse_num(args.position), raw_prog_parsed))
+
+    if args.debug_labels:
+        print(prog.debug_labels())
+
+    elif args.symbol_table:
+        table = prog.top_level_symbols()
+        print(json.dumps(table, indent=4))
+        
+    elif args.whereis:
+        table = prog.symbols()
+        if args.whereis.startswith(':'):
+            search_str = args.whereis[1:]
+            for label, pos in table.items():
+                if search_str in label:
+                    print("{} at {} ({})".format(label, expandWord(toBase27(pos)), pos))
+        else:
+            search_pos = parse_num(args.whereis)
+            print("Searching at {}".format(search_pos))
+            for label, pos in table.items():
+                if pos == search_pos:
+                    print("{} at {}".format(label, pos))
+                if abs(pos-search_pos) < 100:
+                    print("Close: {} at {} (dist {})".format(label,pos, search_pos - pos))
+                        
+
+    elif args.pointer_list:
+        pointers = prog.pointers()
+        print(json.dumps(pointers))
+
+    else:
+        print(prog.render_all())
 
 if __name__ == '__main__':
     main()

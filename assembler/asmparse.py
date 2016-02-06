@@ -1,5 +1,5 @@
 from pyparsing import *
-import asm2 as asm
+import assembler as asm
 
 def trace(x):
     print("aa {}".format(x))

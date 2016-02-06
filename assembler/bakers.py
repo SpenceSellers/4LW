@@ -1,4 +1,4 @@
-import asm2 as asm
+import assembler as asm
 import string
 import copy
 import sys
