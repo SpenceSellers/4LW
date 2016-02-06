@@ -100,7 +100,7 @@ toBad = toEither BadInstruction
 toBadOpLen = toEither BadOperandsLength
 
 -- | readInstruction will attempt to build an entire Instruction out of the address
--- and memory region supplied to it.
+-- and memory supplied to it.
 readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
 readInstruction addr mem = InstructionParseResult <$> instruction <*> pure instructionLength
     where instructionWords = readInstructionWords addr mem

@@ -126,10 +126,9 @@ getData :: DataLocation -> State MachineState Word
 getData (Constant word) = return word
 
 getData (Register letter) = do
-  regs <- use registers
-  return $ if inRange registerBounds letter
-           then regs ! letter
-           else minWord
+  reg <- firstOf (ix letter) <$> use registers
+  return $ fromMaybe minWord reg
+
 
 getData (MemoryLocation loc) = Memory.readWord <$> use memory <*> getData loc
 
@@ -145,10 +144,8 @@ getData (TapeIO letter) = do
         Nothing -> return minWord
 
 getData (Io selector) = do
-  char <- popInBuffer
-  case char >>= Io.charToInternal of
-    Just c -> return $ c
-    Nothing -> return $ maxWord
+  maybechar <- popInBuffer
+  return $ fromMaybe maxWord (maybechar >>= Io.charToInternal)
 
 getData (Negated loc) = negateWord <$> getData loc
 getData (Incremented loc) = offset <$> getData loc <*> pure 1
@@ -218,8 +215,7 @@ jumpCompare f src1 src2 jumpdest = do
 runInstruction :: Instruction -> State MachineState ()
 runInstruction Nop = return ()
 runInstruction Instruction.Halt = action .= HaltAction
-runInstruction (Move src dest) =
-    setData dest =<< getData src
+runInstruction (Move src dest) = setData dest =<< getData src
 
 runInstruction (Add src1 src2 dest)    =  bifunction addWord src1 src2 dest
 runInstruction (Sub src1 src2 dest)    =  bifunction subWord src1 src2 dest
@@ -228,8 +224,7 @@ runInstruction (Div src1 src2 dest)    =  bifunction divWord src1 src2 dest
 runInstruction (Modulo src1 src2 dest) =  bifunction modWord src1 src2 dest
 runInstruction (And src1 src2 dest)    =  bifunction andWord src1 src2 dest
 
-runInstruction (Jump dest) =
-    setPC =<< getData dest
+runInstruction (Jump dest) = setPC =<< getData dest
 
 runInstruction (JumpZero datloc dest) = do
     dat <- getData datloc
@@ -284,9 +279,7 @@ runInstruction (TapeSeekBackwards tape distance) = do
     tapeDeck . at tapeLetter %= fmap (execState (Tapes.tapeSeekBackwards distance))
 
 runInstruction (TapeRewind tapeIDloc) = do
-    tapeID <- getData tapeIDloc
-    let tapeLetter = tapeID ^. fourthLetter
-    --let tryrewind (Just tape) = Just $ execState Tapes.tapeRewind tape
+    tapeLetter <- view fourthLetter <$> getData tapeIDloc
     -- "zoom" would probably work here, but the Maybe causes trouble.
     --zoom (tapeDeck . at tapeLetter) (Tapes.tapeRewind)
     tapeDeck . at tapeLetter %= fmap (execState Tapes.tapeRewind)
@@ -300,11 +293,9 @@ makeLenses ''RunOptions
 
 tick :: State MachineState ()
 tick = do
-  pc <- getPC
-  state <- get
   tickNum += 1
-  let instructionResult = readInstruction pc mem
-      mem = state ^. memory
+  pc <- getPC
+  instructionResult <- readInstruction pc <$> use memory
 
   case instructionResult of
     Left reason -> trace ("BAD INSTRUCTION: " ++ show reason) $ do
@@ -323,7 +314,6 @@ run :: RunOptions -> StateT MachineState IO ()
 run options = do
   input <- lift $ Io.readToBuffer []
   inBuffer <>= input
-  state <- get
   buf <- use inBuffer
   case buf of
       ('`':xs) -> do
@@ -335,8 +325,7 @@ run options = do
   case options ^. ticktime of
     0 -> return ()
     n -> lift $ threadDelay n
-  state <- hoistState $ get
-  let currentAction = view action state
+  currentAction <- use action
   --let ticknum = view tickNum state
   action .= NoAction -- Clear action
   case currentAction of
