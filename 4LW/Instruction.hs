@@ -190,16 +190,20 @@ parseOperands :: [Word] -> Maybe [DataLocation]
 parseOperands words = reverse <$> parseOperands_ words []
 
 parseOperands_ :: [Word] -> Operands -> Maybe [DataLocation]
-parseOperands_ ((Word _ flag1 flag2 control):opdata:xs) ops
-    | control == letter 'R' = build (Register (opdata ^. fourthLetter))
-    -- | control == letter 'M' =  parseOperands_ xs (applyFlag flag (MemoryLocation opdata): ops)
-    | control == letter 'C' = build (Constant opdata)
-    | control == letter 'I' = build (Io (opdata ^. fourthLetter))
-    | control == letter 'S' = build (Stack (opdata ^. fourthLetter))
-    | control == letter 'T' = build (TapeIO (opdata ^. fourthLetter))
-    where build instruction = parseOperands_ xs (applyFlags [flag1, flag2] instruction:ops)
+parseOperands_ ((Word optype flag1 flag2 control):rest) ops =
+    case optype of
+        LetterV '_' ->  case control of
+            LetterV 'R' -> build (Register (opdata ^. fourthLetter))
+            LetterV 'C' -> build (Constant opdata)
+            LetterV 'I' -> build (Io (opdata ^. fourthLetter))
+            LetterV 'S' -> build (Stack (opdata ^. fourthLetter))
+            LetterV 'T' -> build (TapeIO (opdata ^. fourthLetter))
+            _ -> Nothing
+            where (opdata : xs) = rest
+                  build instruction = parseOperands_ xs (applyFlags [flag1, flag2] instruction : ops)
+        _ -> Nothing
 
-parseOperands_ (x:xs) ops = Nothing -- Odd number of words.
+--parseOperands_ (x:xs) ops = Nothing -- Odd number of words.
 parseOperands_ [] ops = return ops
 
 -- | Applies a single DataLocation flag, specified by letter.
