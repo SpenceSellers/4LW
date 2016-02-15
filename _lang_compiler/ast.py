@@ -25,8 +25,6 @@ class Context:
         self.reserved_mem = {}
         self.types = {}
 
-        self.types['Node'] = types.Struct(['data', 'next'])
-
         # TODO function return values.
 
     def reserve_register(self):
@@ -409,6 +407,14 @@ class FCall(Expr):
         except SymbolNotRegisteredException:
             log("Unknown fn {}. Return values may not be cleared.".format(self.fname))
             return False
+
+class SizeOf(Expr):
+    def __init__(self, type_name):
+        self.type_name = type_name
+
+    def emit_with_dest(self, context):
+        size = context.get_type(self.type_name).len_words()
+        return ('', asm.DataLoc(asm.LocType.CONST, asm.ConstWord(size)))
 
 class Io(LValue, Expr):
     def __init__(self):

@@ -18,5 +18,5 @@ class Struct(Type):
     def get_field_offset(self, name):
         return self.fields[name]
 
-    def len_words(len):
+    def len_words(self):
         return len(self.fields)

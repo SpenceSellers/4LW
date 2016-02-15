@@ -51,6 +51,8 @@ fcall_args = Group(Optional(expr + ZeroOrMore(Suppress(',') + expr)))
 
 fcall_expr = (identifier + '(' + fcall_args + ')').setParseAction(lambda t: ast.FCall(t[0], t[2]))
 
+sizeof_expr = (Keyword('sizeof') + type_identifier).setParseAction(lambda t: ast.SizeOf(t[1]))
+
 parens_expr = (Literal('(') + expr + Literal(')')).setParseAction(lambda t: t[1])
 
 var_expr = identifier.copy().setParseAction(lambda t: ast.VarExpr(t[0]))
@@ -60,7 +62,7 @@ deref_expr = ("*" + expr).setParseAction(lambda t: ast.DerefExpr(t[1]))
 string_expr = quotedString.copy().setParseAction(lambda t: ast.StringExpr(t[0][1:-1]))
 
 # All expressions except for infix ones.
-bottom_expr << MatchFirst([num_expr, struct_access, fcall_expr, var_expr, base27_expr, parens_expr, deref_expr, string_expr, special_loc])
+bottom_expr << MatchFirst([num_expr, struct_access, fcall_expr, sizeof_expr, var_expr, base27_expr, parens_expr, deref_expr, string_expr, special_loc])
 
 # All expressions including infix expressions.
 expr << infixNotation(bottom_expr,
