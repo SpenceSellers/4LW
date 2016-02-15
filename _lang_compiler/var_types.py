@@ -1,8 +1,9 @@
 import abc
 
 class Type:
+
     @abc.abstractmethod
-    def len_letters(self):
+    def len_words(self):
         pass
 
 
@@ -17,5 +18,5 @@ class Struct(Type):
     def get_field_offset(self, name):
         return self.fields[name]
 
-    def len_letters(len):
-        return len(self.fields) * 4
+    def len_words(len):
+        return len(self.fields)

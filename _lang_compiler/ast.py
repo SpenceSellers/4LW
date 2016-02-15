@@ -81,6 +81,7 @@ class Context:
         self.strings.append((string, name))
         return asm.DataLoc(asm.LocType.CONST, asm.RefWord(name))
 
+
     def maybe_get_string_name(self, string):
         for s, name in self.strings:
             if s == string:
@@ -107,6 +108,15 @@ class Context:
             out += asm.TermString(name, string).emit()
 
         return out
+
+    def register_type(self, typename, type):
+        self.types[typename] = type
+
+    def get_type(self, type_name):
+        if type_name in self.types:
+            return self.types[type_name]
+        else:
+            return self.parent.get_type(type_name)
 
 class SymbolNotRegisteredException(Exception):
     pass
@@ -444,7 +454,7 @@ class StructAccess(LValue, Expr):
 
     def emit_assign_to(self, src, context):
         out = ''
-        type = context.types[self.type_name]
+        type = context.get_type(self.type_name)
         offset = type.get_field_offset(self.field_name)
 
         basecalc, base_dest = self.base.emit_with_dest(context)
@@ -457,7 +467,7 @@ class StructAccess(LValue, Expr):
 
     def emit_with_dest(self, context):
 
-        type = context.types[self.type_name]
+        type = context.get_type(self.type_name)
         offset = type.get_field_offset(self.field_name)
 
         out = ''
@@ -510,6 +520,15 @@ class DeclareFunction(Statement):
 
     def emit(self, context):
         context.register_fn(self.name, self.returns)
+        return ''
+
+class DeclareStruct(Statement):
+    def __init__(self, name, fields):
+        self.name = name
+        self.fields = fields
+
+    def emit(self, context):
+        context.register_type(self.name, types.Struct(self.fields))
         return ''
 
 class Sequence(Statement):

@@ -31,6 +31,12 @@ identifier = Word(srange('[a-z]_'), alphas + nums + '_')
 
 type_identifier = Word(srange('[A-Z]'), alphas + nums + '_')
 
+type_id_pair = (identifier + ':' + type_identifier).setParseAction(
+    lambda t: TypeAndName(t[2], t[1])
+)
+
+identifier_list = Group(Optional(identifier + ZeroOrMore(Suppress(',') + identifier)))
+
 #identifier = Word(alphas)
 
 single_letter = Word(srange('[A-Z_]'), exact = 1)
@@ -97,7 +103,9 @@ declarevar = (Keyword('var') + identifier).setParseAction(lambda t: ast.DeclareV
 declarefn = (Keyword('declare') + identifier + Optional(Keyword('returns').setParseAction(lambda t: True), default = False))\
     .setParseAction(lambda t: ast.DeclareFunction(t[1], t[2]))
 
-# declare_struct = (Keyword('struct') + type_identifier)
+declare_struct = (Keyword('struct') + type_identifier + '{' + identifier_list + '}').setParseAction(
+    lambda t: ast.DeclareStruct(t[1], t[3])
+)
 
 assignment = (lvalue + Literal(':=') + expr).setParseAction(lambda t: ast.Assignment(t[0], t[2]))
 
@@ -126,7 +134,7 @@ label = (Keyword('label') + identifier).setParseAction(lambda t: ast.Label(t[1])
 
 comment = ('#' + SkipTo(lineEnd))
 
-line = comment.suppress() | MatchFirst([declarevar, declarefn, assignment, function, return_, halt, if_, while_, include, asm, goto, label, expr_statement, nop]) + Literal(';').suppress() + Optional(comment).suppress()
+line = comment.suppress() | MatchFirst([declarevar, declarefn, declare_struct, assignment, function, return_, halt, if_, while_, include, asm, goto, label, expr_statement, nop]) + Literal(';').suppress() + Optional(comment).suppress()
 
 sequence = ZeroOrMore(line).setParseAction(lambda t: ast.Sequence(t.asList()))
 
