@@ -20,10 +20,17 @@ bottom_expr = Forward()
 function = Forward()
 block_sequence = Forward()
 special_loc = Forward()
+struct_access = Forward()
+
+
 num = Word(nums)
 
 
+
 identifier = Word(srange('[a-z]_'), alphas + nums + '_')
+
+type_identifier = Word(srange('[A-Z]'), alphas + nums + '_')
+
 #identifier = Word(alphas)
 
 single_letter = Word(srange('[A-Z_]'), exact = 1)
@@ -46,8 +53,10 @@ deref_expr = ("*" + expr).setParseAction(lambda t: ast.DerefExpr(t[1]))
 
 string_expr = quotedString.copy().setParseAction(lambda t: ast.StringExpr(t[0][1:-1]))
 
-bottom_expr << MatchFirst([num_expr, fcall_expr, var_expr, base27_expr, parens_expr, deref_expr, string_expr, special_loc])
+# All expressions except for infix ones.
+bottom_expr << MatchFirst([num_expr, struct_access, fcall_expr, var_expr, base27_expr, parens_expr, deref_expr, string_expr, special_loc])
 
+# All expressions including infix expressions.
 expr << infixNotation(bottom_expr,
     [
         ('+', 2, opAssoc.LEFT, addify),
@@ -75,12 +84,20 @@ tape = (Keyword("tape") + single_letter).setParseAction(lambda t: ast.Tape(t[1])
 special_loc << ('[' + MatchFirst([io_lvalue, stack, tape]) + ']').setParseAction(lambda t: t[1])
 
 lvariable = identifier.copy().setParseAction(lambda t: ast.Variable(t[0]))
-lvalue = MatchFirst([lvariable, mem_lvalue, special_loc])
+
+struct_access << (type_identifier + '@' + expr + '.' + identifier).setParseAction(
+    lambda t: ast.StructAccess(t[0], t[2], t[4])
+)
+
+# == LVALUES ==
+lvalue = MatchFirst([lvariable, mem_lvalue, special_loc, struct_access])
 
 declarevar = (Keyword('var') + identifier).setParseAction(lambda t: ast.DeclareVar(t[1]))
 
 declarefn = (Keyword('declare') + identifier + Optional(Keyword('returns').setParseAction(lambda t: True), default = False))\
     .setParseAction(lambda t: ast.DeclareFunction(t[1], t[2]))
+
+# declare_struct = (Keyword('struct') + type_identifier)
 
 assignment = (lvalue + Literal(':=') + expr).setParseAction(lambda t: ast.Assignment(t[0], t[2]))
 

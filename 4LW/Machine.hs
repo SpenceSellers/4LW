@@ -326,7 +326,6 @@ run options = do
     0 -> return ()
     n -> lift $ threadDelay n
   currentAction <- use action
-  --let ticknum = view tickNum state
   action .= NoAction -- Clear action
   case currentAction of
     NoAction -> run options

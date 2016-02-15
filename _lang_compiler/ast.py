@@ -2,6 +2,7 @@ import asmwrite as asm
 import abc
 import os
 import sys
+import var_types as types
 
 TEMPSTACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord('_'))
 ARGSTACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord(asm.Stacks.ARGS.value))
@@ -22,8 +23,10 @@ class Context:
         self.parent = parent
         self.functions = {}
         self.reserved_mem = {}
+        self.types = {}
 
-        # TODO self.types
+        self.types['Node'] = types.Struct(['data', 'next'])
+
         # TODO function return values.
 
     def reserve_register(self):
@@ -428,6 +431,45 @@ class Tape(LValue, Expr):
 
     def emit_with_dest(self, context):
         return ('', asm.DataLoc(asm.LocType.TAPE, asm.ConstWord(self.letter)))
+
+class StructAccess(LValue, Expr):
+    def __init__(self, type_name, base, field_name):
+        self.type_name = type_name
+
+        assert isinstance(base, Expr)
+        self.base = base
+
+        assert isinstance(field_name, str)
+        self.field_name = field_name
+
+    def emit_assign_to(self, src, context):
+        out = ''
+        type = context.types[self.type_name]
+        offset = type.get_field_offset(self.field_name)
+
+        basecalc, base_dest = self.base.emit_with_dest(context)
+        out += basecalc
+
+        out += asm.Instruction(asm.Opcode.ADD, [base_dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(offset)), TEMPSTACK]).emit()
+        out += asm.Instruction(asm.Opcode.MOVE, [src, TEMPSTACK.with_flag(asm.DataFlag.MEM)]).emit()
+
+        return out
+
+    def emit_with_dest(self, context):
+
+        type = context.types[self.type_name]
+        offset = type.get_field_offset(self.field_name)
+
+        out = ''
+        basecalc, base_dest = self.base.emit_with_dest(context)
+        out += basecalc
+
+        out += asm.Instruction(asm.Opcode.ADD, [base_dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(offset)), TEMPSTACK]).emit()
+
+        return (out, TEMPSTACK.with_flag(asm.DataFlag.MEM))
+
+
+
 
 class Assignment(Statement):
     def __init__(self, lvalue, rvalue):

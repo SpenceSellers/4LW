@@ -122,6 +122,9 @@ class Instruction:
         self.opcode = opcode
         self.args = args
 
+        for arg in args:
+            assert isinstance(arg, DataLoc)
+
     def emit(self):
         args = ' '.join(a.emit() for a in self.args)
         return "{} {}\n".format(self.opcode.value, args)
