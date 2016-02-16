@@ -195,8 +195,12 @@ class ConstExpr(Expr):
     def is_always_true(self):
         return not self.val.is_zero()
 
+class ConstRefExpr(Expr):
+    def __init__(self, name):
+        self.name = name
 
-
+    def emit_with_dest(self, context):
+        return ('', asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.name)))
 
 class VarExpr(Expr):
     def __init__(self, varname):
@@ -500,9 +504,6 @@ class StructAccess(LValue, Expr):
         #out += asm.Instruction(asm.Opcode.ADD, [base_dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(offset)), TEMPSTACK]).emit()
 
         return (out, loc.with_flag(asm.DataFlag.MEM))
-
-
-
 
 class Assignment(Statement):
     def __init__(self, lvalue, rvalue):

@@ -52,6 +52,7 @@ class Opcode(Enum):
     ADD = "AD"
     SUB = "SB"
     MUL = "ML"
+    DIV = "DV"
     MOD = "MD"
     JUMP = "JP"
     JUMPEQUAL = "JE"
