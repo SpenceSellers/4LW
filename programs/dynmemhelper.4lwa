@@ -1,0 +1,72 @@
+function tagOfMem {
+    SB [stack S] [const 4] [stack V]
+}
+
+function memOfTag {
+    MV [stack plusfour S] [stack V]
+}
+
+# (Tag addr) -- (Tag Addr)
+function nextTag preserving A {
+    MV [stack S] [reg A]
+    call getTagLen [reg A]
+    call memOfTag [reg A]
+    AD [stack V] [stack timesfour V] [stack V]
+
+}
+
+# (Tag addr) -- (length (words))
+function getTagLen {
+    AN [stack mem S] [const _AAA] [stack V]
+}
+
+# (Tag addr) -- (length words)
+function tagTotalLen {
+    call getTagLen to [stack inc V]
+}
+
+# (Tag addr) (Length in words, max ZZZ) --
+function setTagLen preserving A B {
+    MV [stack S] [reg B] # Len
+    MV [stack S] [reg A] # Tag addr
+    AN [reg mem A] [const A___] [reg mem A] # Mask out lower three letters
+    AD [reg mem A] [reg B] [reg mem A]
+}
+
+# (Tag addr) --
+function setAllocated {
+    call setTagFlag [stack S] [const A]
+}
+
+# (Tag addr) --
+function setUnallocated {
+    call setTagFlag [stack S] [const U]
+}
+
+# (Tag word) -- Bool
+function isAllocated {
+    JE [stack first mem S] [const U] [const :unalloc]
+    MV [const ZZZZ] [stack V]
+    JP [const :@return]
+
+    label unalloc
+    MV [const 0] [stack V]
+}
+
+function isTagStop {
+    JE [stack first mem S] [const Z] [const :yes]
+    MV [const 0] [stack V]
+    JP [const :@return]
+
+    label yes
+    MV [const ZZZZ] [stack V]
+}
+
+# (Tag addr) (Flag letter) --
+function setTagFlag preserving A B {
+    MV [stack S] [reg B] # Flag
+    MV [stack S] [reg A] # Tag addr
+    AN [reg mem A] [const _AAA] [reg mem A]
+    ML [reg B] [const A___] [reg B]
+    AD [reg mem A] [reg B] [reg mem A]
+}

@@ -1,0 +1,92 @@
+
+include <dynmemhelper.4lwa>;
+declare nextTag returns;
+declare getTagLen returns;
+
+asm "reserve dynamic_start 1";
+asm "reserve free_count 1";
+asm "reserve defrag_cycle_size 1";
+
+function dynmemInit(start, end){
+    var lenLetters;
+    var lenWords;
+
+    lenLetters := end - start;
+    lenWords := lenLetters / 4;
+
+    if (lenWords > _ZZZ) {
+        memErr(1);
+    };
+
+    *:dynamic_start := start;
+
+    *:defrag_cycle_size := 3;
+    *:free_count := 0;
+
+    setUnallocated(*:dynamic_start);
+    setTagLen(*:dynamic_start, lenWords);
+    *nextTag(*:dynamic_start) := ZZZZ;
+
+};
+
+function malloc(len){
+    var current;
+    var taglen;
+    var nextt;
+    current := *:dynamic_start;
+
+    while(1){
+        if (isTagStop(current)){
+            return ZZZZ;
+        };
+
+        if (isAllocated(current)){
+            goto next;
+        };
+
+        taglen := getTagLen(current);
+        if (len == taglen){
+            # The tag is of equal length, it can be reused.
+            setAllocated(current);
+            return memOfTag(current);
+        };
+
+        if ((len + 1) > taglen){
+            # Too short. The plus one is for the tag.
+            goto next;
+        };
+
+        # We've found the tag we're going to use.
+
+        setTagLen(current, len);
+        setAllocated(current);
+
+        nextt := nextTag(current);
+        setUnallocated(nextt);
+        setTagLen(nextt, len - (taglen + 1));
+
+        return memOfTag(current);
+
+        label next;
+        current := nextTag(current);
+    };
+};
+
+function free(mem){
+    setUnallocated(tagOfMem(mem));
+    *:free_count := *:free_count + 1;
+    if (*:free_count > *:defrag_cycle_size){
+        *:free_count := 0;
+        defragHeap();
+    };
+};
+
+function defragHeap(){
+
+};
+
+function memErr(code){
+    printTerminated("Memory Error: ");
+    printWord(code);
+    printNewline();
+};

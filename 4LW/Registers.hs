@@ -1,5 +1,5 @@
 -- | Handles 4LW's registers.
--- Each register can hod one Word.
+-- Each register can hold one Word.
 module Registers where
 
 import Prelude hiding (Word)
