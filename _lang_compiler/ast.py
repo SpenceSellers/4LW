@@ -466,8 +466,16 @@ class StructAccess(LValue, Expr):
         basecalc, base_dest = self.base.emit_with_dest(context)
         out += basecalc
 
-        out += asm.Instruction(asm.Opcode.ADD, [base_dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(offset)), TEMPSTACK]).emit()
-        out += asm.Instruction(asm.Opcode.MOVE, [src, TEMPSTACK.with_flag(asm.DataFlag.MEM)]).emit()
+        loc = None
+        if offset == 0:
+            loc = base_dest
+        elif offset == 4:
+            loc = base_dest.with_flag(asm.DataFlag.PLUSFOUR)
+        else:
+            out += asm.Instruction(asm.Opcode.ADD, [base_dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(offset)), TEMPSTACK]).emit()
+            loc = TEMPSTACK
+
+        out += asm.Instruction(asm.Opcode.MOVE, [src, loc.with_flag(asm.DataFlag.MEM)]).emit()
 
         return out
 
@@ -480,9 +488,18 @@ class StructAccess(LValue, Expr):
         basecalc, base_dest = self.base.emit_with_dest(context)
         out += basecalc
 
-        out += asm.Instruction(asm.Opcode.ADD, [base_dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(offset)), TEMPSTACK]).emit()
+        loc = None
+        if offset == 0:
+            loc = base_dest
+        elif offset == 4:
+            loc = base_dest.with_flag(asm.DataFlag.PLUSFOUR)
+        else:
+            out += asm.Instruction(asm.Opcode.ADD, [base_dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(offset)), TEMPSTACK]).emit()
+            loc = TEMPSTACK
 
-        return (out, TEMPSTACK.with_flag(asm.DataFlag.MEM))
+        #out += asm.Instruction(asm.Opcode.ADD, [base_dest, asm.DataLoc(asm.LocType.CONST, asm.ConstWord(offset)), TEMPSTACK]).emit()
+
+        return (out, loc.with_flag(asm.DataFlag.MEM))
 
 
 

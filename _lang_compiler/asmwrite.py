@@ -38,7 +38,7 @@ class DataFlag(Enum):
     MEM = 'mem'
     NEG = 'neg'
     TIMESFOUR = 'timesfour'
-    PLUSFOR = 'plusfour'
+    PLUSFOUR = 'plusfour'
 
 class LocType(Enum):
     REG = 'reg'
@@ -108,7 +108,7 @@ class DataLoc:
 
     def add_flag(self, flag):
         assert len(self.flags) <= 1
-        self.flags.append(flag)
+        self.flags.insert(0, flag)
 
     def with_flag(self, flag):
         assert self.can_add_flag(), "Cannot add new flag to dataloc!"
