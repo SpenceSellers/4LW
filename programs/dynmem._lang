@@ -87,7 +87,6 @@ function free(mem){
 };
 
 function defragHeap(){
-    println("Defrag");
     var following;
     var leading;
     var newlen;

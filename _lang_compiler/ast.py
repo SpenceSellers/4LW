@@ -382,11 +382,12 @@ class FCall(Expr):
 
     def emit_with_dest(self, context):
         argcalcs = []
+        dests = []
         for arg in self.args:
             calc, dest = arg.emit_with_dest(context)
             argcalcs.append(calc)
-            move_to_arg_stack = asm.Instruction(asm.Opcode.MOVE, [dest, ARGSTACK])
-            argcalcs.append(move_to_arg_stack.emit())
+
+            dests.append(dest)
 
         # If the function returns a value, it's going to have to be cleared off of the
         # function result stack one way or another.
@@ -402,7 +403,7 @@ class FCall(Expr):
         else:
             result_dest = ZERO_WORD
 
-        call = asm.Instruction(asm.Opcode.FUNCCALL, [asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.fname))])
+        call = asm.Instruction(asm.Opcode.FUNCCALL, [asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.fname))] + dests)
         return (''.join(argcalcs) + call.emit(), result_dest)
 
     def must_read_result(self, context):
