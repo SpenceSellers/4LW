@@ -2,6 +2,11 @@
 include <dynmemhelper.4lwa>;
 declare nextTag returns;
 declare getTagLen returns;
+declare tagTotalLen returns;
+declare isTagStop returns;
+declare isAllocated returns;
+declare tagOfMem returns;
+declare memOfTag returns;
 
 asm "reserve dynamic_start 1";
 asm "reserve free_count 1";
@@ -63,7 +68,7 @@ function malloc(len){
 
         nextt := nextTag(current);
         setUnallocated(nextt);
-        setTagLen(nextt, len - (taglen + 1));
+        setTagLen(nextt, taglen - (len + 1));
 
         return memOfTag(current);
 
@@ -74,15 +79,58 @@ function malloc(len){
 
 function free(mem){
     setUnallocated(tagOfMem(mem));
-    *:free_count := *:free_count + 1;
-    if (*:free_count > *:defrag_cycle_size){
+    *:free_count := (*:free_count) + 1;
+    if ((*:free_count) > (*:defrag_cycle_size)){
         *:free_count := 0;
         defragHeap();
     };
 };
 
 function defragHeap(){
+    println("Defrag");
+    var following;
+    var leading;
+    var newlen;
+    following := *:dynamic_start;
+    leading := nextTag(following);
+    while (1){
+        label continue;
+        if (isTagStop(leading)){
+            goto done;
+        };
 
+        if (isAllocated(leading)){
+            goto next;
+        };
+
+
+        if (isAllocated(following)){
+            goto next;
+        };
+
+        newlen := getTagLen(following) + tagTotalLen(leading);
+
+        setTagLen(following, newlen);
+
+        leading := nextTag(leading);
+        goto continue;
+
+        label next;
+        following := leading;
+        leading := nextTag(leading);
+
+
+    };
+    label done;
+};
+
+function debugHeap(){
+    var tag;
+    tag := *:dynamic_start;
+    while(!isTagStop(tag)){
+        printf(*tag, tag, "Addr %w tag %w%n");
+        tag := nextTag(tag);
+    };
 };
 
 function memErr(code){

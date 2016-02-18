@@ -1,7 +1,7 @@
 main();
 halt;
 
-include <dynmem.4lwa>;
+include <dynmem._lang>;
 include <print.4lwa>;
 include <strings.4lwa>;
 include <base10.4lwa>;
@@ -218,12 +218,13 @@ function evalcmd(cmdstr){
 
 function main(){
     dynmemInit(B___, ET__);
+    println("Done init");
     #fs_new_file(ABCD);
     #fs_write_file(ABCD, "Test file", 10);
     #var res;
     #fs_read_file(ABCD, res, 10);
     #println(res);
-
+    malloc(AZ);
     println("Welcome to OSv2");
     var alloc;
     var cmd;
