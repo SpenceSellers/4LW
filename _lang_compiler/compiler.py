@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import langparse
 import ast
 import sys
@@ -11,7 +13,7 @@ def compile_file(path):
     f = open(path, 'r')
     progstring = f.read()
     return compile(progstring)
-    
+
 def main():
     filename = sys.argv[1]
     print(compile_file(filename))
