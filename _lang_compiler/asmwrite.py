@@ -86,6 +86,12 @@ class ConstWord:
     def is_zero(self):
         return self.word == '____'
 
+    def __eq__(self, other):
+        if type(self) == type(other):
+            return self.word == other.word
+        else:
+            return False
+
 class RefWord:
     def __init__(self, ident):
         self.ident = ident
@@ -116,6 +122,9 @@ class DataLoc:
         new = copy.deepcopy(self)
         new.add_flag(flag)
         return new
+
+    def __eq__(self, other):
+        return self.loctype == other.loctype and self.flags == other.flags and self.payload == other.payload
 
 
 class Instruction:

@@ -11,6 +11,7 @@ declare memOfTag returns;
 asm "reserve dynamic_start 1";
 asm "reserve free_count 1";
 asm "reserve defrag_cycle_size 1";
+asm "reserve fast_free_region 1";
 
 function dynmemInit(start, end){
     var lenLetters;
@@ -24,9 +25,9 @@ function dynmemInit(start, end){
     };
 
     *:dynamic_start := start;
-
     *:defrag_cycle_size := 3;
     *:free_count := 0;
+    *:fast_free_region := *:dynamic_start;
 
     setUnallocated(*:dynamic_start);
     setTagLen(*:dynamic_start, lenWords);
@@ -38,6 +39,14 @@ function malloc(len){
     var current;
     var taglen;
     var nextt;
+    var fast_attempt;
+
+    fast_attempt := attempt_malloc_fast(len);
+    if (fast_attempt != ZZZZ){
+        return fast_attempt;
+    };
+
+
     current := *:dynamic_start;
 
     while(1){
@@ -63,18 +72,44 @@ function malloc(len){
 
         # We've found the tag we're going to use.
 
-        setTagLen(current, len);
-        setAllocated(current);
-
-        nextt := nextTag(current);
-        setUnallocated(nextt);
-        setTagLen(nextt, taglen - (len + 1));
+        allocate_from(current, len);
 
         return memOfTag(current);
 
         label next;
         current := nextTag(current);
     };
+};
+
+function attempt_malloc_fast(len){
+    if (isAllocated(*:fast_free_region)){
+        return ZZZZ;
+    };
+
+    if (getTagLen(*:fast_free_region) < len){
+        return ZZZZ;
+    };
+
+    allocate_from(*:fast_free_region, len);
+    *:fast_free_region := nextTag(*:fast_free_region);
+
+    return memOfTag(*:fast_free_region);
+};
+
+# Allocates a piece out of an unallocated tag.
+function allocate_from(tag, len) {
+    var oldLen;
+    var next_tag;
+    oldLen := getTagLen(tag);
+
+    setAllocated(tag);
+    setTagLen(tag, len);
+
+    next_tag := nextTag(tag);
+
+    setTagLen(next_tag, oldLen - (len + 1));
+    setUnallocated(next_tag);
+
 };
 
 function free(mem){
@@ -92,7 +127,7 @@ function defragHeap(){
     var newlen;
     following := *:dynamic_start;
     leading := nextTag(following);
-    
+
     while (1){
         label continue;
         if (isTagStop(leading)){

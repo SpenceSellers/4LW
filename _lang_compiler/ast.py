@@ -24,6 +24,7 @@ class Context:
         self.functions = {}
         self.reserved_mem = {}
         self.types = {}
+        self.macros = {}
 
         # TODO function return values.
 
@@ -397,7 +398,6 @@ class And(Biconditional):
     def emit_conditional(self, aloc, bloc, successloc):
         return asm.Instruction(asm.Opcode.AND, [aloc, bloc, successloc]).emit()
 
-
 class FCall(Expr):
     def __init__(self, fname, args=[]):
         self.fname = fname
@@ -581,6 +581,14 @@ class DeclareStruct(Statement):
         context.register_type(self.name, types.Struct(self.fields))
         return ''
 
+class DeclareMacro(Statement):
+    def __init__(self, name, internal):
+        self.name = name
+        self.internal = internal
+
+    def emit(self, context):
+        context.register_macro(self.name, self.internal)
+
 class Sequence(Statement):
     def __init__(self, statements):
         self.statements = statements
@@ -643,10 +651,17 @@ class Return(Statement):
 
     def emit(self, context):
         if self.expr:
+            out = ''
             calc, dest = self.expr.emit_with_dest(context)
-            saveval = asm.Instruction(asm.Opcode.MOVE, [dest, RESULT_STACK])
-            retjump = asm.Jump(RETURN_LOC)
-            return calc + saveval.emit() + retjump.emit()
+            out += calc
+            # If the calc dest is already the return stack,
+            # it's really just a waste of time to move it.
+            if dest == RESULT_STACK:
+                out += asm.comment("Omitting return move")
+            else:
+                out += asm.Instruction(asm.Opcode.MOVE, [dest, RESULT_STACK]).emit()
+            out += asm.Jump(RETURN_LOC).emit()
+            return out
         else:
             return asm.Jump(RETURN_LOC).emit()
 

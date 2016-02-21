@@ -143,6 +143,16 @@ function readfile_cmd(){
 
 };
 
+function benchmark_mem_cmd(){
+    var i;
+    i := 0;
+    while (i < 30){
+        malloc(10);
+        i := i + 1;
+        [IO] := A;
+    };
+};
+
 function evalcmd(cmdstr){
     var arg;
     if (strEq(cmdstr, "ping")){
@@ -210,6 +220,11 @@ function evalcmd(cmdstr){
 
     if (strEq(cmdstr, "readfile")){
         readfile_cmd();
+        return;
+    };
+
+    if (strEq(cmdstr, "membench")){
+        benchmark_mem_cmd();
         return;
     };
 
