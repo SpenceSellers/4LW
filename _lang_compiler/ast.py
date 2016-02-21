@@ -59,7 +59,6 @@ class Context:
     def register_fn(self, name, returns):
         self.functions[name] = returns
 
-
     def does_fn_return_value(self, name):
         try:
             return self.functions[name]
@@ -239,6 +238,22 @@ class IncExpr(Expr):
         inced_dest = dest.with_flag(asm.DataFlag.INC)
         return (calc, inced_dest)
 
+class Inc4Expr(Expr):
+    def __init__(self, inner):
+        self.expr = inner
+    def emit_with_dest(self, context):
+        calc, dest = self.expr.emit_with_dest(context)
+        inced_dest = dest.with_flag(asm.DataFlag.PLUSFOUR)
+        return (calc, inced_dest)
+
+class DecExpr(Expr):
+    def __init__(self, inner):
+        self.expr = inner
+    def emit_with_dest(self, context):
+        calc, dest = self.expr.emit_with_dest(context)
+        deced_dest = dest.with_flag(asm.DataFlag.DEC)
+        return (calc, deced_dest)
+
 class BiExpr(Expr):
     def __init__(self, a, b):
         assert isinstance(a, Expr)
@@ -263,11 +278,15 @@ class AddExpr(BiExpr):
     def opcode(self):
         return asm.Opcode.ADD
 
-    def optimized(self):
-        if isinstance(self.b, ConstExpr) and self.b.val == '___A':
-            return IncExpr(self.a)
+    def emit_with_dest(self, context):
+        if isinstance(self.b, ConstExpr) and self.b.val.word == '___A':
+            return IncExpr(self.a).emit_with_dest(context)
+        elif isinstance(self.b, ConstExpr) and self.b.val.word == '___D':
+            return Inc4Expr(self.a).emit_with_dest(context)
         else:
-            return self
+            return super().emit_with_dest(context)
+
+
 
 class MulExpr(BiExpr):
     def opcode(self):
@@ -276,6 +295,12 @@ class MulExpr(BiExpr):
 class SubExpr(BiExpr):
     def opcode(self):
         return asm.Opcode.SUB
+
+    def emit_with_dest(self, context):
+        if isinstance(self.b, ConstExpr) and self.b.val.word == '___A':
+            return DecExpr(self.a).emit_with_dest(context)
+        else:
+            return super().emit_with_dest(context)
 
 class DivExpr(BiExpr):
     def opcode(self):
