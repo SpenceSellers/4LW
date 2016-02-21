@@ -1,0 +1,195 @@
+# (string: addr) (length) --
+function print preserving A B {
+    MV [stack S] [reg B]                    # B is length
+    MV [stack S] [reg A]                    # A is string addr
+    AD [reg A] [reg B] [reg B]              # B is now end of string
+
+    loop {
+        JE [reg A] [reg B] [const :@break]
+        MV [reg mem A] [io]
+        AD [reg A] [const 4] [reg A]
+    }
+}
+# (string: addr) --
+function printTerminated preserving A B {
+    MV [stack S] [reg A] # String ptr
+
+    loop {
+        MV [reg mem A] [reg B]
+        JZ [reg neg B] [const :@break]
+        MV [reg B] [io]
+        AD [reg A] [const 4] [reg A]
+    }
+}
+
+function println {
+    call printTerminated
+    call printNewline
+}
+# --
+function printNewline {
+    MV [const __C_] [io]
+}
+
+# -- (Char)
+function readChar preserving A {
+    label wait
+    MV [io] [reg A]
+    JE [reg A] [const ZZZZ] [const :wait]
+    MV [reg A] [io]
+    MV [reg A] [stack V]
+}
+
+function readCharNoEcho preserving A {
+    label wait
+    MV [io] [reg A]
+    JE [reg A] [const ZZZZ] [const :wait]
+    MV [reg A] [stack V]
+}
+
+function readCharNoBackspace preserving A {
+    label wait
+    MV [io] [reg A]
+    JE [reg A] [const ZZZZ] [const :wait]
+    JE [reg A] [const __CB] [const :wait]
+    MV [reg A] [io]
+    MV [reg A] [stack V]
+}
+
+# (Buffer: addr) (Buffer length: words) -- (read length)
+function readLine preserving A B C D {
+    MV [stack S] [reg B] # Buffer Length
+    MV [stack S] [reg A] # Buffer Addr
+
+    MV [const 0] [reg D] # Length of read
+
+    loop {
+        JE [reg B] [reg D] [const :@break] # We've reached length limit.
+
+        call readChar to [reg C]
+
+        JE [reg C] [const __C_] [const :@break]     # Is it an enter?
+        MV [reg inc D] [reg D]
+        MV [reg C] [reg mem A]
+        AD [reg A] [const 4] [reg A] # Move buffer loc
+    }
+    MV [reg D] [stack V]
+}
+
+# (Buffer: addr) (Buffer length: words) --
+function readLineTerm preserving A B L {
+    MV [stack S] [reg L] # Buffer length
+    MV [stack S] [reg A] # Buffer addr
+
+    MV [reg A] [stack S]
+    MV [reg L] [stack S] # TODO watch out for terminator.
+    call readLine to [reg B]
+    AD [reg A] [reg timesfour B] [reg A]
+    MV [const ZZZZ] [reg mem A]
+
+}
+
+# (Word: word) --
+function printWord preserving A {
+    MV [stack S] [reg A]
+    MV [reg first A] [io]
+    MV [reg second A] [io]
+    MV [reg third A] [io]
+    MV [reg fourth A] [io]
+}
+
+# Char Char Char Char -- Word
+function parseWord preserving A B {
+    MV [stack fourth S] [reg A]
+    ML [stack fourth S] [const A_] [reg B]
+    AD [reg B] [reg A] [reg A]
+    ML [stack fourth S] [const A__] [reg B]
+    AD [reg B] [reg A] [reg A]
+    ML [stack fourth S] [const A___] [reg B]
+    AD [reg B] [reg A] [reg A]
+    MV [reg A] [stack V]
+}
+
+# -- (Word)
+function readWord {
+    call readChar to [stack S]
+    call readChar to [stack S]
+    call readChar to [stack S]
+    call readChar to [stack S]
+
+    call parseWord
+}
+# (formatString: addr) [varargs] --
+# Note that due to stack stuff the arguments have to be pushed on very backwardsly
+
+function printf preserving A B {
+    MV [stack S] [reg A]
+    label loopStart
+    loop {
+
+        JE [reg mem A] [const ZZZZ] [const :@return]
+        JE [reg mem A] [const '%'] [const :special]
+        MV [reg mem A] [io]
+
+        label next
+        AD [reg A] [const 4] [reg A]
+        JP [const :@continue]
+
+        label special
+        AD [reg A] [const 4] [reg A]
+        JE [reg mem A] [const 'w'] [const :wword]
+        JE [reg mem A] [const 's'] [const :wstring]
+        JE [reg mem A] [const 'n'] [const :wnewline]
+        JE [reg mem A] [const 'c'] [const :wchar]
+
+        # TODO error here
+
+
+        label wword
+        call printWord [stack S]
+        JP [const :next]
+
+        label wstring
+        call printTerminated [stack S]
+        JP [const :next]
+
+        label wnewline
+        call printNewline
+        JP [const :next]
+
+        label wchar
+        MV [stack S] [io]
+        JP [const :next]
+    }
+}
+
+function readLetter preserving A {
+    call readChar to [reg A]
+    JN [reg third A] [const _] [const :notletter]
+    MV [reg fourth A] [stack V]
+    JP [const :@return]
+
+    label notletter
+    MV [const ZZZZ] [stack V]
+}
+
+# (addr) -- (length (letters))
+function enterRaw preserving A B C D {
+    MV [stack S] [reg A]
+    MV [const 0] [reg D]
+    loop {
+        call readLetter to [reg B]
+        JZ [reg neg B] [const :done]
+        MV [reg inc D] [reg D]
+        MV [reg first mem A] [reg C]
+        ML [reg C] [const A___] [reg C]
+        SB [reg mem A] [reg C] [reg mem A]
+        ML [reg B] [const A___] [reg B]
+        AD [reg mem A] [reg B] [reg mem A]
+
+
+        MV [reg inc A] [reg A]
+    }
+    label done
+    MV [reg D] [stack V]
+}

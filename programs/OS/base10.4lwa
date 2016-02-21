@@ -1,0 +1,64 @@
+label toBase10
+    preserve A B C
+    MV [stack S] [reg A] # The number
+    MV [const 0] [reg C] # Length counter
+
+    # This algorithm won't work if the number is zero.
+    JZ [reg A] [const :_base_num_is_zero]
+
+    loop {
+        JZ [reg A] [const :@break]
+        MD [reg A] [const 10] [reg B] # A mod 10
+        AD [reg B] [const __N_] [reg B] # make it a number char
+        MV [reg B] [stack V] # We have a digit, save it
+        MV [reg inc C] [reg C] # Inc C
+        DV [reg A] [const 10] [reg A] # The new A
+    }
+
+    label _baseloopend
+    MV [reg C] [stack V] # Top of stack is number of values.
+    restore C B A
+    RT
+
+    label _base_num_is_zero # What to do if number is zero:
+    MV [const __N_] [stack V] # Repr of zero
+    MV [const 1] [reg C] # One value
+    JP [const :_baseloopend] # Jump to end
+
+function printBase10 preserving A B C {
+    call toBase10 [stack S]
+    MV [stack V] [reg C] # Length of number
+
+    loop {
+        JZ [reg C] [const :@break] # If no more numbers, exit
+        MV [stack V] [io]           # Print the number
+        MV [reg dec C] [reg C]          # decrement
+    }
+}
+
+# -- (word number)
+function readBase10Char preserving A {
+    call readChar to [reg A]
+    JE [reg third A] [const N] [const :parsenum]
+
+    MV [const ZZZZ] [stack V]
+    JP [const :@return]
+    
+    label parsenum
+    MV [reg fourth A] [stack V]
+}
+
+function readBase10Line preserving A D {
+    MV [const 0] [reg A]
+
+    loop {
+        call readBase10Char to [reg D]
+        JZ [reg neg D] [const :done]
+        
+        ML [reg A] [const 10] [reg A]
+        AD [reg A] [reg D] [reg A]
+    }
+
+    label done
+    MV [reg A] [stack V]
+}
