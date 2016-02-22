@@ -8,6 +8,8 @@ declare isAllocated returns;
 declare tagOfMem returns;
 declare memOfTag returns;
 
+declare attempt_malloc_fast returns;
+
 asm "reserve dynamic_start 1";
 asm "reserve free_count 1";
 asm "reserve defrag_cycle_size 1";
@@ -91,9 +93,10 @@ function attempt_malloc_fast(len){
     };
 
     allocate_from(*:fast_free_region, len);
+    [stack _] := *:fast_free_region;
     *:fast_free_region := nextTag(*:fast_free_region);
 
-    return memOfTag(*:fast_free_region);
+    return memOfTag([stack _]);
 };
 
 # Allocates a piece out of an unallocated tag.
