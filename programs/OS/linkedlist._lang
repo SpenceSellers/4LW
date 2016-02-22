@@ -1,0 +1,32 @@
+declare malloc returns;
+declare free;
+
+struct Node {
+    data,
+    next
+};
+
+declare ll_new_node returns;
+function ll_new_node(data){
+    var node;
+    node := malloc(sizeof Node);
+    Node@node.data := data;
+    Node@node.next := ZZZZ;
+    return node;
+};
+
+declare ll_insert returns;
+function ll_insert(list, data){
+    var node;
+    node := ll_new_node(data);
+    Node@node.next := list;
+    return node;
+};
+
+declare ll_remove_frist returns;
+function ll_remove_first(list){
+    var next;
+    next := Node@list.next;
+    free(list);
+    return next;
+};

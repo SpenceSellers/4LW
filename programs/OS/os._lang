@@ -1,6 +1,6 @@
 main();
 halt;
-asm "array syscall_table :malloc :free :println";
+asm "array syscall_table :malloc :free :println ZZZZ";
 
 include <dynmem._lang>;
 include <print.4lwa>;
@@ -8,6 +8,7 @@ include <strings.4lwa>;
 include <base10.4lwa>;
 include <fs._lang>;
 include <executables._lang>;
+include <linkedlist._lang>;
 
 declare dynmemInit;
 declare printTerminated;
