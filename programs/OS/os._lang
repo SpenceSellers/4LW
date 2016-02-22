@@ -1,5 +1,6 @@
 main();
 halt;
+asm "array syscall_table :malloc :free :println";
 
 include <dynmem._lang>;
 include <print.4lwa>;
@@ -232,17 +233,12 @@ function evalcmd(cmdstr){
     println("Unknown command!");
 };
 
+
 function main(){
-    dynmemInit(B___, ET__);
-    println("Done init");
-    #fs_new_file(ABCD);
-    #fs_write_file(ABCD, "Test file", 10);
-    #var res;
-    #fs_read_file(ABCD, res, 10);
-    #println(res);
-    malloc(AZ);
     println("Welcome to OSv2");
-    var alloc;
+    dynmemInit(B___, ET__);
+    println("Memory initialized");
+    printf(:syscall_table, "Syscall table begins at %w.%n");
     var cmd;
     while (1){
         printTerminated("Command: ");

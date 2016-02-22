@@ -429,7 +429,9 @@ class FCall(Expr):
         else:
             result_dest = ZERO_WORD
 
-        call = asm.Instruction(asm.Opcode.FUNCCALL, [asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.fname))] + dests)
+        func_loc = context.get_loc_for_name(self.fname)
+
+        call = asm.Instruction(asm.Opcode.FUNCCALL, [func_loc] + dests)
         return (''.join(argcalcs) + call.emit(), result_dest)
 
     def must_read_result(self, context):
