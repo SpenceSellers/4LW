@@ -1,0 +1,22 @@
+declare lengthTerminated returns;
+
+
+function prepare_prog(addr){
+    var progStart;
+    var headerLen;
+    var current;
+    var loc;
+    var headerLoc;
+
+    headerLen := (lengthTerminated(addr) + 1)*4;
+    progStart := addr + headerLen;
+
+    headerLoc := addr;
+    while ((*headerLoc) != ZZZZ){
+        loc := (*headerLoc) + progStart;
+        *loc := (*loc) + progStart;
+        headerLoc := headerLoc + 4;
+    };
+
+    return progStart;
+};

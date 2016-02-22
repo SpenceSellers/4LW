@@ -8,24 +8,16 @@ from subprocess import run
 import json
 import tempfile
 
-import asm2 as asm
+import assembler as asm
 
-assemblerPath = os.path.join(os.path.abspath(sys.path[0]), './asm2.py')
-ospath = 'os1.4lwa'
+assemblerPath = os.path.join(os.path.abspath(sys.path[0]), './assembler.py')
 
 def main():
     filename = sys.argv[1]
 
-    linkfile = tempfile.NamedTemporaryFile()
-    
-    linkinfo = run([assemblerPath, ospath, '-S'], stdout=subprocess.PIPE).stdout
-    linkfile.write(linkinfo)
-    linkfile.flush()
-    
-    
-    assembled = run([assemblerPath, filename, '-l', linkfile.name], stdout=subprocess.PIPE).stdout
+    assembled = run([assemblerPath, filename], stdout=subprocess.PIPE).stdout
 
-    raw_pointerinfo = run([assemblerPath, filename, '-l', linkfile.name, '--pointers'], stdout=subprocess.PIPE).stdout
+    raw_pointerinfo = run([assemblerPath, filename,  '--pointers'], stdout=subprocess.PIPE).stdout
     pointers = json.loads(raw_pointerinfo.decode())
 
     pointerstring = ""

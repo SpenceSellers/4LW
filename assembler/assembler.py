@@ -67,12 +67,13 @@ class Bakeable:
                 # if name.startswith("@"):
                 #     pointers.append(pos)
                 #     continue
-                    
+
+
                 for otherlabel in table.keys():
                     if otherlabel.contains_label(name) and not otherlabel.is_absolute():
                         pointers.append(pos)
 
-                    
+
         return sorted(pointers)
 
 
@@ -401,7 +402,7 @@ def main():
     elif args.symbol_table:
         table = prog.top_level_symbols()
         print(json.dumps(table, indent=4))
-        
+
     elif args.whereis:
         table = prog.symbols()
         if args.whereis.startswith(':'):
@@ -417,7 +418,7 @@ def main():
                     print("{} at {}".format(label, pos))
                 if abs(pos-search_pos) < 100:
                     print("Close: {} at {} (dist {})".format(label,pos, search_pos - pos))
-                        
+
 
     elif args.pointer_list:
         pointers = prog.pointers()

@@ -7,6 +7,7 @@ include <print.4lwa>;
 include <strings.4lwa>;
 include <base10.4lwa>;
 include <fs._lang>;
+include <executables._lang>;
 
 declare dynmemInit;
 declare printTerminated;
@@ -22,6 +23,7 @@ declare debugHeap;
 declare enterRaw;
 declare lengthTerminated returns;
 declare lineEnter returns;
+declare prepare_prog returns;
 
 function lineEnter(bufflen){
     var buff;
@@ -154,6 +156,18 @@ function benchmark_mem_cmd(){
     };
 };
 
+function load_raw_cmd(){
+    var buf;
+    var prog;
+    buf := malloc(400);
+    printf(buf, "Reading to %w%n");
+    enterRaw(buf);
+    prog := prepare_prog(buf);
+    printf(prog, "Execing at %w%n");
+    prog();
+    free(buf);
+};
+
 function evalcmd(cmdstr){
     var arg;
     var a;
@@ -227,6 +241,11 @@ function evalcmd(cmdstr){
 
     if (strEq(cmdstr, "membench")){
         benchmark_mem_cmd();
+        return;
+    };
+
+    if (strEq(cmdstr, "load")){
+        load_raw_cmd();
         return;
     };
 
