@@ -61,7 +61,10 @@ data Instruction =
 
 -- | An error report of a 'failed' instruction parse.
 data BadInstruction =
-     BadInstruction | BadOpcode (Letter, Letter)| BadOperands | BadOperandsLength | ZeroLengthInstruction deriving Show
+     BadInstruction | BadOpcode (Letter, Letter)| BadOperands BadOperand | BadOperandsLength | ZeroLengthInstruction deriving Show
+
+data BadOperand =
+    BadOptype Letter | BadOpcontrol Letter deriving Show
 
 -- | An InstructionParseResult is just the instruction, and how long
 --  the instruction was, so we can change the Program Counter register
@@ -99,6 +102,10 @@ toBad = toEither BadInstruction
 
 toBadOpLen = toEither BadOperandsLength
 
+badOperandsToBadInstruction :: Either BadOperand a -> Either BadInstruction a
+badOperandsToBadInstruction (Left badop) = Left $ BadOperands badop
+badOperandsToBadInstruction (Right val) = Right val
+
 -- | readInstruction will attempt to build an entire Instruction out of the address
 -- and memory supplied to it.
 readInstruction :: Word -> Memory.Memory -> Either BadInstruction InstructionParseResult
@@ -116,7 +123,7 @@ assembleRaw :: [Word] -> Either BadInstruction RawInstruction
 assembleRaw [] = Left ZeroLengthInstruction
 assembleRaw (opWord:rawOperands) = RawInstruction <$> pure opcode <*> operands
     where opcode = (opWord ^. firstLetter, opWord ^. secondLetter)
-          operands = toEither BadOperands $ parseOperands rawOperands
+          operands = badOperandsToBadInstruction $ parseOperands rawOperands
 
 -- Reads the words of an instruction, using the length flag.
 readInstructionWords :: Word -> Memory.Memory -> [Word]
@@ -186,10 +193,10 @@ constructInstruction (RawInstruction opcode operands)
 
 -- | Given the list of words that make up the operands (arguments) to an
 --  instruction, turn them into real DataLocations.
-parseOperands :: [Word] -> Maybe [DataLocation]
+parseOperands :: [Word] -> Either BadOperand [DataLocation]
 parseOperands words = reverse <$> parseOperands_ words []
 
-parseOperands_ :: [Word] -> Operands -> Maybe [DataLocation]
+parseOperands_ :: [Word] -> Operands -> Either BadOperand [DataLocation]
 parseOperands_ ((Word optype flag1 flag2 control):rest) ops =
     case optype of
         LetterV '_' ->  case control of
@@ -198,13 +205,13 @@ parseOperands_ ((Word optype flag1 flag2 control):rest) ops =
             LetterV 'I' -> build (Io (opdata ^. fourthLetter))
             LetterV 'S' -> build (Stack (opdata ^. fourthLetter))
             LetterV 'T' -> build (TapeIO (opdata ^. fourthLetter))
-            _ -> Nothing
+            _ -> Left (BadOptype control)
             where (opdata : xs) = rest
                   build instruction = parseOperands_ xs (applyFlags [flag1, flag2] instruction : ops)
-        _ -> Nothing
+        _ -> Left (BadOpcontrol optype)
 
 --parseOperands_ (x:xs) ops = Nothing -- Odd number of words.
-parseOperands_ [] ops = return ops
+parseOperands_ [] ops = Right ops
 
 -- | Applies a single DataLocation flag, specified by letter.
 applyFlag :: Letter -> DataLocation -> DataLocation
