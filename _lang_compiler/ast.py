@@ -3,6 +3,7 @@ import abc
 import os
 import sys
 import var_types as types
+import traceback
 
 TEMPSTACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord('_'))
 ARGSTACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord(asm.Stacks.ARGS.value))
@@ -605,7 +606,7 @@ class Sequence(Statement):
         out = ''
         out += self.emit(context)
         out += context.emit_strings()
-        out += context.emit_reserved_mem()
+        #out += context.emit_reserved_mem()
         return out
 
     def __repr__(self):

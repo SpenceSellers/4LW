@@ -18,4 +18,5 @@ def main():
     filename = sys.argv[1]
     print(compile_file(filename))
 
-main()
+if __name__ == '__main__':
+    main()
