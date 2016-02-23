@@ -35,10 +35,8 @@ declare lineEnter returns;
 declare prepare_prog returns;
 
 function lineEnter(bufflen){
-    var buff;
-    buff := malloc(bufflen);
-    var pos;
-    pos := buff;
+    var buff := malloc(bufflen);
+    var pos := buff;
 
     var char;
     while (pos != (buff + (bufflen*4) - 4)){
@@ -79,10 +77,9 @@ function logWord(str, word){
 };
 
 function strcpy(src, dest, maxlen){
-    var i;
     var char;
 
-    i := 0;
+    var i := 0;
     while (1){
         char := *(src + (i*4));
         *(dest + (i*4)) := char;
@@ -106,9 +103,8 @@ function readNum(){
 
 declare promptNum returns;
 function promptNum(str){
-    var res;
     printTerminated(str);
-    res := readNum();
+    var res := readNum();
     printNewline();
     return res;
 };
@@ -119,10 +115,8 @@ function promptYesNo(str){
 
 
 function coredumpCmd(){
-    var pos;
-    var stop;
-    pos := promptNum("Start: ");
-    stop := promptNum("Stop: ");
+    var pos := promptNum("Start: ");
+    var stop := promptNum("Stop: ");
 
     while (pos != stop){
         [stack _] := pos;
@@ -133,22 +127,17 @@ function coredumpCmd(){
 };
 
 function writefile_cmd(){
-    var fname;
-    var buffer;
-    fname := promptNum("File ID: ");
+    var fname := promptNum("File ID: ");
     fs_new_file(fname);
-    buffer := lineEnter(ZZ);
+    var buffer := lineEnter(ZZ);
     fs_write_file(fname, buffer, lengthTerminated(buffer) + 1);
     free(buffer);
 };
 
 function readfile_cmd(){
-    var fname;
-    var buffer;
-    var len;
-    fname := promptNum("File ID: ");
-    len := promptNum("Length: ");
-    buffer := malloc(len);
+    var fname := promptNum("File ID: ");
+    var len := promptNum("Length: ");
+    var buffer := malloc(len);
     fs_read_file(fname, buffer, len);
     println(buffer);
     free(buffer);
@@ -156,8 +145,7 @@ function readfile_cmd(){
 };
 
 function benchmark_mem_cmd(){
-    var i;
-    i := 0;
+    var i := 0;
     while (i < 30){
         malloc(10);
         i := i + 1;
@@ -166,23 +154,19 @@ function benchmark_mem_cmd(){
 };
 
 function load_raw_cmd(){
-    var buf;
-    var prog;
-    buf := malloc(400);
+    var buf := malloc(400);
     printf(buf, "Reading to %w%n");
     enterRaw(buf);
-    prog := prepare_prog(buf);
+    var prog := prepare_prog(buf);
     printf(prog, "Execing at %w%n");
     prog();
     free(buf);
 };
 
 function write_raw_file_cmd(){
-    var buf;
-    var fname;
-    fname := promptNum("File ID:");
+    var fname := promptNum("File ID:");
     println("Enter raw:");
-    buf := malloc(ZZ);
+    var buf := malloc(ZZ);
     enterRaw(buf);
 
     fs_new_file(fname);
@@ -191,15 +175,12 @@ function write_raw_file_cmd(){
 };
 
 function run_file_cmd(){
-    var buf;
-    var fname;
-    var prog;
-    fname := promptNum("File ID:");
-    buf := malloc(ZZ);
+    var fname := promptNum("File ID:");
+    var buf := malloc(ZZ);
     println("Reading file...");
     fs_read_file(fname, buf, ZZ);
     println("Preparing program...");
-    prog := prepare_prog(buf);
+    var prog := prepare_prog(buf);
     prog();
     free(buf);
 };

@@ -558,13 +558,19 @@ class ReserveMem(Statement):
         return ''
 
 class DeclareVar(Statement):
-    def __init__(self, varname):
+    def __init__(self, varname, initial_val = None):
         assert type(varname) is str
         self.varname = varname
+        assert initial_val == None or isinstance(initial_val, Expr)
+        self.initial_val = initial_val;
 
     def emit(self, context):
+
         context.make_var(self.varname)
-        return ''
+        if self.initial_val:
+            return Assignment(Variable(self.varname), self.initial_val).emit(context)
+        else:
+            return ''
 
 class DeclareFunction(Statement):
     def __init__(self, name, returns):

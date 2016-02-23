@@ -16,11 +16,9 @@ asm "reserve defrag_cycle_size 1";
 asm "reserve fast_free_region 1";
 
 function dynmemInit(start, end){
-    var lenLetters;
-    var lenWords;
 
-    lenLetters := end - start;
-    lenWords := lenLetters / 4;
+    var lenLetters := end - start;
+    var lenWords := lenLetters / 4;
 
     if (lenWords > _ZZZ) {
         memErr(1);
@@ -38,18 +36,16 @@ function dynmemInit(start, end){
 };
 
 function malloc(len){
-    var current;
     var taglen;
     var nextt;
-    var fast_attempt;
 
-    fast_attempt := attempt_malloc_fast(len);
+    var fast_attempt := attempt_malloc_fast(len);
     if (fast_attempt != ZZZZ){
         return fast_attempt;
     };
 
 
-    current := *:dynamic_start;
+    var current := *:dynamic_start;
 
     while(1){
         if (isTagStop(current)){
@@ -101,14 +97,12 @@ function attempt_malloc_fast(len){
 
 # Allocates a piece out of an unallocated tag.
 function allocate_from(tag, len) {
-    var oldLen;
-    var next_tag;
-    oldLen := getTagLen(tag);
+    var oldLen := getTagLen(tag);
 
     setAllocated(tag);
     setTagLen(tag, len);
 
-    next_tag := nextTag(tag);
+    var next_tag := nextTag(tag);
 
     setTagLen(next_tag, oldLen - (len + 1));
     setUnallocated(next_tag);
@@ -125,11 +119,9 @@ function free(mem){
 };
 
 function defragHeap(){
-    var following;
-    var leading;
     var newlen;
-    following := *:dynamic_start;
-    leading := nextTag(following);
+    var following := *:dynamic_start;
+    var leading := nextTag(following);
 
     while (1){
         label continue;
@@ -163,8 +155,7 @@ function defragHeap(){
 };
 
 function debugHeap(){
-    var tag;
-    tag := *:dynamic_start;
+    var tag := *:dynamic_start;
     while(!isTagStop(tag)){
         printf(*tag, tag, "Addr %w tag %w%n");
         tag := nextTag(tag);

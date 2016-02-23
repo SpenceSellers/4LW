@@ -102,7 +102,7 @@ struct_access << (type_identifier + '@' + expr + '.' + identifier).setParseActio
 # == LVALUES ==
 lvalue = MatchFirst([lvariable, mem_lvalue, special_loc, struct_access])
 
-declarevar = (Keyword('var') + identifier).setParseAction(lambda t: ast.DeclareVar(t[1]))
+declarevar = (Keyword('var') + identifier + Optional(Literal(':=').suppress() + expr, default=None)).setParseAction(lambda t: ast.DeclareVar(t[1], t[2]))
 
 declarefn = (Keyword('declare') + identifier + Optional(Keyword('returns').setParseAction(lambda t: True), default = False))\
     .setParseAction(lambda t: ast.DeclareFunction(t[1], t[2]))

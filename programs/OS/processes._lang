@@ -7,19 +7,16 @@ struct Process {
 };
 
 function process_start(process){
-    var loc;
     Process@process.id := 1;
-    loc := Process@process.code_start;
+    var loc := Process@process.code_start;
     loc();
 };
 
 declare process_load_executable returns;
 function process_load_executable(executable_addr){
-    var start;
-    var p;
-    start := prepare_prog(executable_addr);
+    var start := prepare_prog(executable_addr);
 
-    p := malloc(sizeof Process);
+    var p := malloc(sizeof Process);
     Process@p.id := ZZZZ;
     Process@p.code_start := start;
     Process@p.heap_addr := executable_addr;
