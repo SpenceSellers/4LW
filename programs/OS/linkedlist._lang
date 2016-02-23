@@ -6,8 +6,7 @@ struct Node {
     next
 };
 
-declare ll_new_node returns;
-function ll_new_node(data){
+function ll_new_node(data) returns {
     var node;
     node := malloc(sizeof Node);
     Node@node.data := data;
@@ -15,16 +14,14 @@ function ll_new_node(data){
     return node;
 };
 
-declare ll_insert returns;
-function ll_insert(list, data){
+function ll_insert(list, data) returns {
     var node;
     node := ll_new_node(data);
     Node@node.next := list;
     return node;
 };
 
-declare ll_remove_first returns;
-function ll_remove_first(list){
+function ll_remove_first(list) returns {
     var next;
     next := Node@list.next;
     free(list);

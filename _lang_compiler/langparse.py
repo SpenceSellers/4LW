@@ -104,6 +104,7 @@ lvalue = MatchFirst([lvariable, mem_lvalue, special_loc, struct_access])
 
 declarevar = (Keyword('var') + identifier + Optional(Literal(':=').suppress() + expr, default=None)).setParseAction(lambda t: ast.DeclareVar(t[1], t[2]))
 
+
 declarefn = (Keyword('declare') + identifier + Optional(Keyword('returns').setParseAction(lambda t: True), default = False))\
     .setParseAction(lambda t: ast.DeclareFunction(t[1], t[2]))
 
@@ -146,8 +147,10 @@ block_sequence << ('{' + sequence + '}').setParseAction(lambda t: t[1])
 
 function_args = Group(Optional(identifier + ZeroOrMore(Suppress(',') + identifier)))
 
-function << (Keyword('function') + identifier + '(' + function_args + ')' + block_sequence)\
-    .setParseAction(lambda t: ast.Function(t[1], t[3], t[5] ))
+functionOptions = Group(ZeroOrMore(MatchFirst([Keyword('returns')])))
+
+function << (Keyword('function') + identifier + '(' + function_args + ')' + functionOptions + block_sequence)\
+    .setParseAction(lambda t: ast.Function(t[1], t[3], t[6], options = t[5]))
 
 # lambda q: ast.Function(t[1], t[3], + t[5] )
 program = sequence + StringEnd()

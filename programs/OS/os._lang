@@ -32,10 +32,9 @@ declare printNewline;
 declare debugHeap;
 declare enterRaw;
 declare lengthTerminated returns;
-declare lineEnter returns;
 declare prepare_prog returns;
 
-function lineEnter(bufflen){
+function lineEnter(bufflen) returns {
     var buff := malloc(bufflen);
     var pos := buff;
 
@@ -97,21 +96,18 @@ function strcpy(src, dest, maxlen){
     label endstr;
 };
 
-declare readNum returns;
-function readNum(){
+function readNum() returns{
     return readWord();
 };
 
-declare promptNum returns;
-function promptNum(str){
+function promptNum(str) returns {
     printTerminated(str);
     var res := readNum();
     printNewline();
     return res;
 };
 
-declare promptYesNo returns;
-function promptYesNo(prompt_str){
+function promptYesNo(prompt_str) returns {
     printf(prompt_str, "%s (y n): ");
     var response := readChar();
     printNewline();

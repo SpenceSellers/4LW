@@ -8,8 +8,6 @@ declare isAllocated returns;
 declare tagOfMem returns;
 declare memOfTag returns;
 
-declare attempt_malloc_fast returns;
-
 asm "reserve dynamic_start 1";
 asm "reserve free_count 1";
 asm "reserve defrag_cycle_size 1";
@@ -35,7 +33,7 @@ function dynmemInit(start, end){
 
 };
 
-function malloc(len){
+function malloc(len) returns {
     var taglen;
     var nextt;
 
@@ -78,7 +76,7 @@ function malloc(len){
     };
 };
 
-function attempt_malloc_fast(len){
+function attempt_malloc_fast(len) returns {
     if ((*:fast_free_region) == ZZZZ){
         return ZZZZ;
     };

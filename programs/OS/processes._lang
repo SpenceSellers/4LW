@@ -12,8 +12,7 @@ function process_start(process){
     loc();
 };
 
-declare process_load_executable returns;
-function process_load_executable(executable_addr){
+function process_load_executable(executable_addr) returns {
     var start := prepare_prog(executable_addr);
 
     var p := malloc(sizeof Process);

@@ -621,12 +621,17 @@ class Sequence(Statement):
         return "Sequence: {}".format(self.statements)
 
 class Function(Statement):
-    def __init__(self, name, args, sequence):
+    def __init__(self, name, args, sequence, options = []):
         self.name = name
         self.args = args
         self.sequence = sequence
+        self.options = set(options)
 
     def emit(self, context):
+        if 'returns' in self.options:
+            context.register_fn(self.name, True)
+        else:
+            context.register_fn(self.name, False)
         c = Context(parent=context)
         move_args = ''
         # Args are pushed backwards
