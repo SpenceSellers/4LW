@@ -69,7 +69,6 @@ function malloc(len){
         };
 
         # We've found the tag we're going to use.
-
         allocate_from(current, len);
 
         return memOfTag(current);
@@ -80,7 +79,15 @@ function malloc(len){
 };
 
 function attempt_malloc_fast(len){
+    if ((*:fast_free_region) == ZZZZ){
+        return ZZZZ;
+    };
+
     if (isAllocated(*:fast_free_region)){
+        return ZZZZ;
+    };
+
+    if (isTagStop(*:fast_free_region)){
         return ZZZZ;
     };
 
@@ -98,11 +105,19 @@ function attempt_malloc_fast(len){
 # Allocates a piece out of an unallocated tag.
 function allocate_from(tag, len) {
     var oldLen := getTagLen(tag);
+    if (oldLen == len){
+        setAllocated(tag);
+        return;
+    };
+
 
     setAllocated(tag);
     setTagLen(tag, len);
 
     var next_tag := nextTag(tag);
+    if (isTagStop(next_tag)){
+        return;
+    };
 
     setTagLen(next_tag, oldLen - (len + 1));
     setUnallocated(next_tag);
@@ -112,6 +127,11 @@ function allocate_from(tag, len) {
 function free(mem){
     setUnallocated(tagOfMem(mem));
     *:free_count := (*:free_count) + 1;
+
+    if ((*:fast_free_region) == ZZZZ){
+        *:fast_free_region := tagOfMem(mem);
+    };
+
     if ((*:free_count) > (*:defrag_cycle_size)){
         *:free_count := 0;
         defragHeap();
@@ -138,24 +158,31 @@ function defragHeap(){
             goto next;
         };
 
+        if ((*:fast_free_region) == leading){
+            # We were about to invalidate the fast free region!
+            # Let's just mark it as invalid.
+            *:fast_free_region := ZZZZ;
+        };
+
+
         newlen := getTagLen(following) + tagTotalLen(leading);
 
         setTagLen(following, newlen);
 
+        # Let's try to merge multiple free tags into one.
         leading := nextTag(leading);
         goto continue;
 
         label next;
         following := leading;
         leading := nextTag(leading);
-
-
     };
     label done;
 };
 
 function debugHeap(){
     var tag := *:dynamic_start;
+    printf(*:fast_free_region, "Fast free is %w%n");
     while(!isTagStop(tag)){
         printf(*tag, tag, "Addr %w tag %w%n");
         tag := nextTag(tag);
