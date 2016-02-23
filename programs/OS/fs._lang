@@ -39,7 +39,7 @@ function fs_get_file_block(id){
         if (seen_id == id){
             return [tape A];
         };
-        
+
         tape_seek(1); # Skip addr word.
     };
 
@@ -66,21 +66,13 @@ function fs_add_new_file_block(block_id){
 
 declare fs_is_block_free returns;
 function fs_is_block_free(id){
-    var seen_id;
-    var seen_block;
-    tape_rewind();
-    while (1){
-        seen_id := [tape A];
-        seen_block := [tape A];
-        
-        if (seen_id == ZZZZ){
-            return ZZZZ;
-        };
-        
-        if (seen_block == id){
-           return 0;
-        };       
-
+    var head;
+    fs_go_to_block(id);
+    head := [tape A];
+    if (head == 0){
+        return ZZZZ;
+    } else {
+        return 0;
     };
 };
 
@@ -103,7 +95,33 @@ function fs_go_to_block(block_id){
     tape_seek(A__ * block_id);
 };
 
-function fs_go_to_file(file_id){
+function fs_go_to_block_data(block_id){
+    fs_go_to_block();
+    tape_seek(1);
+};
+
+function fs_set_block_header(block_id, header){
+    fs_go_to_block(block_id);
+    [tape A] := header;
+};
+
+function fs_set_block_unused(block_id){
+    fs_set_block_header(block_id, 0);
+};
+
+function fs_set_block_next(block_id, next_id){
+    fs_set_block_header(block_id, next_id);
+};
+
+function fs_set_block_last_in_file(block_id){
+    fs_set_block_header(block_id, ZZZZ);
+};
+
+function fs_go_to_file_data(file_id){
+    fs_go_to_block_data(fs_get_file_block(file_id));
+};
+
+function fs_go_to_file_block(file_id){
     fs_go_to_block(fs_get_file_block(file_id));
 };
 
@@ -111,6 +129,7 @@ function fs_new_file(file_id){
     var new_block;
     var seen_id;
     new_block := fs_get_free_block();
+    fs_set_block_last_in_file(new_block);
     tape_rewind();
     while (1){
         seen_id := [tape A];
@@ -128,7 +147,7 @@ function fs_new_file(file_id){
 function fs_write_file(file_id, mem, len){
     var end;
     end := mem + (len * 4);
-    fs_go_to_file(file_id);
+    fs_go_to_file_data(file_id);
     while (mem < end){
         [tape A] := *mem;
         mem := mem + 4;
@@ -137,8 +156,9 @@ function fs_write_file(file_id, mem, len){
 
 function fs_read_file(file_id, buffer, len){
     var end;
+    var next_block;
     end := buffer + (len * 4);
-    fs_go_to_file(file_id);
+    fs_go_to_file_data(file_id);
     while (buffer < end){
         *buffer := [tape A];
         buffer := buffer + 4;

@@ -1,13 +1,16 @@
 declare prepare_prog returns;
 
 struct Process {
-    process_id,    # Process ID.
-    code_start,    # The start of the process's exeutable code.
-    heap_addr,     # The address of the process on the heap, to be freed when done. Can be null.
+    id,
+    code_start,
+    heap_addr
 };
 
 function process_start(process){
-
+    var loc;
+    Process@process.id := 1;
+    loc := Process@process.code_start;
+    loc();
 };
 
 declare process_load_executable returns;
@@ -17,7 +20,7 @@ function process_load_executable(executable_addr){
     start := prepare_prog(executable_addr);
 
     p := malloc(sizeof Process);
-    Process@p.process_id := 1;
+    Process@p.id := ZZZZ;
     Process@p.code_start := start;
     Process@p.heap_addr := executable_addr;
 

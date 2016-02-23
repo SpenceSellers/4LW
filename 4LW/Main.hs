@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns #-}
 module Main where
 import Machine
 import Control.Monad.State.Lazy
@@ -53,6 +54,10 @@ main = do
     tapeStr <- case tapeFile options of
             Just fname -> catch (readFile fname) (\(e :: SomeException) -> putStrLn "Error reading tape" >> return "")
             Nothing -> return ""
+
+    -- Nasty way of forcing haskell to read in the entire file.
+    -- Else the laziness breaks things when you try to write the file back out.
+    seq (length tapeStr) (return ())
 
     -- Load the memory file into main memory.
     let statemem = memory %~ fromJust . importString (sanitizeProg prog) minWord $ blankState

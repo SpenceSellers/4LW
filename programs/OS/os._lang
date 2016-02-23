@@ -1,5 +1,12 @@
+
+# Don't change these two lines.
+# All programs expect the syscall table to start at addr ___P,
+# Corresponding to 16 letters in.
+# That's enough for one argument-less fcall and a halt.
 main();
 halt;
+
+# Syscall table
 asm "array syscall_table :malloc :free :println ZZZZ";
 
 include <dynmem._lang>;
@@ -9,6 +16,7 @@ include <base10.4lwa>;
 include <fs._lang>;
 include <executables._lang>;
 include <linkedlist._lang>;
+include <processes._lang>;
 
 declare dynmemInit;
 declare printTerminated;

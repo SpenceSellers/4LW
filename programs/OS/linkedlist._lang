@@ -23,7 +23,7 @@ function ll_insert(list, data){
     return node;
 };
 
-declare ll_remove_frist returns;
+declare ll_remove_first returns;
 function ll_remove_first(list){
     var next;
     next := Node@list.next;
