@@ -96,7 +96,7 @@ function fs_go_to_block(block_id){
 };
 
 function fs_go_to_block_data(block_id){
-    fs_go_to_block();
+    fs_go_to_block(block_id);
     tape_seek(1);
 };
 

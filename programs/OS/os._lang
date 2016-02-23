@@ -177,6 +177,33 @@ function load_raw_cmd(){
     free(buf);
 };
 
+function write_raw_file_cmd(){
+    var buf;
+    var fname;
+    fname := promptNum("File ID:");
+    println("Enter raw:");
+    buf := malloc(ZZ);
+    enterRaw(buf);
+
+    fs_new_file(fname);
+    fs_write_file(fname, buf, ZZ);
+
+};
+
+function run_file_cmd(){
+    var buf;
+    var fname;
+    var prog;
+    fname := promptNum("File ID:");
+    buf := malloc(ZZ);
+    println("Reading file...");
+    fs_read_file(fname, buf, ZZ);
+    println("Preparing program...");
+    prog := prepare_prog(buf);
+    prog();
+    free(buf);
+};
+
 function evalcmd(cmdstr){
     var arg;
     var a;
@@ -243,6 +270,11 @@ function evalcmd(cmdstr){
         return;
     };
 
+    if (strEq(cmdstr, "writefileraw")){
+        write_raw_file_cmd();
+        return;
+    };
+
     if (strEq(cmdstr, "readfile")){
         readfile_cmd();
         return;
@@ -255,6 +287,11 @@ function evalcmd(cmdstr){
 
     if (strEq(cmdstr, "load")){
         load_raw_cmd();
+        return;
+    };
+
+    if (strEq(cmdstr, "runfile")){
+        run_file_cmd();
         return;
     };
 
