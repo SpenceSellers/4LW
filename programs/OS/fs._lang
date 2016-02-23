@@ -141,6 +141,47 @@ function fs_new_file(file_id){
     };
 };
 
+function fs_delete_file(file_id){
+    var block := fs_get_file_block(file_id);
+    fs_set_block_unused(block);
+
+    var seen_id;
+    tape_rewind();
+    while(1){
+        seen_id := [tape A];
+        if (seen_id == file_id){
+            tape_seek_backwards(1);
+            [tape A] := 0;  # Remove tape ID.
+            [tape A] := 0;  # Remove block ID.
+            return;
+        };
+
+        if (seen_id == ZZZZ){
+            return;
+        };
+
+        tape_seek(1); # Skip addr word.
+    };
+};
+
+function fs_list_files(){
+    var seen;
+    println("Files on tape:");
+    tape_rewind();
+    while(1){
+        label continue;
+        seen := [tape A];
+        if (seen == ZZZZ){
+            return;
+        };
+        if (seen == 0){
+            goto continue;
+        };
+        printf(seen, "%w%n");
+        tape_seek(1); # Skip addr word.
+    };
+};
+
 function fs_write_file(file_id, mem, len){
     var end := mem + (len * 4);
     fs_go_to_file_data(file_id);

@@ -164,7 +164,7 @@ function load_raw_cmd(){
 };
 
 function write_raw_file_cmd(){
-    var fname := promptNum("File ID:");
+    var fname := promptNum("File ID: ");
     println("Enter raw:");
     var buf := malloc(ZZ);
     enterRaw(buf);
@@ -175,7 +175,7 @@ function write_raw_file_cmd(){
 };
 
 function run_file_cmd(){
-    var fname := promptNum("File ID:");
+    var fname := promptNum("File ID: ");
     var buf := malloc(ZZ);
     println("Reading file...");
     fs_read_file(fname, buf, ZZ);
@@ -183,6 +183,10 @@ function run_file_cmd(){
     var prog := prepare_prog(buf);
     prog();
     free(buf);
+};
+
+function rm_file_cmd(){
+    fs_delete_file(promptNum("File ID: "));
 };
 
 function evalcmd(cmdstr){
@@ -273,6 +277,16 @@ function evalcmd(cmdstr){
 
     if (strEq(cmdstr, "runfile")){
         run_file_cmd();
+        return;
+    };
+
+    if (strEq(cmdstr, "rm")){
+        rm_file_cmd();
+        return;
+    };
+
+    if (strEq(cmdstr, "ls")){
+        fs_list_files();
         return;
     };
 
