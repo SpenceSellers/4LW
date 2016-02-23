@@ -1,0 +1,7 @@
+f();
+asm "RT";
+function f(){
+    var print;
+    print := *24;
+    print("Hello World");
+};

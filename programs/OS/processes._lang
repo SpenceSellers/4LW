@@ -23,3 +23,7 @@ function process_load_executable(executable_addr){
 
     return p;
 };
+
+function process_yield(){
+
+};
