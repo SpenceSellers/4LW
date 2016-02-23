@@ -29,6 +29,7 @@ charTable = uppercaseTable ++ lowercaseTable ++ numberTable ++ [
     ('!', wrd "__PX"),
     ('.', wrd "__PD"),
     ('-', wrd "__PM"),
+    ('?', wrd "__PQ"),
     ('|', wrd "__PB"),
     ('(', wrd "__BA"),
     (')', wrd "__BB")

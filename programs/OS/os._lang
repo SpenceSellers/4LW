@@ -25,6 +25,7 @@ declare println;
 declare free;
 declare strEq returns;
 declare readCharNoEcho returns;
+declare readChar returns;
 declare readWord returns;
 declare printWord;
 declare printNewline;
@@ -109,8 +110,19 @@ function promptNum(str){
     return res;
 };
 
-function promptYesNo(str){
-
+declare promptYesNo returns;
+function promptYesNo(prompt_str){
+    printf(prompt_str, "%s (y n): ");
+    var response := readChar();
+    printNewline();
+    if (response == AY){
+        return ZZZZ;
+    };
+    if (response == AN){
+        return 0;
+    };
+    println("Please answer y or n.");
+    return promptYesNo(prompt_str);
 };
 
 
@@ -251,12 +263,11 @@ function evalcmd(cmdstr){
     };
 
     if (strEq(cmdstr, "writefile")){
-        writefile_cmd();
-        return;
-    };
-
-    if (strEq(cmdstr, "writefileraw")){
-        write_raw_file_cmd();
+        if (promptYesNo("Write raw?")){
+            write_raw_file_cmd();
+        } else {
+            writefile_cmd();
+        };
         return;
     };
 
