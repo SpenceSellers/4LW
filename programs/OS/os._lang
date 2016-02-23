@@ -53,20 +53,20 @@ function lineEnter(bufflen){
                 # Shouldn't backspace past beginning
                 goto continue;
             };
-            [IO] := __CB;
-            pos := pos - 4;
+            [IO] := __CB; # Backspace on screen.
+            pos := pos - 4; # Go to prev buffer pusition.
             goto continue;
 
         };
-        [IO] := char;
-        *pos := char;
+        [IO] := char; # Echo the char
+        *pos := char; # Write it to mem
         pos := pos + 4;
 
 
     };
     label done;
-    *pos := ZZZZ;
-    [IO] := __C_;
+    *pos := ZZZZ; # Terminate string
+    [IO] := __C_; # Write newline
     return buff;
 
  };

@@ -115,12 +115,14 @@ class Function(Bakeable):
     def bake(self):
         elems = []
         label = Label(self.name).bake() # Function label
-        preserves = Instruction('PU', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in self.preserves]).bake()
-        elems.append(preserves)
+        if self.preserves:
+            preserves = Instruction('PU', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in self.preserves]).bake()
+            elems.append(preserves)
         elems.extend([b.bake() for b in self.pieces]) # Actual body
         elems.append(Label("@return").bake())
-        restores = Instruction('PL', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in reversed(self.preserves)]).bake()
-        elems.append(restores)
+        if self.preserves:
+            restores = Instruction('PL', [Operand('S', [], ConstWord('P'))] + [Operand('R', [], ConstWord(reg)) for reg in reversed(self.preserves)]).bake()
+            elems.append(restores)
         elems.append(Instruction('RT',[]).bake())
         return bakers.BakerSequence([label, bakers.CaptureScopeBaker(bakers.BakerSequence(elems), pretty_name = 'func_' + self.name)])
         #return bakers.BakerSequence([label] + elems)
