@@ -284,6 +284,12 @@ runInstruction (TapeRewind tapeIDloc) = do
     --zoom (tapeDeck . at tapeLetter) (Tapes.tapeRewind)
     tapeDeck . at tapeLetter %= fmap (execState Tapes.tapeRewind)
 
+runInstruction (StackSize stackid dest) = do
+    stks <- use stacks
+    stackIdWord <- getData stackid
+    let stack = stks ! (stackIdWord ^. fourthLetter)
+    setData dest (toWord $ Stacks.size stack)
+
 
 data RunOptions = RunOptions {
     _ticktime :: Int,

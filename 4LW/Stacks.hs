@@ -1,4 +1,4 @@
-module Stacks (Stack, Stacks, emptyStacks, emptyStack, push, pop, peekAll) where
+module Stacks (Stack, Stacks, emptyStacks, emptyStack, push, pop, peekAll, size) where
 
 import Prelude hiding (Word)
 import Base27

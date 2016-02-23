@@ -304,6 +304,20 @@ function evalcmd(cmdstr){
     println("Unknown command!");
 };
 
+function printStackSizes(){
+    asm "SS [const R] [stack _]";
+    var r := [stack _];
+
+    asm "SS [const S] [stack _]";
+    var s := [stack _];
+
+    asm "SS [const V] [stack _]";
+    var v := [stack _];
+
+    printf(r, "Stack R is at %w%n");
+    printf(s, "Stack S is at %w%n");
+    printf(v, "Stack R is at %w%n");
+};
 
 function main(){
     println("Welcome to OSv2");
