@@ -261,10 +261,6 @@ wordToString :: Base27.Word -> String
 wordToString word = map getLetter (wordToList word)
     where getLetter (LetterV c) = c
 
-
---lettersFromString :: String -> Maybe [Letter]
---lettersFromString = sequence . fmap letterSafe
-
 -- | Convenience function to turn a string of two letters into a tuple.
 letter2 :: String -> (Letter, Letter)
 letter2 (a:b:[]) = (letter a, letter b)

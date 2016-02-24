@@ -19,6 +19,7 @@ import Control.Applicative
 import Options.Applicative
 import Text.Read
 import Control.Exception
+import System.IO
 
 
 sanitizeProg :: [Char] -> [Char]
@@ -73,16 +74,17 @@ main = do
     (_, state') <- runStateT (start runOptions) state
     -- Done running
     -- Save the tape:
+    hPutStr stderr "\n\n\n"
     case tapeFile options of
       Just fname -> do
-           putStrLn $ "Saving " ++ fname
+           hPutStrLn stderr $ "Saving " ++ fname
            Tapes.writeTapeToFile fname (fromJust (view (tapeDeck . at (letter 'A')) $ state'))
       Nothing -> return ()
 
-    putStrLn "4LW shutting down."
+    hPutStrLn stderr "4LW shutting down."
 
-    putStr "PC was at: "
-    print $ fromJust $ state' ^? registers . ix pcRegister
+    hPutStrLn stderr "PC was at: "
+    hPrint stderr $ fromJust $ state' ^? registers . ix pcRegister
 
-    putStr "Ticks: "
-    print $ state' ^. tickNum
+    hPutStr stderr "Ticks: "
+    hPrint stderr $ state' ^. tickNum
