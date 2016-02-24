@@ -1,0 +1,6 @@
+f();
+halt;
+
+function f(){
+    [IO] := A;
+};
