@@ -1,0 +1,8 @@
+declare f returns;
+[IO] := f(A);
+[IO] := f(D);
+halt;
+
+function f(x) returns {
+    return x + 1;
+};

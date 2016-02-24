@@ -1,0 +1,7 @@
+f(W, T);
+halt;
+
+function f(a, b){
+    [IO] := a;
+    [IO] := b;
+};
