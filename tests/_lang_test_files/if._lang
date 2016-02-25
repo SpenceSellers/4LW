@@ -1,0 +1,16 @@
+declare f returns;
+
+var a := 0;
+while (a < 5){
+    [IO] := f(a);
+    a := a + 1;
+};
+
+halt;
+function f(x) returns {
+    if (x % 2 == 0){
+        return E;
+    } else {
+        return O;
+    };
+};

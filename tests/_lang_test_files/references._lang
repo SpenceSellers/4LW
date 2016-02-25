@@ -1,0 +1,9 @@
+*B___ := A;
+*B__D := B;
+
+var loc := B___;
+
+[IO] := *loc;
+[IO] := *B___;
+[IO] := *(loc + 4);
+halt;

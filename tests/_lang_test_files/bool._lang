@@ -1,0 +1,20 @@
+main();
+halt;
+
+function bool_print(b) {
+    if (b){
+        [IO] := T;
+    } else {
+        [IO] := F;
+    };
+};
+
+
+function main(){
+    bool_print(1 < 2);
+    bool_print(2 < 1);
+    var f := 10 < 5;
+    var t := 5 < 10;
+    bool_print(!f);
+    bool_print(!t);
+};
