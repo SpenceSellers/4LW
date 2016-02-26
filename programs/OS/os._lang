@@ -17,6 +17,7 @@ include <fs._lang>;
 include <executables._lang>;
 include <linkedlist._lang>;
 include <processes._lang>;
+include <util._lang>;
 
 declare dynmemInit;
 declare printTerminated;
@@ -33,6 +34,7 @@ declare debugHeap;
 declare enterRaw;
 declare lengthTerminated returns;
 declare prepare_prog returns;
+declare pop_stack returns;
 
 function lineEnter(bufflen) returns {
     var buff := malloc(bufflen);

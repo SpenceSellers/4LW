@@ -240,6 +240,8 @@ rightShift (Word a b c d) = Word (letter ' ') a b c
 leftShift :: Word -> Word
 leftShift (Word a b c d) = Word b c d (letter ' ')
 
+
+
 -- | Ands a word using the magic AND formula.
 andWord :: Word -> Word -> Word
 andWord a b = zipWord andLetter a b

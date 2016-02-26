@@ -1,0 +1,18 @@
+function get_tri_0(l, n) returns {
+    return l % 3;
+};
+
+function get_tri_1(l, n) returns {
+    return (l / 3) % 3;
+};
+
+function get_tri_2(l, n) returns {
+    return (l / 3) % 9;
+};
+
+function pop_stack(stack_letter) {
+    *(:move + 8) := stack_letter;
+    label move;
+    asm "MV [stack X] [stack _]";
+    return [stack _];
+};

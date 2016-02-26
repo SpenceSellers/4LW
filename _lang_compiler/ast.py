@@ -251,6 +251,7 @@ class Inc4Expr(Expr):
 class DecExpr(Expr):
     def __init__(self, inner):
         self.expr = inner
+        
     def emit_with_dest(self, context):
         calc, dest = self.expr.emit_with_dest(context)
         deced_dest = dest.with_flag(asm.DataFlag.DEC)
