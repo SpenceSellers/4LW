@@ -1,7 +1,7 @@
 4LW
 ===
-
-## What is 4LW
+![image](https://i.imgur.com/Saho9Vh.gif)
+## What is 4LW?
 4LW is a Base-27 virtual machine and corresponding stack (an Assembler, a compiler for a C-like language called _lang, and a simple Operating System). The VM is written in Haskell, the assembler and compiler are written in Python, and the OS is of course written in _lang.
 
 The 4LW's equivalent of a bit is a Letter. A letter can have 27 possible values: a space (Usually represented as an Underscore '_'), or an uncased character from A to Z.

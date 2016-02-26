@@ -188,9 +188,10 @@ function run_file_cmd(){
     var fname := promptNum("File ID: ");
     var buf := malloc(ZZ);
     println("Reading file...");
-    fs_read_file(fname, buf, ZZ);
+    fs_read_file(fname, buf, GG);
     println("Preparing program...");
     var prog := prepare_prog(buf);
+    printf("Running:%n%n");
     prog();
     free(buf);
 };
@@ -317,16 +318,27 @@ function printStackSizes(){
     printf(v, "Stack R is at %w%n");
 };
 
+function getFree() returns {
+    return ZZZZ - :end;
+};
+
 function main(){
+    var freeMem := getFree();
     println("Welcome to OSv2");
+    printBase10(freeMem);
+    printf(freeMem, " (%w) letters of memory free.%n");
+
     dynmemInit(B___, ET__);
     println("Memory initialized");
-    printf(:syscall_table, "Syscall table begins at %w.%n");
+    printf(:syscall_table, "Syscall table begins at %w.%n%n");
     var cmd;
     while (1){
+        printNewline();
         printTerminated("Command: ");
         cmd := lineEnter(40);
         evalcmd(cmd);
         free(cmd);
     };
 };
+
+label end;
