@@ -196,6 +196,12 @@ class ConstExpr(Expr):
     def is_always_true(self):
         return not self.val.is_zero()
 
+    def __eq__(self, other):
+        return type(self) == type(other) and self.val == other.val
+
+    def has_value(self, val):
+        return self.val == asm.ConstWord(val)
+
 class ConstRefExpr(Expr):
     def __init__(self, name):
         self.name = name
@@ -251,7 +257,7 @@ class Inc4Expr(Expr):
 class DecExpr(Expr):
     def __init__(self, inner):
         self.expr = inner
-        
+
     def emit_with_dest(self, context):
         calc, dest = self.expr.emit_with_dest(context)
         deced_dest = dest.with_flag(asm.DataFlag.DEC)
@@ -384,9 +390,34 @@ class Equality(Biconditional):
     def emit_conditional(self, aloc, bloc, successloc):
         return asm.Instruction(asm.Opcode.JUMPEQUAL, [aloc, bloc, successloc]).emit()
 
+    def emit_jump_true(self, dest, context):
+        out = ''
+        if type(self.b) is ConstExpr and self.b.has_value(0):
+            acalc, adest = self.a.emit_with_dest(context)
+            out += acalc
+            out += asm.Instruction(asm.Opcode.JUMPZERO, [adest, dest]).emit()
+            return out
+
+        elif type(self.b) is ConstExpr and self.b.has_value('ZZZZ'):
+            acalc, adest = self.a.emit_with_dest(context)
+            out += acalc
+            out += asm.Instruction(asm.Opcode.JUMPZERO, [adest.with_flag(asm.DataFlag.NEG), dest]).emit()
+            return out
+        else:
+            return super().emit_jump_true(dest, context)
+
+    def emit_jump_false(self, dest, context):
+        # This would be more efficient as an inequality
+        return Inequality(self.a, self.b).emit_jump_true(dest, context)
+
 class Inequality(Biconditional):
     def emit_conditional(self, aloc, bloc, successloc):
         return asm.Instruction(asm.Opcode.JUMPNOTEQUAL, [aloc, bloc, successloc]).emit()
+            
+    def emit_jump_false(self, dest, context):
+        # This would be more efficient as an equality.
+        return Equality(self.a, self.b).emit_jump_true(dest, context)
+
 
 class Greater(Biconditional):
     def emit_conditional(self, aloc, bloc, successloc):
