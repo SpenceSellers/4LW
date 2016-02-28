@@ -139,7 +139,7 @@ function coredumpCmd(){
 function writefile_cmd(){
     var fname := promptNum("File ID: ");
     fs_new_file(fname);
-    var buffer := lineEnter(ZZ);
+    var buffer := lineEnter(C__);
     fs_write_file(fname, buffer, lengthTerminated(buffer) + 1);
     free(buffer);
 };

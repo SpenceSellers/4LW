@@ -139,6 +139,11 @@ function fs_new_file(file_id){
 
 function fs_delete_file(file_id){
     var block := fs_get_file_block(file_id);
+    fs_go_to_block(block);
+    var next_block := [tape A];
+
+    # TODO make this work for multiple blocks
+
     fs_set_block_unused(block);
 
     var seen_id;
@@ -179,21 +184,48 @@ function fs_list_files(){
 };
 
 function fs_write_file(file_id, mem, len){
+    var left_in_block := ZZ;
     var end := mem + (len * 4);
-    fs_go_to_file_data(file_id);
+    var next_block := 0;
+    var current_block := fs_get_file_block(file_id);
+
+    fs_go_to_block_data(current_block);
     while (mem < end){
+        if (left_in_block == 0){
+            println("Ran out of block room: continuing next.");
+            next_block := fs_get_free_block();
+            fs_set_block_next(current_block, next_block);
+            fs_set_block_last_in_file(next_block);
+            fs_go_to_block_data(next_block);
+            left_in_block := ZZ;
+            current_block := next_block;
+        };
         [tape A] := *mem;
         mem := mem + 4;
+        left_in_block := left_in_block - 1;
     };
 };
 
 function fs_read_file(file_id, buffer, len){
-    var next_block;
+    var current_block := fs_get_file_block(file_id);
+    var left_in_block := ZZ;
     var end := buffer + (len * 4);
-    fs_go_to_file_data(file_id);
+    fs_go_to_block(current_block);
+    var next_block := [tape A];
     while (buffer < end){
+        if (left_in_block == 0){
+            if (next_block == ZZZZ){
+                return;
+            } else {
+                current_block := next_block;
+                fs_go_to_block(current_block);
+                next_block := [tape A];
+                left_in_block := ZZ;
+            };
+        };
         *buffer := [tape A];
         buffer := buffer + 4;
+        left_in_block := left_in_block - 1;
     };
     println("Done copying");
 };

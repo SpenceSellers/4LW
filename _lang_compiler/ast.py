@@ -74,6 +74,7 @@ class Context:
     def register_string(self, string):
         maybename = self.maybe_get_string_name(string)
         if maybename:
+            # This string has already been registered, we don't have to do it again.
             return asm.DataLoc(asm.LocType.CONST, asm.RefWord(maybename))
 
         name = asm.ident('str')
@@ -413,7 +414,7 @@ class Equality(Biconditional):
 class Inequality(Biconditional):
     def emit_conditional(self, aloc, bloc, successloc):
         return asm.Instruction(asm.Opcode.JUMPNOTEQUAL, [aloc, bloc, successloc]).emit()
-            
+
     def emit_jump_false(self, dest, context):
         # This would be more efficient as an equality.
         return Equality(self.a, self.b).emit_jump_true(dest, context)
@@ -789,6 +790,7 @@ class Include(Statement):
         return self.compile()
 
 class Asm(Statement):
+    '''A raw line of assembly'''
     def __init__(self, text):
         self.text = text
 
