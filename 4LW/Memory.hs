@@ -30,6 +30,7 @@ readWord mem addr = Word a b c d
 
 -- |Writes a single letter to memory, given an address.
 writeLetter :: Memory -> Word -> Letter -> Memory
+writeLetter mem addr (LetterV '_') = Map.delete addr mem -- Deleting zero letters yields a small speed increase.
 writeLetter mem addr letter = Map.insert addr letter mem
 
 -- |Writes a sequence of letters to memory, given a starting address.

@@ -196,7 +196,7 @@ toWord num = Word (toLetter a) (toLetter b) (toLetter c) (toLetter d)
 toWordDigits :: Int -> (Int, Int, Int, Int)
 --{-# INLINE toWordDigits #-}
 toWordDigits val = (a, b, c, d)
-    where n = val `mod` wordValues
+    where n = val `rem` wordValues
           (dr, d) = quotRem n 27
           (cr, c) = quotRem dr 27
           (br, b) = quotRem cr 27
