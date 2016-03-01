@@ -150,48 +150,51 @@ oneArgInstruction inst operands = toBadOpLen $ inst <$> (operands ^? ix 0)
 -- | Takes a RawInstruction and figures out what it really is.
 -- the resulting Instruction will be actually usable by 4LW.
 constructInstruction :: RawInstruction -> Either BadInstruction Instruction
-constructInstruction (RawInstruction opcode operands)
-    | opcode == letter2 "__" = Right Nop
-    | opcode == letter2 "HL" = Right Halt
-    | opcode == letter2 "AD" = threeArgInstruction Add operands
-    | opcode == letter2 "SB" = threeArgInstruction Sub operands
-    | opcode == letter2 "ML" = threeArgInstruction Mul operands
-    | opcode == letter2 "DV" = threeArgInstruction Div operands
-    | opcode == letter2 "MD" = threeArgInstruction Modulo operands
-    | opcode == letter2 "AN" = threeArgInstruction And operands
-    | opcode == letter2 "MV" = twoArgInstruction Move operands
+constructInstruction (RawInstruction opcode operands) =
+    case charify opcode of
+        ('_', '_') -> Right Nop
+        ('H', 'L') -> Right Halt
+        ('A', 'D') -> threeArgInstruction Add operands
+        ('S', 'B') -> threeArgInstruction Sub operands
+        ('M', 'L') -> threeArgInstruction Mul operands
+        ('D', 'V') -> threeArgInstruction Div operands
+        ('M', 'D') -> threeArgInstruction Modulo operands
+        ('A', 'N') -> threeArgInstruction And operands
+        ('M', 'V') -> twoArgInstruction Move operands
 
-    | opcode == letter2 "JP" = oneArgInstruction Jump operands
-    | opcode == letter2 "JZ" = twoArgInstruction JumpZero operands
-    | opcode == letter2 "JE" = threeArgInstruction JumpEqual operands
-    | opcode == letter2 "JN" = threeArgInstruction JumpNotEqual operands
-    | opcode == letter2 "JG" = threeArgInstruction JumpGreater operands
-    | opcode == letter2 "JL" = threeArgInstruction JumpLesser operands
+        ('J', 'P') -> oneArgInstruction Jump operands
+        ('J', 'Z') -> twoArgInstruction JumpZero operands
+        ('J', 'E') -> threeArgInstruction JumpEqual operands
+        ('J', 'N') -> threeArgInstruction JumpNotEqual operands
+        ('J', 'G') -> threeArgInstruction JumpGreater operands
+        ('J', 'L') -> threeArgInstruction JumpLesser operands
 
-    | opcode == letter2 "FN" = toBadOpLen $ FCall <$>
+        ('F', 'N') -> toBadOpLen $ FCall <$>
                                  (operands ^? ix 0) <*>
                                  (pure . tail $ operands)
 
-    | opcode == letter2 "RT" = Right $ Return operands
+        ('R', 'T') -> Right $ Return operands
 
-    | opcode == letter2 "SW" = twoArgInstruction Swap operands
-    | opcode == letter2 "RD" = oneArgInstruction Read operands
+        ('S', 'W') -> twoArgInstruction Swap operands
+        ('R', 'D') -> oneArgInstruction Read operands
 
-    | opcode == letter2 "PU" = toBadOpLen $ PushAll <$>
+        ('P', 'U') -> toBadOpLen $ PushAll <$>
                                  (operands ^? ix 0) <*>
                                  (pure . tail $ operands)
 
-    | opcode == letter2 "PL" = toBadOpLen $ PullAll <$>
+        ('P', 'L') -> toBadOpLen $ PullAll <$>
                                  (operands ^? ix 0) <*>
                                  (pure . tail $ operands)
 
-    | opcode == letter2 "TS" = twoArgInstruction TapeSeek operands
-    | opcode == letter2 "TB" = twoArgInstruction TapeSeekBackwards operands
-    | opcode == letter2 "TR" = oneArgInstruction TapeRewind operands
+        ('T', 'S') -> twoArgInstruction TapeSeek operands
+        ('T', 'B') -> twoArgInstruction TapeSeekBackwards operands
+        ('T', 'R') -> oneArgInstruction TapeRewind operands
 
-    | opcode == letter2 "SS" = twoArgInstruction StackSize operands
+        ('S', 'S') -> twoArgInstruction StackSize operands
 
-    | otherwise = Left $ BadOpcode opcode
+        (_, _) -> Left $ BadOpcode opcode
+
+    where charify ((LetterV a), (LetterV b)) = (a, b)
 
 
 -- | Given the list of words that make up the operands (arguments) to an
