@@ -190,14 +190,23 @@ function run_file_cmd(){
     println("Reading file...");
     fs_read_file(fname, buf, GG);
     println("Preparing program...");
-    var prog := prepare_prog(buf);
+    #var prog := prepare_prog(buf);
     printf("Running:%n%n");
-    prog();
-    free(buf);
+
+    var proc := process_load_executable(buf);
+    add_process_to_scheduler(proc);
+    process_start_pid(1);
+    #prog();
+    #free(buf);
 };
 
 function rm_file_cmd(){
     fs_delete_file(promptNum("File ID: "));
+};
+
+function time_cmd(){
+    asm "MV [reg S] [stack _]";
+    printWord([stack _]);
 };
 
 function evalcmd(cmdstr){
@@ -300,6 +309,11 @@ function evalcmd(cmdstr){
         return;
     };
 
+    if (strEq(cmdstr, "time")){
+        time_cmd();
+        return;
+    };
+
     println("Unknown command!");
 };
 
@@ -330,6 +344,8 @@ function main(){
 
     dynmemInit(B___, ET__);
     println("Memory initialized");
+    scheduler_init();
+
     printf(:syscall_table, "Syscall table begins at %w.%n%n");
     var cmd;
     while (1){

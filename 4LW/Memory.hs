@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Memory where
 import Prelude hiding (Word)
 import Base27

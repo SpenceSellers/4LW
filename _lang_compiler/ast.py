@@ -16,7 +16,7 @@ def log(s):
     print(s, file=sys.stderr)
 
 class Context:
-    def __init__(self, parent = None):
+    def __init__(self, parent = None, name = None):
         self.available_registers = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
         self.available_registers.reverse()
         self.vars = {}
@@ -26,6 +26,7 @@ class Context:
         self.reserved_mem = {}
         self.types = {}
         self.macros = {}
+        self.name = name
 
         # TODO function return values.
 
@@ -102,6 +103,10 @@ class Context:
         for entry in other.strings:
             self.strings.append(entry)
 
+        for key, value in other.types.items():
+            log("{} is inheriting {} from {}".format(self, key, other))
+            self.register_type(key, value)
+
     def emit_strings(self):
         out = ''
         for string, name in self.strings:
@@ -116,7 +121,17 @@ class Context:
         if type_name in self.types:
             return self.types[type_name]
         else:
-            return self.parent.get_type(type_name)
+            if self.parent:
+                return self.parent.get_type(type_name)
+            else:
+                log("  It doesn't exist, our types are {}".format(self.types.keys()))
+                return None
+
+    def __str__(self):
+        if self.name:
+            return "[Context {}, parent {}]".format(self.name, self.parent)
+        else :
+            return "[Unknown context, parent {}]".format(self.parent)
 
 class SymbolNotRegisteredException(Exception):
     pass
@@ -548,8 +563,9 @@ class StructAccess(LValue, Expr):
     def emit_with_dest(self, context):
 
         type = context.get_type(self.type_name)
+        if type is None:
+            raise Exception("Type {} does not exist in context {}".format(self.type_name, context))
         offset = type.get_field_offset(self.field_name)
-
         out = ''
         basecalc, base_dest = self.base.emit_with_dest(context)
         out += basecalc
@@ -665,7 +681,7 @@ class Function(Statement):
             context.register_fn(self.name, True)
         else:
             context.register_fn(self.name, False)
-        c = Context(parent=context)
+        c = Context(parent=context, name = "Function {}".format(self.name))
         move_args = ''
         # Args are pushed backwards
         for arg in reversed(self.args):
@@ -773,7 +789,7 @@ class Include(Statement):
     def __init__(self, path):
         self.path = path
 
-    def compile(self):
+    def compile(self, context):
         import compiler
         extension = os.path.splitext(self.path)[1]
         if extension.lower() in ('.4lwa', '.asm'):
@@ -783,11 +799,14 @@ class Include(Statement):
             return text + '\n'
         else:
             # We'll hope that this is the right language.
-            return compiler.compile_file(self.path)
+            result = compiler.compile_file_with_parent_context(self.path, context)
+            return result
 
 
     def emit(self, context):
-        return self.compile()
+        result = self.compile(context)
+        #context.inherit(subcontext)
+        return result
 
 class Asm(Statement):
     '''A raw line of assembly'''

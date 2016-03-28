@@ -302,7 +302,8 @@ tick = do
   tickNum += 1
   pc <- getPC
   instructionResult <- readInstruction pc <$> use memory
-
+  count <- use tickNum
+  setRegister (letter 'S') (toWord . fromIntegral $ count)
   case instructionResult of
     Left reason -> trace ("BAD INSTRUCTION: " ++ show reason) $ do
         action .= HaltAction
