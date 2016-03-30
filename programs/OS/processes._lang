@@ -1,4 +1,9 @@
 declare prepare_prog returns;
+declare ll_insert returns;
+
+asm "reserve current_pid 1";
+asm "reserve process_table 1";
+asm "reserve next_pid 1";
 
 struct Process {
     id,
@@ -6,10 +11,21 @@ struct Process {
     heap_addr
 };
 
+function scheduler_init(){
+    *:current_pid := ZZZZ;
+    *:process_table := ZZZZ;
+    *:next_pid := 1;
+};
+
 function process_start(process){
-    Process@process.id := 1;
+    *:current_pid := Process@process.id;
     var loc := Process@process.code_start;
     loc();
+};
+
+function process_start_pid(pid){
+    var entry := get_process_entry(pid);
+    process_start(entry);
 };
 
 function process_load_executable(executable_addr) returns {
@@ -23,6 +39,35 @@ function process_load_executable(executable_addr) returns {
     return p;
 };
 
-function process_yield(){
+# Will change the PID to whatever it needs to be.
+function add_process_to_scheduler(proc){
+    Process@proc.id := *:next_pid;
+    *:next_pid := (*:next_pid) + 1;
+
+    *:process_table := ll_insert(*:process_table, proc);
+};
+
+function process_remove_process(pid){
+    
+};
+
+function get_process_entry(pid) returns {
+    var current_node := *:process_table;
+    var current_entry;
+    while (1){
+        if (current_node == ZZZZ){
+            return ZZZZ;
+        };
+
+        current_entry := Node@current_node.data;
+        if (Process@current_entry.id == pid){
+            return current_entry;
+        };
+
+        current_node := Node@current_node.next;
+    };
+};
+
+function process_yield(pid){
 
 };
