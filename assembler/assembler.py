@@ -12,6 +12,8 @@ import json
 
 import positions
 
+SMALL_OPERANDS = True
+
 def log(s):
     print(s, file=sys.stderr)
 
@@ -196,11 +198,14 @@ class Instruction(Bakeable):
         self.operands = operands
 
     def bake(self):
-        oplen = toBase27(len(self.operands) * 2 + 1)
+        oplen = toBase27(self.word_len())
         assert len(oplen) == 1
         head = bakers.Baked("{opcode}{len}_".format(opcode=self.opcode, len = oplen))
 
         return bakers.BakerSequence([head] + [opr.bake() for opr in self.operands])
+
+    def word_len(self):
+        return sum(oper.word_len() for oper in self.operands) + 1
 
     def __repr__(self):
         return "<{} {}>".format(self.opcode, self.operands)
@@ -219,8 +224,22 @@ class Operand(Bakeable):
 
     def bake(self):
         flagstr = "{s:_>2}".format(s = ''.join(self.flags))
+        if SMALL_OPERANDS and isinstance(self.payload.bake(), bakers.Baked):
+            small = smallify(self.payload.bake().s)
+            if small:
+                return bakers.Baked("{type}{flags}{payload}".format(type = self.type, flags = flagstr, payload = small))
         head = "_{flags}{type}".format(type = self.type, flags = flagstr)
         return bakers.BakerSequence([bakers.Baked(head), self.payload.bake()])
+
+    def word_len(self):
+        if SMALL_OPERANDS and isinstance(self.payload.bake(), bakers.Baked):
+            small = smallify(self.payload.bake().s)
+            if small:
+                return 1
+            else:
+                return 2
+        else:
+            return 2
 
     def __repr__(self):
         return "[Opr {} {} {}]".format(self.type, self.flags if self.flags else '', self.payload)
@@ -249,7 +268,6 @@ class Array(Bakeable):
         self.datas = datas
 
     def bake(self):
-
         return bakers.BakerSequence([bakers.LabelBaker(self.label)] + [b.bake() for b in self.datas])
 
 class ConstWord(Bakeable):
@@ -372,6 +390,12 @@ def parse_num(s):
         pass
 
     return base27to10(s)
+
+def smallify(word):
+    if word[0:3] == '___':
+        return word[3]
+    else:
+        return None
 
 def main():
     argsp = argparse.ArgumentParser()

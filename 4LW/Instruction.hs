@@ -192,7 +192,7 @@ constructInstruction (RawInstruction opcode operands) =
         ('T', 'R') -> oneArgInstruction TapeRewind operands
 
         ('S', 'S') -> twoArgInstruction StackSize operands
-        
+
         ('W', 'S') -> twoArgInstruction SwapStacks operands
 
         (_, _) -> Left $ BadOpcode opcode
@@ -209,15 +209,22 @@ parseOperands_ :: [Word] -> Operands -> Either BadOperand [DataLocation]
 parseOperands_ ((Word optype flag1 flag2 control):rest) ops =
     case optype of
         LetterV '_' ->  case control of
-            LetterV 'R' -> build (Register (opdata ^. fourthLetter))
-            LetterV 'C' -> build (Constant opdata)
-            LetterV 'I' -> build (Io (opdata ^. fourthLetter))
-            LetterV 'S' -> build (Stack (opdata ^. fourthLetter))
-            LetterV 'T' -> build (TapeIO (opdata ^. fourthLetter))
+            LetterV 'R' -> buildLong (Register (opdata ^. fourthLetter))
+            LetterV 'C' -> buildLong (Constant opdata)
+            LetterV 'I' -> buildLong (Io (opdata ^. fourthLetter))
+            LetterV 'S' -> buildLong (Stack (opdata ^. fourthLetter))
+            LetterV 'T' -> buildLong (TapeIO (opdata ^. fourthLetter))
             _ -> Left (BadOptype control)
             where (opdata : xs) = rest
-                  build instruction = parseOperands_ xs (applyFlags [flag1, flag2] instruction : ops)
+                  buildLong instruction = parseOperands_ xs (applyFlags [flag1, flag2] instruction : ops)
+
+        LetterV 'C' -> buildShort (Constant . extendToWord $ control)
+        LetterV 'R' -> buildShort (Register control)
+        LetterV 'S' -> buildShort (Stack control)
+        LetterV 'I' -> buildShort (Io control)
+        LetterV 'T' -> buildShort (TapeIO control)
         _ -> Left (BadOpcontrol optype)
+    where buildShort loc = parseOperands_ rest ((applyFlags [flag1, flag2] loc ) : ops)
 
 --parseOperands_ (x:xs) ops = Nothing -- Odd number of words.
 parseOperands_ [] ops = Right ops
