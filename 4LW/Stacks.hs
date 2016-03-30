@@ -1,4 +1,4 @@
-module Stacks (Stack, Stacks, emptyStacks, emptyStack, push, pop, peekAll, size) where
+module Stacks (Stack, Stacks, emptyStacks, swapStacks, emptyStack, push, pop, peekAll, size) where
 
 import Prelude hiding (Word)
 import Base27
@@ -26,6 +26,9 @@ instance Show SizeLimitedStack where
 emptyStacks :: Stacks
 emptyStacks = listArray (letter '_', letter 'Z') (repeat emptyStack)
 
+swapStacks :: Stacks -> Letter -> Letter -> Stacks
+swapStacks = arraySwap
+
 emptyStack :: Stack
 emptyStack = SizeLimitedStack 0 []
 
@@ -48,3 +51,6 @@ size (SizeLimitedStack size _) = size
 -- Mostly intended for debugging purposes.
 peekAll :: Stack -> [Word]
 peekAll (SizeLimitedStack _ s) = s
+
+arraySwap :: (Ix k) => Array k a -> k -> k -> Array k a
+arraySwap arr a b = arr // [(b, arr ! a), (a, arr ! b)]

@@ -56,7 +56,8 @@ data Instruction =
     TapeSeek DataLocation DataLocation  |
     TapeSeekBackwards DataLocation DataLocation |
     TapeRewind DataLocation |
-    StackSize DataLocation DataLocation
+    StackSize DataLocation DataLocation |
+    SwapStacks DataLocation DataLocation
 
     deriving (Show, Eq)
 
@@ -191,6 +192,8 @@ constructInstruction (RawInstruction opcode operands) =
         ('T', 'R') -> oneArgInstruction TapeRewind operands
 
         ('S', 'S') -> twoArgInstruction StackSize operands
+        
+        ('W', 'S') -> twoArgInstruction SwapStacks operands
 
         (_, _) -> Left $ BadOpcode opcode
 

@@ -290,6 +290,12 @@ runInstruction (StackSize stackid dest) = do
     let stack = stks ! (stackIdWord ^. fourthLetter)
     setData dest (toWord $ Stacks.size stack)
 
+runInstruction (SwapStacks a b) =
+    stacks <~ Stacks.swapStacks
+        <$> use stacks
+        <*> (getData a <&> view fourthLetter)
+        <*> (getData b <&> view fourthLetter)
+
 
 data RunOptions = RunOptions {
     _ticktime :: Int,
