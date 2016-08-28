@@ -171,9 +171,11 @@ class RefLoc(LValue):
 class Expr:
     @abc.abstractmethod
     def emit_with_dest(self, context):
+        '''Emits the code to generate the expression and the DataLoc that the result will be found in, as a (code, dataloc)'''
         pass
 
     def emit_jump_true(self, jump_dest, context):
+        '''Emits code that jumps to a location if the expr is truthy.'''
         out = ''
         calc, calc_dest = self.emit_with_dest(context)
 
@@ -203,6 +205,7 @@ class Expr:
         return self
 
 class ConstExpr(Expr):
+    """Expression that has a constant value"""
     def __init__(self, val):
         self.val = asm.ConstWord(val)
 
@@ -226,6 +229,7 @@ class ConstRefExpr(Expr):
         return ('', asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.name)))
 
 class VarExpr(Expr):
+    """Expression that reads from a variable"""
     def __init__(self, varname):
         self.varname = varname
 
@@ -234,6 +238,7 @@ class VarExpr(Expr):
         return ('', asm.DataLoc(asm.LocType.REG, asm.ConstWord(reg)))
 
 class StringExpr(Expr):
+    "Expr representing a static string. It will register the string with the Context that its in."
     def __init__(self, string):
         self.string = string
 
@@ -242,6 +247,7 @@ class StringExpr(Expr):
         return ('', loc)
 
 class DerefExpr(Expr):
+    """An Expr that treats the inner expr as a pointer"""
     def __init__(self, expr):
         self.expr = expr
 
@@ -280,6 +286,7 @@ class DecExpr(Expr):
         return (calc, deced_dest)
 
 class BiExpr(Expr):
+    """Superclass that helps create exprs that take two values and use a single instruction on them"""
     def __init__(self, a, b):
         assert isinstance(a, Expr)
         assert isinstance(b, Expr)
@@ -348,6 +355,7 @@ class Negate(Expr):
 
 
 class Biconditional(Expr):
+    """Superclass that helps create conditionals that take two arguments."""
     def __init__(self, a, b):
         self.a = a
         self.b = b
@@ -448,6 +456,7 @@ class And(Biconditional):
         return asm.Instruction(asm.Opcode.AND, [aloc, bloc, successloc]).emit()
 
 class FCall(Expr):
+    """Expression that calls a function"""
     def __init__(self, fname, args=[]):
         self.fname = fname
         self.args = args
@@ -508,6 +517,7 @@ class Io(LValue, Expr):
         return ('', asm.DataLoc(asm.LocType.IO))
 
 class Stack(LValue, Expr):
+    """Assigns or reads from a static stack"""
     def __init__(self, letter):
         assert(len(letter) == 1)
         self.letter = letter
