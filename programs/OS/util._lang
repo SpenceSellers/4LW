@@ -10,7 +10,7 @@ function get_tri_2(l, n) returns {
     return (l / 3) % 9;
 };
 
-function pop_stack(stack_letter) {
+function pop_stack(stack_letter) returns {
     *(:move + 8) := stack_letter;
     label move;
     asm "MV [stack X] [stack _]";
