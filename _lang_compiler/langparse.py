@@ -22,10 +22,7 @@ block_sequence = Forward()
 special_loc = Forward()
 struct_access = Forward()
 
-
 num = Word(nums)
-
-
 
 identifier = Word(srange('[a-z]_'), alphas + nums + '_')
 

@@ -190,7 +190,8 @@ function debugHeap(){
 };
 
 function memErr(code){
-    printTerminated("Memory Error: ");
+    printTerminated("Dynmem Error: ");
     printWord(code);
     printNewline();
+    asm "HL";
 };

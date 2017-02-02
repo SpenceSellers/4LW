@@ -209,6 +209,12 @@ function time_cmd(){
     printWord([stack _]);
 };
 
+function echo_cmd(){
+    var buf := lineEnter(50);
+    println(buf);
+    free(buf);
+};
+
 function evalcmd(cmdstr){
     var arg;
     var a;
@@ -311,6 +317,11 @@ function evalcmd(cmdstr){
 
     if (strEq(cmdstr, "time")){
         time_cmd();
+        return;
+    };
+
+    if (strEq(cmdstr, "echo")){
+        echo_cmd();
         return;
     };
 
