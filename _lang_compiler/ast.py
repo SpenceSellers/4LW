@@ -271,11 +271,7 @@ class Expr:
         return self
 
 class ConstExpr(Expr):
-<<<<<<< HEAD
     ''' A constant value '''
-=======
-    """Expression that has a constant value"""
->>>>>>> ee3c24b8a51670962cc6fb8b4a7a993297c1f8f1
     def __init__(self, val):
         self.val = asm.ConstWord(val)
 
@@ -300,11 +296,7 @@ class ConstRefExpr(Expr):
         return ('', asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.name)))
 
 class VarExpr(Expr):
-<<<<<<< HEAD
     ''' Evaluates to the value of a variable '''
-=======
-    """Expression that reads from a variable"""
->>>>>>> ee3c24b8a51670962cc6fb8b4a7a993297c1f8f1
     def __init__(self, varname):
         self.varname = varname
 
@@ -313,11 +305,7 @@ class VarExpr(Expr):
         return ('', asm.DataLoc(asm.LocType.REG, asm.ConstWord(reg)))
 
 class StringExpr(Expr):
-<<<<<<< HEAD
     ''' Evaluates to the memory address of a string '''
-=======
-    "Expr representing a static string. It will register the string with the Context that its in."
->>>>>>> ee3c24b8a51670962cc6fb8b4a7a993297c1f8f1
     def __init__(self, string):
         self.string = string
 
@@ -326,11 +314,7 @@ class StringExpr(Expr):
         return ('', loc)
 
 class DerefExpr(Expr):
-<<<<<<< HEAD
     ''' Derefs the value of another expression, treating it as a memory adddress '''
-=======
-    """An Expr that treats the inner expr as a pointer"""
->>>>>>> ee3c24b8a51670962cc6fb8b4a7a993297c1f8f1
     def __init__(self, expr):
         self.expr = expr
 
@@ -373,11 +357,7 @@ class DecExpr(Expr):
         return (calc, deced_dest)
 
 class BiExpr(Expr):
-<<<<<<< HEAD
     ''' Abstract method for exprs that take in two 'arguments' '''
-=======
-    """Superclass that helps create exprs that take two values and use a single instruction on them"""
->>>>>>> ee3c24b8a51670962cc6fb8b4a7a993297c1f8f1
     def __init__(self, a, b):
         assert isinstance(a, Expr)
         assert isinstance(b, Expr)
@@ -446,11 +426,7 @@ class Negate(Expr):
 
 
 class Biconditional(Expr):
-<<<<<<< HEAD
     ''' Abstract class that is used by Exprs that take two values and compare them somehow '''
-=======
-    """Superclass that helps create conditionals that take two arguments."""
->>>>>>> ee3c24b8a51670962cc6fb8b4a7a993297c1f8f1
     def __init__(self, a, b):
         self.a = a
         self.b = b
@@ -551,11 +527,7 @@ class And(Biconditional):
         return asm.Instruction(asm.Opcode.AND, [aloc, bloc, successloc]).emit()
 
 class FCall(Expr):
-<<<<<<< HEAD
     ''' Expr that calls a function'''
-=======
-    """Expression that calls a function"""
->>>>>>> ee3c24b8a51670962cc6fb8b4a7a993297c1f8f1
     def __init__(self, fname, args=[]):
         self.fname = fname
         self.args = args
