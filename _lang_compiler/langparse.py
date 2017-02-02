@@ -1,3 +1,8 @@
+''' This module parses the _lang language.
+We use the pyparsing library to do this. 
+
+It isn't pretty. I hope the parser names are fairly self-explanitory'''
+
 from pyparsing import *
 import ast
 

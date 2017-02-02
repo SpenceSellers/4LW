@@ -578,6 +578,7 @@ class SizeOf(Expr):
         return ('', asm.DataLoc(asm.LocType.CONST, asm.ConstWord(size)))
 
 class Io(LValue, Expr):
+    ''' Standard output. This can both be read from and assigned to. '''
     def __init__(self):
         pass
 
@@ -611,6 +612,7 @@ class Tape(LValue, Expr):
         return ('', asm.DataLoc(asm.LocType.TAPE, asm.ConstWord(self.letter)))
 
 class StructAccess(LValue, Expr):
+    ''' Allows access to struct values '''
     def __init__(self, type_name, base, field_name):
         self.type_name = type_name
 
@@ -898,6 +900,7 @@ class Asm(Statement):
         return self.text + '\n'
 
 class Goto(Statement):
+    ''' It ain't a low-level language if you can't make an awful goto mess '''
     def __init__(self, labelname):
         self.labelname = labelname
 
@@ -905,6 +908,7 @@ class Goto(Statement):
         return asm.Jump(asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.labelname))).emit()
 
 class Label(Statement):
+    ''' A label for gotos etc '''
     def __init__(self, name):
         self.name = name
 
