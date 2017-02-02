@@ -4,55 +4,101 @@ import os
 import sys
 import var_types as types
 import traceback
-
+# The DataLoc of a stack that _lang will use for temporary values.
 TEMPSTACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord('_'))
+# The DataLoc of the stack that _lang will use to pass function arguments
 ARGSTACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord(asm.Stacks.ARGS.value))
+# The DataLoc of the stack that will be used to return function results
 RESULT_STACK = asm.DataLoc(asm.LocType.STACK, asm.ConstWord(asm.Stacks.RESULT.value))
+# The biggest word that 4LW can represent.
 MAX_WORD = asm.DataLoc(asm.LocType.CONST, asm.ConstWord("ZZZZ"))
 ZERO_WORD = asm.DataLoc(asm.LocType.CONST, asm.ConstWord(0))
+# This dataloc points to the local function return label.
 RETURN_LOC = asm.DataLoc(asm.LocType.CONST, asm.RefWord('@return'))
 
 def log(s):
     print(s, file=sys.stderr)
 
 class Context:
+    ''' Contexts store information about scopes/functions.
+
+    Contexts can have children contexts, so they form a kind of tree. 
+    Contexts manage register allocation and mapping variable names to registers.
+    '''
     def __init__(self, parent = None, name = None):
+        # These are the registers available for local use.
+        # 4LW has more registers than this, some of them are used by the hardware,
+        # and others might be reserved for explicit program use.
         self.available_registers = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
+
+        # We'll just reverse the list so that .pop() uses them in a prettier order.
         self.available_registers.reverse()
+
+        # Maps variable names to registers.
         self.vars = {}
+
+        # Local strings
         self.strings = []
+
+        # The parent scope. Will be None for a root context.
         self.parent = parent
+
+        # Stores function names. This has to be different from variables,
+        # because variables are stored in registers. Better to use constant 
+        # memory addresses for functions.
+        # The keys are the function names, the values are booleans that 
+        # represent whether or not the function returns a word.
         self.functions = {}
+
+        # Stores uninitialized reserved memory. 
+        # Key is the name, value is the length of stored memory in words.
         self.reserved_mem = {}
+
         self.types = {}
-        self.macros = {}
+
+        # The context's name. This is for debugging mostly.
         self.name = name
 
-        # TODO function return values.
 
     def reserve_register(self):
+        ''' Asks to be reserved a register. Returns the register you were assigned. '''        
         try:
             return self.available_registers.pop()
         except IndexError:
             return None
 
     def make_var(self, name):
+        ''' Creates a named variable. Internally this reserves a register, but the caller
+        doesn't need to know which one yet. '''
         reg = self.reserve_register()
         self.vars[name] = reg
 
     def get_reg_for_var(self, name):
+        ''' Returns the register that a named variable is assigned to. '''
         return self.vars[name]
 
     def var_exists(self, name):
+        ''' Does this variable actually exist? '''
         return name in self.vars
 
     def get_loc_for_name(self, name):
+        ''' Gets the dataloc for an identifier. 
+
+        If it's a plain named variable, you'll get the dataloc to that register.
+        If not, you'll get a reference to that assembly label.
+
+        That's kind of scary. If the programmer references a variable that doesn't exist,
+        the program will compile into assembly. The assembler will blow up though, since
+        the label probably doesn't exist. The idea is that the outputted assembly could be
+        linked with external raw assembly code and the function calls would work.
+        '''
         if self.var_exists(name):
             return asm.DataLoc(asm.LocType.REG, asm.ConstWord(self.get_reg_for_var(name)))
         else:
             return asm.DataLoc(asm.LocType.CONST, asm.RefWord(name))
 
     def get_used_regs(self):
+        ''' Returns the set of used registers '''
         regs = set()
         for var, reg in self.vars.items():
             regs.add(reg)
@@ -60,9 +106,12 @@ class Context:
         return regs
 
     def register_fn(self, name, returns):
+        ''' Registers a function. 'returns' should be true if the function returns a word,
+        and otherwise false. '''
         self.functions[name] = returns
 
     def does_fn_return_value(self, name):
+        ''' Does a given function return a word, or not return anything at all?'''
         try:
             return self.functions[name]
         except:
@@ -73,6 +122,7 @@ class Context:
                 raise SymbolNotRegisteredException("Unknown function: {}".format(name))
 
     def register_string(self, string):
+        ''' Stores a string so that it'll be available later. '''
         maybename = self.maybe_get_string_name(string)
         if maybename:
             # This string has already been registered, we don't have to do it again.
@@ -84,12 +134,14 @@ class Context:
 
 
     def maybe_get_string_name(self, string):
+        ''' Does this string already have a name? If so, get the name. '''
         for s, name in self.strings:
             if s == string:
                 return name
         return None
 
     def reserve_mem(self, name, len=1):
+        ''' Reserve raw uninitialized memory '''
         self.reserved_mem[name] = len
 
     def emit_reserved_mem(self):
@@ -100,6 +152,8 @@ class Context:
         return out
 
     def inherit(self, other):
+        ''' Contexts can inherit from their children. This is done to bubble
+        strings, etc up to the top level. '''
         for entry in other.strings:
             self.strings.append(entry)
 
@@ -140,11 +194,13 @@ class Statement:
     pass
 
 class LValue:
+    ''' LValues can be assigned to.'''
     @abc.abstractmethod
     def emit_assign_to(self, src, context):
         pass
 
 class Variable(LValue):
+    ''' The most common type of LValue. Internally it's backed by a register. '''
     def __init__(self, name):
         self.name = name
 
@@ -157,6 +213,8 @@ class Variable(LValue):
         return "LValue {}".format(self.name)
 
 class RefLoc(LValue):
+    ''' Assigns to an assembly label to a memory location.
+    Strings etc will use this. '''
     def __init__(self, loc):
         assert isinstance(loc, Expr)
         self.loc = loc
@@ -169,11 +227,15 @@ class RefLoc(LValue):
 
 
 class Expr:
+    ''' Exprs calculate values. '''
     @abc.abstractmethod
     def emit_with_dest(self, context):
         pass
 
     def emit_jump_true(self, jump_dest, context):
+        ''' Emits a jump to the destination if this expr turns out to be non-zero 
+        This is a generic impl, a lot of Exprs will want to override it.
+        '''
         out = ''
         calc, calc_dest = self.emit_with_dest(context)
 
@@ -183,6 +245,8 @@ class Expr:
         return out
 
     def emit_jump_false(self, jump_dest, context):
+        ''' The inverse of emit_jump_true. It's a different function because they often
+        can be optimized very differently'''
         out = ''
         calc, calc_dest = self.emit_with_dest(context)
 
@@ -192,6 +256,9 @@ class Expr:
         return out
 
     def must_read_result(self, context):
+        ''' Does the caller HAVE to run the emit_with_dest() of this Expr?
+        Many Exprs will put results on the stack, and you don't want to let those
+        stick around. '''
         return False
 
     # It doesn't matter if this is true and claims to be false,
@@ -203,6 +270,7 @@ class Expr:
         return self
 
 class ConstExpr(Expr):
+    ''' A constant value '''
     def __init__(self, val):
         self.val = asm.ConstWord(val)
 
@@ -219,6 +287,7 @@ class ConstExpr(Expr):
         return self.val == asm.ConstWord(val)
 
 class ConstRefExpr(Expr):
+    ''' An expr that is a constant memory address of some identifier '''
     def __init__(self, name):
         self.name = name
 
@@ -226,6 +295,7 @@ class ConstRefExpr(Expr):
         return ('', asm.DataLoc(asm.LocType.CONST, asm.RefWord(self.name)))
 
 class VarExpr(Expr):
+    ''' Evaluates to the value of a variable '''
     def __init__(self, varname):
         self.varname = varname
 
@@ -234,6 +304,7 @@ class VarExpr(Expr):
         return ('', asm.DataLoc(asm.LocType.REG, asm.ConstWord(reg)))
 
 class StringExpr(Expr):
+    ''' Evaluates to the memory address of a string '''
     def __init__(self, string):
         self.string = string
 
@@ -242,6 +313,7 @@ class StringExpr(Expr):
         return ('', loc)
 
 class DerefExpr(Expr):
+    ''' Derefs the value of another expression, treating it as a memory adddress '''
     def __init__(self, expr):
         self.expr = expr
 
@@ -254,6 +326,7 @@ class DerefExpr(Expr):
         return self.expr.must_read_result(context)
 
 class IncExpr(Expr):
+    ''' Increments the value of an expression '''
     def __init__(self, inner):
         self.expr = inner
 
@@ -263,6 +336,8 @@ class IncExpr(Expr):
         return (calc, inced_dest)
 
 class Inc4Expr(Expr):
+    ''' Increments the value of an expression by four. 
+    4LW can do this in hardware, so it's nice to have in _lang.'''
     def __init__(self, inner):
         self.expr = inner
     def emit_with_dest(self, context):
@@ -271,6 +346,7 @@ class Inc4Expr(Expr):
         return (calc, inced_dest)
 
 class DecExpr(Expr):
+    ''' Decrements the value of an expression '''
     def __init__(self, inner):
         self.expr = inner
 
@@ -280,6 +356,7 @@ class DecExpr(Expr):
         return (calc, deced_dest)
 
 class BiExpr(Expr):
+    ''' Abstract method for exprs that take in two 'arguments' '''
     def __init__(self, a, b):
         assert isinstance(a, Expr)
         assert isinstance(b, Expr)
@@ -348,6 +425,7 @@ class Negate(Expr):
 
 
 class Biconditional(Expr):
+    ''' Abstract class that is used by Exprs that take two values and compare them somehow '''
     def __init__(self, a, b):
         self.a = a
         self.b = b
@@ -448,6 +526,7 @@ class And(Biconditional):
         return asm.Instruction(asm.Opcode.AND, [aloc, bloc, successloc]).emit()
 
 class FCall(Expr):
+    ''' Expr that calls a function'''
     def __init__(self, fname, args=[]):
         self.fname = fname
         self.args = args
