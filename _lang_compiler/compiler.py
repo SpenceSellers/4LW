@@ -7,24 +7,14 @@ import sys
 def compile(progstring, fname = None):
     return compile_and_emit_context(progstring)[0]
 
-def compile_and_emit_context(progstring, fname = None):
-    if fname:
-        name = fname
-    else:
-        name = "Root"
-
+def compile_and_emit_context(progstring, fname = "Root"):
     parsed = langparse.program.parseString(progstring)[0]
-    c = ast.Context(name = name)
+    c = ast.Context(name=fname)
     return (parsed.emit_top_level(c), c)
 
-def compile_with_parent_context(progstring, context, fname = None):
-    if fname:
-        name = fname
-    else:
-        name = "Root"
-
+def compile_with_parent_context(progstring, context, fname = "Root"):
     parsed = langparse.program.parseString(progstring)[0]
-    c = ast.Context(name = name, parent=context)
+    c = ast.Context(name=fname, parent=context)
     result = parsed.emit_top_level(c)
     context.inherit(c)
     return result
