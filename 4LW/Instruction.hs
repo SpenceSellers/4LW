@@ -17,52 +17,52 @@ import qualified Memory
 -- These are usually supplied in the form of operands (instruction arguments).
 -- Some DataLocations are modifications of other DataLocations.
 data DataLocation =
-    Register Letter |          -- A register
-    Constant Word |            -- A fixed constant word
-    Io Letter |                -- Std IO. Letter/Word will be used as a selector later.
-    Stack Letter |
-    TapeIO Letter |
-    MemoryLocation DataLocation |      -- A location in main memory
-    Negated DataLocation |     -- The real result but negated
-    Incremented DataLocation | -- The real result but incremented
-    Decremented DataLocation |  -- The real result but decremented
-    TimesFour DataLocation |
-    PlusFour DataLocation |
-    FirstLetter DataLocation |
-    SecondLetter DataLocation |
-    ThirdLetter DataLocation |
-    FourthLetter DataLocation
+      Register Letter           -- A register
+    | Constant Word             -- A fixed constant word
+    | Io Letter                 -- Std IO. Letter/Word will be used as a selector later.
+    | Stack Letter 
+    | TapeIO Letter 
+    | MemoryLocation DataLocation       -- A location in main memory
+    | Negated DataLocation      -- The real result but negated
+    | Incremented DataLocation  -- The real result but incremented
+    | Decremented DataLocation   -- The real result but decremented
+    | TimesFour DataLocation 
+    | PlusFour DataLocation 
+    | FirstLetter DataLocation 
+    | SecondLetter DataLocation 
+    | ThirdLetter DataLocation 
+    | FourthLetter DataLocation
     deriving (Show, Eq)
 
 -- | An Instruction is an action that the machine can perform.
 -- What these instructions actually do is defined in Machine.hs
 data Instruction =
-    Nop |
-    Halt |
-    Move DataLocation DataLocation |
-    Add DataLocation DataLocation DataLocation |
-    Sub DataLocation DataLocation DataLocation |
-    Mul DataLocation DataLocation DataLocation |
-    Div DataLocation DataLocation DataLocation |
-    Modulo DataLocation DataLocation DataLocation |
-    And DataLocation DataLocation DataLocation |
-    Jump DataLocation |
-    JumpZero DataLocation DataLocation |
-    JumpEqual DataLocation DataLocation DataLocation |
-    JumpNotEqual DataLocation DataLocation DataLocation |
-    JumpGreater DataLocation DataLocation DataLocation |
-    JumpLesser DataLocation DataLocation DataLocation |
-    FCall DataLocation [DataLocation] |
-    Return [DataLocation] |
-    Swap DataLocation DataLocation |
-    Read DataLocation |
-    PushAll DataLocation [DataLocation] |
-    PullAll DataLocation [DataLocation] |
-    TapeSeek DataLocation DataLocation  |
-    TapeSeekBackwards DataLocation DataLocation |
-    TapeRewind DataLocation |
-    StackSize DataLocation DataLocation |
-    SwapStacks DataLocation DataLocation
+      Nop 
+    | Halt 
+    | Move DataLocation DataLocation 
+    | Add DataLocation DataLocation DataLocation 
+    | Sub DataLocation DataLocation DataLocation 
+    | Mul DataLocation DataLocation DataLocation 
+    | Div DataLocation DataLocation DataLocation 
+    | Modulo DataLocation DataLocation DataLocation 
+    | And DataLocation DataLocation DataLocation 
+    | Jump DataLocation 
+    | JumpZero DataLocation DataLocation 
+    | JumpEqual DataLocation DataLocation DataLocation 
+    | JumpNotEqual DataLocation DataLocation DataLocation 
+    | JumpGreater DataLocation DataLocation DataLocation 
+    | JumpLesser DataLocation DataLocation DataLocation 
+    | FCall DataLocation [DataLocation] 
+    | Return [DataLocation] 
+    | Swap DataLocation DataLocation 
+    | Read DataLocation 
+    | PushAll DataLocation [DataLocation] 
+    | PullAll DataLocation [DataLocation] 
+    | TapeSeek DataLocation DataLocation  
+    | TapeSeekBackwards DataLocation DataLocation 
+    | TapeRewind DataLocation 
+    | StackSize DataLocation DataLocation 
+    | SwapStacks DataLocation DataLocation
 
     deriving (Show, Eq)
 
