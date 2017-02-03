@@ -1,4 +1,4 @@
-''' This module makes it easier to write 4LW assembly code programatically. ''
+''' This module makes it easier to write 4LW assembly code programatically. '''
 
 
 import uuid
