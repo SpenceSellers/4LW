@@ -1,3 +1,5 @@
+-- | Machine.hs is the central module of 4LW. It defines all of the instructions,
+-- registers, etc.
 
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
@@ -25,15 +27,19 @@ import Debug.Trace
 import Control.Concurrent
 import System.IO
 
+-- What stack will we place the function return address onto?
 returnAddressStackId :: Letter
 returnAddressStackId = letter 'R'
 
+-- What stack will we place the return value of a function onto?
 returnValueStackId :: Letter
 returnValueStackId = letter 'V'
 
+-- What stack will we place function arguments onto?
 argStackId :: Letter
 argStackId = letter 'S'
 
+-- What stack will we use to preserve registers during function calls?
 preserveStackId :: Letter
 preserveStackId = letter 'P'
 
@@ -94,6 +100,7 @@ getRegister reg = do
 setMemory :: Word -> Word -> State MachineState ()
 setMemory addr word = memory %= \mem -> Memory.writeWord mem addr word
 
+-- | Push a word onto a stack
 pushStack :: Letter -> Word -> State MachineState ()
 pushStack l word = do
     stks <- use stacks
@@ -103,6 +110,7 @@ pushStack l word = do
     let newStacks = stks // [(l, newStack)]
     stacks .= newStacks
 
+-- | Pop a word from a stack
 popStack :: Letter -> State MachineState Word
 popStack l = do
     stks <- use stacks
@@ -122,6 +130,7 @@ setPC :: Word -> State MachineState ()
 setPC addr = registers . ix pcRegister .= addr
 
 -- | Fetches data from a DataLocation.
+-- DataLocations are defined in Instruction.hs
 getData :: DataLocation -> State MachineState Word
 getData (Constant word) = return word
 
@@ -211,7 +220,13 @@ jumpCompare f src1 src2 jumpdest = do
     dat2 <- getData src2
     when (f dat1 dat2) (setPC =<< getData jumpdest)
 
+-- ======================
+-- ==== INSTRUCTIONS ====
+-- ======================
+
 -- | Applies an instruction to the state of the Machine.
+-- All of these instructions are defined in Instruction.hs,
+-- but runInstruction defines what they do.
 runInstruction :: Instruction -> State MachineState ()
 runInstruction Nop = return ()
 runInstruction Instruction.Halt = action .= HaltAction
@@ -298,37 +313,49 @@ runInstruction (SwapStacks a b) =
 
 
 data RunOptions = RunOptions {
+    -- | How long should we wait in between instructions?
     _ticktime :: Int,
+    -- | What should happen when the user hits the VM command key?
     _commandFn :: StateT MachineState IO ()
 }
 makeLenses ''RunOptions
 
+-- Perform a single instruction
 tick :: State MachineState ()
 tick = do
   tickNum += 1
   pc <- getPC
   instructionResult <- readInstruction pc <$> use memory
   count <- use tickNum
+  -- Set register S to be the tick counter.
   setRegister (letter 'S') (toWord . fromIntegral $ count)
   case instructionResult of
+    -- We weren't able to parse this instruction for whatever reason.
+    -- We can't continue, so we should halt.
     Left reason -> trace ("BAD INSTRUCTION: " ++ show reason) $ do
         action .= HaltAction
+    -- The instruction parsed!
     Right (InstructionParseResult instruction length) ->
         do
+          -- Update the program counter to point to the next instruction
           setPC $ offsetBy pc length
+          -- And finally run the instruction
           runInstruction instruction
 
+-- Prepare the 4LW VM and run it
 start :: RunOptions -> StateT MachineState IO ()
 start options = do
     lift $ Io.prepareTerminal
     run options
 
+-- Runs 4LW until it halts.
 run :: RunOptions -> StateT MachineState IO ()
 run options = do
   input <- lift $ Io.readToBuffer []
   inBuffer <>= input
   buf <- use inBuffer
   case buf of
+      -- They hit the command key! Let's run the command function.
       ('`':xs) -> do
           inBuffer .= filter (/= '`') buf
           (options ^. commandFn)
@@ -336,6 +363,7 @@ run options = do
 
   hoistState tick -- Run the tick
   case options ^. ticktime of
+    -- If we're waiting by 0 time, there's no need to call an actual delay function.
     0 -> return ()
     n -> lift $ threadDelay n
   currentAction <- use action

@@ -23,6 +23,7 @@ type Stacks = Array Letter Stack
 instance Show SizeLimitedStack where
     show (SizeLimitedStack size words) = "stack " ++ show words
 
+-- | Creates a full set of empty stacks
 emptyStacks :: Stacks
 emptyStacks = listArray (letter '_', letter 'Z') (repeat emptyStack)
 

@@ -1,3 +1,7 @@
+-- | Instruction.hs defines and parses instructions.
+-- As part of this, it also defines and parses the arguments of Instructions,
+-- DataLocations.
+
 {-# LANGUAGE GADTs #-}
 module Instruction where
 import Prelude hiding (Word)
@@ -31,6 +35,7 @@ data DataLocation =
     deriving (Show, Eq)
 
 -- | An Instruction is an action that the machine can perform.
+-- What these instructions actually do is defined in Machine.hs
 data Instruction =
     Nop |
     Halt |
@@ -63,10 +68,17 @@ data Instruction =
 
 -- | An error report of a 'failed' instruction parse.
 data BadInstruction =
-     BadInstruction | BadOpcode (Letter, Letter)| BadOperands BadOperand | BadOperandsLength | ZeroLengthInstruction deriving Show
+    BadInstruction 
+    | BadOpcode (Letter, Letter) 
+    | BadOperands BadOperand 
+    | BadOperandsLength 
+    | ZeroLengthInstruction 
+    deriving Show
 
 data BadOperand =
-    BadOptype Letter | BadOpcontrol Letter deriving Show
+    BadOptype Letter 
+    | BadOpcontrol Letter 
+    deriving Show
 
 -- | An InstructionParseResult is just the instruction, and how long
 --  the instruction was, so we can change the Program Counter register
@@ -81,6 +93,7 @@ data InstructionParseResult where
 data RawInstruction = RawInstruction (Letter, Letter) Operands
                       deriving (Show, Eq)
 
+-- | Instruction operands are lists of DataLocations
 type Operands = [DataLocation]
 
 tr :: Show a => a -> a

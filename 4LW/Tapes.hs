@@ -1,3 +1,7 @@
+-- | The 4LW machine can have up to 27 tape drives attached to it.
+-- Tapes hold quite a bit of storage (27^4 words), but are not directly 
+-- addressable. Only seek / rewind operations are provided in hardware.
+
 module Tapes where
 import Prelude hiding (Word)
 import Base27

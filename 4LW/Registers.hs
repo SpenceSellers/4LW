@@ -23,7 +23,7 @@ registerBounds = (letter 'A', letter 'T')
 blankRegisters :: Registers
 blankRegisters = listArray registerBounds (repeat minWord)
 
--- |
+-- | Sets a register to a value
 updateRegister :: Registers -> Letter -> Word -> Maybe Registers
 updateRegister regs l value
     | inRange registerBounds l = Just $ regs // [(l, value)]

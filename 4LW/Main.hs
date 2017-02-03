@@ -21,7 +21,7 @@ import Text.Read
 import Control.Exception
 import System.IO
 
-
+-- | Removes characters that aren't 4LW Base 27
 sanitizeProg :: [Char] -> [Char]
 sanitizeProg = filter Base27.isLetter
 
@@ -62,11 +62,16 @@ main = do
 
     -- Load the memory file into main memory.
     let statemem = memory %~ fromJust . importString (sanitizeProg prog) minWord $ blankState
+
+    -- Read the tape file (if any) into tape 'A'. In the future we'll probably want
+    -- multiple tape files.
     let state = tapeDeck . at (letter 'A') .~ Just (Tapes.newTape (WS.readWordsFiltered tapeStr)) $ statemem
 
     -- | Set up the default run options for the 4LW VM
     let runOptions = RunOptions {
+      -- How fast should the interpreter run?
       _ticktime = tickTime options,
+      -- What should happen when they hit the command/debug key?
       _commandFn = VMInterface.interface
     }
 
@@ -80,7 +85,8 @@ main = do
            hPutStrLn stderr $ "Saving " ++ fname
            Tapes.writeTapeToFile fname (fromJust (view (tapeDeck . at (letter 'A')) $ state'))
       Nothing -> return ()
-
+    
+    -- Print some interesting info
     hPutStrLn stderr "4LW shutting down."
 
     hPutStrLn stderr "PC was at: "
