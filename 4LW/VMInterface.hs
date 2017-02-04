@@ -1,3 +1,8 @@
+-- Sometimes the user may want to do things outside the sandbox of the VM,
+-- like inspecting memory, decoding instructions, or even just exiting 4LW.
+-- That interface is designed here.
+
+
 module VMInterface where
 import qualified Machine as M
 import qualified Instruction
@@ -5,6 +10,7 @@ import qualified Memory
 import qualified Base27
 import qualified Io
 import qualified Stacks
+
 
 
 import Control.Lens
@@ -24,6 +30,7 @@ maybeRead = fmap fst . listToMaybe . reads
 hoistState :: Monad m => State s a -> StateT s m a
 hoistState = StateT . (return .) . runState
 
+-- |Sets up and runs the VM interface.
 interface :: StateT M.MachineState IO ()
 interface = do
     liftIO $ Io.unprepareTerminal
@@ -43,10 +50,11 @@ parseWord s = case Base27.toWord <$> maybeRead s of
 parseLetter :: String -> Maybe Base27.Letter
 parseLetter s = Base27.letterSafe =<< s ^? ix 0
 
+-- |Often the Program Counter acts as a good default for an address, if none other is provided.
 elsePC :: Maybe Base27.Word -> StateT M.MachineState IO Base27.Word
 elsePC a = fromMaybe <$> hoistState M.getPC <*> pure a
 
-
+-- |Defines and describes a VM Interface command.
 data Command = Command
     { name :: String
     , description:: String
@@ -54,6 +62,7 @@ data Command = Command
     , continue :: Bool
     }
 
+-- |Provides a pretty string that describes a command
 commandHelp :: Command -> String 
 commandHelp cmd = name cmd ++ ": " ++ description cmd
 
@@ -157,9 +166,22 @@ stackCmd = Command
   
     , continue = True
     }
-commands :: [Command]
-commands = [resumeCmd, stopCmd, helpCmd, peekCmd, pokeCmd, decodeCmd, decodeSequenceCmd, regsCmd, stackCmd]
 
+-- |The list of commands that the VMInterface knows about.
+commands :: [Command]
+commands = [
+      resumeCmd
+    , stopCmd
+    , helpCmd
+    , peekCmd
+    , pokeCmd
+    , decodeCmd
+    , decodeSequenceCmd
+    , regsCmd
+    , stackCmd
+    ]
+
+-- |Recursively loops, allowing the user to enter and run multiple commands.
 commandLoop :: StateT M.MachineState IO ()
 commandLoop = do
     liftIO $ putStr "[Control] "
@@ -167,15 +189,17 @@ commandLoop = do
     rawcmd <- liftIO $ getLine
     let cmdlist = splitOn " " rawcmd
     let (cmd : args) = cmdlist
-
+    -- Search through the commands and find the one with the right name.
+    -- If it isn't found, run unknownCommand instead.
     let command = fromMaybe unknownCommand $ find (\c -> name c == cmd) commands
+    -- run the command.
     action command $ args
-    
+    -- Should we continue, or exit the interface?
     case continue command of 
         True -> commandLoop
         False -> return ()
    
-
+-- |Prints the state of all of the registers.
 dumpRegs ::  StateT M.MachineState IO ()
 dumpRegs = do
     reglist <- assocs <$> use M.registers
