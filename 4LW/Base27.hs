@@ -1,3 +1,5 @@
+-- |4LW uses base 27 math for everything.
+-- This module handles it.
 {-# LANGUAGE PatternSynonyms #-}
 
 module Base27 (Letter, Word(Word) , letter,
@@ -19,6 +21,8 @@ import Control.Lens
 
 -- | Letters are the very basis of 4LW. A letter can be any uppercase letter,
 -- or an underscore, for a maximum of 27 possible values.
+-- They're stored internally as characters here, but the constructor limits them to
+-- the proper 4LW subset of values.
 newtype Letter = Letter Char deriving (Eq)
 
 -- | A view for letter. You can pattern match on it, but you can't construct it!

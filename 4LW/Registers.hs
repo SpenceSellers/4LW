@@ -16,6 +16,7 @@ type Registers = Array Letter Word
 pcRegister :: Letter
 pcRegister = letter 'T'
 
+-- | Defines how many and what registers exist.
 registerBounds :: (Letter, Letter)
 registerBounds = (letter 'A', letter 'T')
 
