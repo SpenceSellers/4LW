@@ -1,4 +1,6 @@
 dist/*
 .stack-work/*
 .cabal-sandbox/*
-.stack-work.bak/*
+stack-work.bak/*
+Dockerfile
+.dockerignore
